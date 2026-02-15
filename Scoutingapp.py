@@ -605,6 +605,8 @@ def login_ui():
 
     if enviar:
         match = df_users[(df_users["Usuario"] == usuario) & (df_users["Contraseña"] == clave)]
+        st.info(f"USUARIO:{usuario}")
+        st.info(f"CONTRASEÑA:{clave}")
         if not match.empty:
             rol = match.iloc[0]["Rol"]
             st.session_state["user"] = usuario

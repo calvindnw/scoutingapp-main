@@ -601,12 +601,17 @@ def login_ui():
         st.session_state["user"] = None
         st.session_state["role"] = None
 
+    # Siempre mostrar el grabado y bloque de usuario
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("<h4 style='color:#5a9a7c;'>🔐 Acceso de usuario</h4>", unsafe_allow_html=True)
+
     if st.session_state["user"]:
-        st.sidebar.success(f"Conectado: {st.session_state['user']} ({st.session_state['role']})")
+        st.sidebar.markdown(f"<b>Usuario:</b> {st.session_state['user']}", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<b>Rol:</b> {st.session_state['role']}", unsafe_allow_html=True)
         if st.sidebar.button("Cerrar sesión"):
             st.session_state["user"] = None
             st.session_state["role"] = None
-            st.rerun()
+            st.experimental_rerun()
         return True
 
     with st.sidebar.form("login_form"):
@@ -620,17 +625,18 @@ def login_ui():
             st.session_state["user"] = match.iloc[0]["Usuario"]
             st.session_state["role"] = match.iloc[0]["Rol"]
             st.success(f"Bienvenido, {st.session_state['user']} ({st.session_state['role']})")
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Usuario o contraseña incorrectos")
     return False
 # =========================================================
 # INICIALIZACIÓN DE USUARIO Y ROL GLOBAL
 # =========================================================
-if "user" not in st.session_state or st.session_state["user"] is None:
-    login_success = login_ui()
-    if not login_success:
-        st.stop()
+
+# Siempre mostrar el bloque de login/acceso de usuario en la barra lateral
+login_success = login_ui()
+if not login_success:
+    st.stop()
 
 CURRENT_USER = st.session_state["user"]
 CURRENT_ROLE = st.session_state["role"]

@@ -1509,7 +1509,13 @@ if menu == "Jugadores":
                                 CURRENT_USER,
                                 hoy.strftime("%d/%m/%Y")
                             ]
-
+                            # Convertir todos los valores a tipos nativos de Python
+                            nueva_fila = [
+                                int(x) if isinstance(x, (np.integer,)) else
+                                float(x) if isinstance(x, (np.floating,)) else
+                                str(x) if x is not None else ""
+                                for x in nueva_fila
+                            ]
                             ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
                             st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
                             st.cache_data.clear()

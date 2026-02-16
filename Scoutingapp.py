@@ -786,39 +786,92 @@ def radar_chart(prom_jugador, prom_posicion):
 
 
 # ---------------------------------------------------------
-# FUNCIÓN AUXILIAR: SANITIZAR CARACTERES PARA PDF
+# FUNCIÓN AUXILIAR: SANITIZAR CARACTERES PARA PDF (AGRESIVA)
 # ---------------------------------------------------------
 def sanitizar_texto_pdf(texto):
     """
-    Reemplaza caracteres especiales no soportados por FPDF
-    con equivalentes soportados.
+    Sanitización AGRESIVA de caracteres especiales no soportados por FPDF.
+    Enfoque: Convertir CUALQUIER carácter especial a ASCII equivalente.
     """
     if not isinstance(texto, str):
         texto = str(texto)
     
-    # Mapeo de caracteres problemáticos a soportados
-    reemplazos = {
+    # Primero: Reemplazos específicos de caracteres problemáticos
+    reemplazos_especificos = {
         "•": "-",           # bullet point
-        "°": "°",           # grado
-        "–": "-",           # dash
+        "○": "o",           # círculo vacío
+        "●": "o",           # círculo lleno
+        "·": ".",           # punto medio
+        "×": "x",           # multiplicación
+        "÷": "/",           # división
+        "°": "o",           # grado
+        "º": "o",           # ordinal
+        "ª": "a",           # ordinal femenino
+        "–": "-",           # en dash
         "—": "-",           # em dash
-        "'": "'",           # comilla inteligente
-        """: '"',           # comilla doble inteligente
-        """: '"',           # comilla doble inteligente
+        "−": "-",           # minus
+        "'": "'",           # comilla inteligente izquierda
+        "'": "'",           # comilla inteligente derecha
+        """: '"',           # comilla doble izquierda
+        """: '"',           # comilla doble derecha
+        "„": '"',           # comilla baja doble
+        "‟": '"',           # comilla alta doble
+        "«": '"',           # comilla francesa izquierda
+        "»": '"',           # comilla francesa derecha
+        "‹": "<",           # comilla simple izquierda
+        "›": ">",           # comilla simple derecha
         "…": "...",         # ellipsis
+        "‚": "'",           # comilla baja simple
+        "‛": "'",           # comilla alta simple
+        "ℓ": "l",           # script l
         "™": "TM",          # trademark
         "®": "R",           # registered
         "©": "C",           # copyright
+        "℠": "SM",          # service mark
         "€": "EUR",         # euro
         "¥": "JPY",         # yen
         "£": "GBP",         # libra
+        "¢": "cents",       # centavos
+        "₹": "-",           # rupia
+        "₽": "-",           # ruble
+        "¤": "$",           # moneda genérica
+        "§": "S",           # sección
+        "¶": "P",           # párrafo
+        "†": "+",           # dagger
+        "‡": "++",          # double dagger
+        "‰": "0/00",        # per mille
+        "‱": "0/000",       # per ten thousand
+        "↑": "^",           # arrow up
+        "↓": "v",           # arrow down
+        "←": "<",           # arrow left
+        "→": ">",           # arrow right
+        "◄": "<",           # pointer left
+        "►": ">",           # pointer right
+        "◆": "*",           # diamond
+        "★": "*",           # star
+        "☆": "*",           # star vacio
+        "✓": "OK",          # checkmark
+        "✗": "X",           # cross
+        "✔": "OK",          # heavy checkmark
+        "✕": "X",           # heavy cross
+        "⚠": "!",           # warning
     }
     
-    for viejo, nuevo in reemplazos.items():
+    for viejo, nuevo in reemplazos_especificos.items():
         texto = texto.replace(viejo, nuevo)
     
-    # Eliminar caracteres no ASCII problemáticos
+    # Segundo: Enfoque nuclear - convertir TODO a ASCII puro
+    # Usar 'replace' para caracteres no-ASCII en lugar de 'ignore'
     texto = texto.encode('ascii', errors='replace').decode('ascii')
+    
+    # Tercero: Limpiar caracteres de reemplazo (?) que quedan
+    texto = texto.replace('?', '-')
+    
+    # Cuarto: Eliminar caracteres de control y no-imprimibles
+    texto = ''.join(c for c in texto if c.isprintable() or c.isspace())
+    
+    # Quinto: Limpiar espacios múltiples
+    texto = ' '.join(texto.split())
     
     return texto
 
@@ -833,12 +886,30 @@ def generar_pdf_reporte_completo(jugador, df_reports):
     - Foto con marco verde sutil
     - Secciones con fondos gris claro
     - Tipografía jerárquica mejorada
+    - SANITIZACIÓN RADICAL DE TODOS LOS CARACTERES ESPECIALES
     """
     try:
         from fpdf import FPDF
         from io import BytesIO
         import requests
         from PIL import Image
+        import pandas as pd
+        
+        # =========================================
+        # SANITIZACIÓN PREVENTIVA DE DATOS
+        # =========================================
+        # Copiar y sanitizar TODOS los campos del jugador
+        jugador_limpio = {}
+        for key, valor in jugador.items():
+            jugador_limpio[key] = sanitizar_texto_pdf(str(valor)) if valor else "-"
+        
+        # Sanitizar TODOS los campos del dataframe de reportes
+        df_reports_limpio = df_reports.copy()
+        for col in df_reports_limpio.columns:
+            if df_reports_limpio[col].dtype == 'object':  # Columnas de texto
+                df_reports_limpio[col] = df_reports_limpio[col].apply(
+                    lambda x: sanitizar_texto_pdf(str(x)) if pd.notna(x) else ""
+                )
         
         # =========================================
         # CONFIGURACIÓN INICIAL DEL PDF
@@ -896,6 +967,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         foto_disponible = False
         temp_path = None
         try:
+            # IMPORTANTE: URL_Foto NO debe sanitizarse porque es una URL
             url_foto = str(jugador.get("URL_Foto", "")).strip()
             if url_foto.startswith("http"):
                 response = requests.get(url_foto, timeout=5)
@@ -933,7 +1005,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "B", 16)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         
-        nombre = sanitizar_texto_pdf(str(jugador.get("Nombre", "SIN NOMBRE")).strip())
+        nombre = jugador_limpio.get("Nombre", "SIN NOMBRE")
         col_width = pdf.w - x_datos - pdf.r_margin
         
         pdf.set_x(x_datos)
@@ -944,10 +1016,10 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(80, 80, 80)
         
         datos = [
-            ("Club", sanitizar_texto_pdf(str(jugador.get("Club", "-")))),
-            ("Posición", sanitizar_texto_pdf(str(jugador.get("Posición", "-")))),
-            ("Liga", sanitizar_texto_pdf(str(jugador.get("Liga", "-")))),
-            ("Nacionalidad", sanitizar_texto_pdf(str(jugador.get("Nacionalidad", "-")))),
+            ("Club", jugador_limpio.get("Club", "-")),
+            ("Posición", jugador_limpio.get("Posición", "-")),
+            ("Liga", jugador_limpio.get("Liga", "-")),
+            ("Nacionalidad", jugador_limpio.get("Nacionalidad", "-")),
         ]
         
         for etiqueta, valor in datos:
@@ -962,8 +1034,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-        altura = sanitizar_texto_pdf(str(jugador.get("Altura", "-")).strip())
-        pie = sanitizar_texto_pdf(str(jugador.get("Pie_Hábil", "-")).strip())
+        altura = jugador_limpio.get("Altura", "-")
+        pie = jugador_limpio.get("Pie_Hábil", "-")
         
         pdf.set_x(x_datos)
         pdf.set_font("Arial", "", 10)
@@ -1012,7 +1084,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(0, 0, 0)
         pdf.ln(1)
         
-        informes = df_reports[df_reports["ID_Jugador"] == jugador["ID_Jugador"]].sort_values(
+        # Usar dataframe limpio con caracteres sanitizados
+        jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
+        # Asegurar ID_Jugador es string en dataframe limpio
+        df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
+        informes = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id].sort_values(
             "Fecha_Partido", ascending=False
         )
         
@@ -1030,24 +1106,26 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.line(pdf.l_margin + 3, y_sep, pdf.w - pdf.r_margin - 3, y_sep)
                     pdf.ln(2)
                 
-                # Fecha y Partido
+                # Fecha y Partido (YA SANITIZADOS DEL DATAFRAME LIMPIO)
                 pdf.set_font("Arial", "B", 10)
                 pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
                 
-                fecha_str = sanitizar_texto_pdf(str(inf.get("Fecha_Partido", "")).strip())
-                equipos_str = sanitizar_texto_pdf(str(inf.get("Equipos_Resultados", "")).strip())
+                fecha_str = inf.get("Fecha_Partido", "").strip()
+                equipos_str = inf.get("Equipos_Resultados", "").strip()
                 
                 if fecha_str:
                     pdf.cell(0, 4, f"Fecha: {fecha_str}", ln=True)
                 if equipos_str:
                     pdf.cell(0, 4, f"Partido: {equipos_str}", ln=True)
                 
-                # Observaciones - AUMENTADO A 9.5pt (+1 punto)
-                observaciones = sanitizar_texto_pdf(str(inf.get("Observaciones", "")).strip())
+                # Observaciones - AUMENTADO A 9.5pt (+1 punto) - YA SANITIZADO
+                observaciones = inf.get("Observaciones", "").strip()
                 if observaciones:
                     pdf.set_font("Arial", "", 9.5)  # +1 punto: de 8.5pt a 9.5pt
                     pdf.set_text_color(60, 60, 60)
                     obs_truncada = observaciones[:1200]
+                    # DOBLE SANITIZACIÓN COMO PRECAUCIÓN EXTRA
+                    obs_truncada = sanitizar_texto_pdf(obs_truncada)
                     pdf.multi_cell(0, 4, obs_truncada, align="L")
         
         pdf.ln(2)

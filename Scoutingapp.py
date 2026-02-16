@@ -1372,26 +1372,26 @@ if menu == "Jugadores":
                         car_str = ", ".join(nueva_caracteristica) if nueva_caracteristica else ""
 
                         fila = [
-                            nuevo_id,
-                            nuevo_nombre or "",
-                            nueva_fecha or "",
-                            nueva_nacionalidad or "",
-                            nueva_seg_nac or "",
-                            nueva_altura if nueva_altura else 175,
-                            nuevo_pie or opciones_pies[0],
-                            nueva_posicion or opciones_posiciones[0],
-                            car_str,
-                            nuevo_club or "",
-                            nueva_liga or opciones_ligas[0],
-                            "",  # Descripción
-                            "",  # Sexo
-                            nueva_url_foto or "",
-                            nueva_url_perfil or "",
-                            nueva_instagram or "",
-                            nueva_fecha_fin_contrato or "",
-                            nueva_video or "",
-                            nuevo_telefono or "",
-                            nuevo_representante or ""
+                            nuevo_id,                                 # 0 ID_Jugador
+                            nuevo_nombre or "",                       # 1 Nombre
+                            nueva_fecha or "",                        # 2 Fecha_Nac
+                            nueva_nacionalidad or "",                # 3 Nacionalidad
+                            nueva_seg_nac or "",                      # 4 Segunda_Nacionalidad
+                            nueva_altura if nueva_altura else 175,     # 5 Altura
+                            nuevo_pie or opciones_pies[0],             # 6 Pie_Hábil
+                            nueva_posicion or opciones_posiciones[0],  # 7 Posición
+                            car_str,                                   # 8 Caracteristica
+                            nuevo_club or "",                         # 9 Club
+                            nueva_liga or opciones_ligas[0],           # 10 Liga
+                            "",                                       # 11 Descripcion
+                            "",                                       # 12 Sexo
+                            nueva_url_foto or "",                     # 13 URL_Foto
+                            nueva_url_perfil or "",                   # 14 URL_Perfil
+                            nueva_fecha_fin_contrato or "",           # 15 Fin de contrato
+                            nueva_instagram or "",                    # 16 Instagram
+                            nueva_video or "",                        # 17 URL Video
+                            nuevo_telefono or "",                     # 18 Teléfono
+                            nuevo_representante or ""                 # 19 Representante
                         ]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
                         st.cache_data.clear()

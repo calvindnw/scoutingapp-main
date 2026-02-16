@@ -26,6 +26,8 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 import matplotlib.patches as patches
 import gspread
 from google.oauth2.service_account import Credentials
+import requests
+from PIL import Image
 
 # =========================================================
 # 🎨 HELPER VISUAL — PLOTLY GLASS (ANTI FONDO NEGRO)
@@ -781,6 +783,188 @@ def radar_chart(prom_jugador, prom_posicion):
     ax.tick_params(colors="white")
 
     st.pyplot(fig)
+
+
+# ---------------------------------------------------------
+# FUNCION: GENERAR PDF REPORTE COMPLETO
+# ---------------------------------------------------------
+def generar_pdf_reporte_completo(jugador, df_reports):
+    """
+    Genera un PDF completo con foto del jugador e informes.
+    Título: "Reporte de scouting"
+    Excluye el nombre del Scout en los informes.
+    Mantiene diseño simple y profesional.
+    """
+    try:
+        from fpdf import FPDF
+        from io import BytesIO
+        import requests
+        from PIL import Image
+        
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # =========================================
+        # ENCABEZADO: Título
+        # =========================================
+        pdf.set_font("Arial", "B", 20)
+        pdf.set_text_color(90, 154, 124)  # Color acento #5a9a7c
+        pdf.cell(0, 15, "Reporte de Scouting", ln=True, align="C")
+        
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(0, 5, f"Generado: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align="C")
+        pdf.ln(5)
+        
+        # =========================================
+        # SECCIÓN: FOTO + DATOS PRINCIPALES (lado a lado)
+        # =========================================
+        
+        # Intentar descargar y insertar foto
+        foto_disponible = False
+        try:
+            url_foto = str(jugador.get("URL_Foto", "")).strip()
+            if url_foto.startswith("http"):
+                response = requests.get(url_foto, timeout=5)
+                if response.status_code == 200:
+                    img = Image.open(BytesIO(response.content))
+                    
+                    # Guardar temporalmente
+                    temp_path = "/tmp/temp_foto.jpg"
+                    img.save(temp_path)
+                    
+                    # Crear tabla con foto + datos
+                    pdf.set_font("Arial", "", 10)
+                    
+                    # Fila con foto a la izquierda
+                    col_x = pdf.get_x()
+                    col_y = pdf.get_y()
+                    
+                    # Foto (60mm de ancho)
+                    pdf.image(temp_path, x=15, y=col_y, w=50, h=60)
+                    
+                    # Datos a la derecha de la foto
+                    pdf.set_xy(75, col_y)
+                    pdf.set_font("Arial", "B", 12)
+                    pdf.cell(0, 8, jugador.get("Nombre", "SIN NOMBRE"), ln=True)
+                    
+                    pdf.set_font("Arial", "", 10)
+                    pdf.set_x(75)
+                    pdf.cell(0, 6, f"Club: {jugador.get('Club', '-')}", ln=True)
+                    pdf.set_x(75)
+                    pdf.cell(0, 6, f"Posición: {jugador.get('Posición', '-')}", ln=True)
+                    pdf.set_x(75)
+                    pdf.cell(0, 6, f"Liga: {jugador.get('Liga', '-')}", ln=True)
+                    pdf.set_x(75)
+                    pdf.cell(0, 6, f"Nacionalidad: {jugador.get('Nacionalidad', '-')}", ln=True)
+                    pdf.set_x(75)
+                    edad = calcular_edad(jugador.get("Fecha_Nac", ""))
+                    pdf.cell(0, 6, f"Edad: {edad} años", ln=True)
+                    pdf.set_x(75)
+                    pdf.cell(0, 6, f"Altura: {jugador.get('Altura', '-')} cm", ln=True)
+                    
+                    # Avanzar más abajo para el siguiente contenido
+                    pdf.ln(15)
+                    
+                    foto_disponible = True
+                    
+        except Exception:
+            pass
+        
+        # Si no hay foto, mostrar datos solo
+        if not foto_disponible:
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 8, jugador.get("Nombre", "SIN NOMBRE"), ln=True)
+            
+            pdf.set_font("Arial", "", 10)
+            pdf.cell(0, 6, f"Club: {jugador.get('Club', '-')}", ln=True)
+            pdf.cell(0, 6, f"Posición: {jugador.get('Posición', '-')}", ln=True)
+            pdf.cell(0, 6, f"Liga: {jugador.get('Liga', '-')}", ln=True)
+            pdf.cell(0, 6, f"Nacionalidad: {jugador.get('Nacionalidad', '-')}", ln=True)
+            edad = calcular_edad(jugador.get("Fecha_Nac", ""))
+            pdf.cell(0, 6, f"Edad: {edad} años", ln=True)
+            pdf.cell(0, 6, f"Altura: {jugador.get('Altura', '-')} cm", ln=True)
+            pdf.cell(0, 6, f"Pie hábil: {jugador.get('Pie_Hábil', '-')}", ln=True)
+            pdf.ln(5)
+        
+        # =========================================
+        # SECCIÓN: INFORMES EVALUACIÓN (Partido a Partido)
+        # =========================================
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(90, 154, 124)
+        pdf.cell(0, 8, "Evaluaciones Partido a Partido", ln=True)
+        
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", "", 9)
+        
+        informes = df_reports[df_reports["ID_Jugador"] == jugador["ID_Jugador"]].sort_values(
+            "Fecha_Partido", ascending=False
+        )
+        
+        if informes.empty:
+            pdf.multi_cell(0, 6, "Sin evaluaciones registradas", border=1)
+        else:
+            for idx, (_, inf) in enumerate(informes.iterrows()):
+                # Separador entre informes
+                if idx > 0:
+                    pdf.ln(2)
+                
+                # Encabezado del informe (sin Scout)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_fill_color(230, 230, 230)  # Fondo gris claro
+                fecha_str = str(inf.get("Fecha_Partido", "")).strip()
+                linea_str = str(inf.get("Línea", "")).strip()
+                
+                titulo_inf = f"Fecha: {fecha_str} | Decisión: {linea_str}"
+                pdf.multi_cell(0, 6, titulo_inf, fill=True, border=1)
+                
+                # Equipos y resultado
+                equipos = str(inf.get("Equipos_Resultados", "")).strip()
+                if equipos:
+                    pdf.set_font("Arial", "", 9)
+                    pdf.multi_cell(0, 5, f"Equipos: {equipos}", border=0)
+                
+                # Formación
+                formacion = str(inf.get("Formación", "")).strip()
+                if formacion and formacion != "-":
+                    pdf.set_font("Arial", "", 9)
+                    pdf.multi_cell(0, 5, f"Formación: {formacion}", border=0)
+                
+                # Línea de juego
+                linea_juego = str(inf.get("Línea", "")).strip()
+                if linea_juego and linea_juego != "-":
+                    pdf.set_font("Arial", "", 9)
+                    pdf.cell(0, 5, f"Línea de juego: {linea_juego}", ln=True)
+                
+                # Observaciones (truncadas a 500 caracteres)
+                observaciones = str(inf.get("Observaciones", "")).strip()
+                if observaciones:
+                    pdf.set_font("Arial", "", 9)
+                    obs_truncada = observaciones[:800]  # Limitar a 800 caracteres
+                    pdf.multi_cell(0, 5, f"Observaciones: {obs_truncada}", border=0)
+                
+                pdf.ln(3)
+        
+        # =========================================
+        # FOOTER
+        # =========================================
+        pdf.ln(10)
+        pdf.set_font("Arial", "", 8)
+        pdf.set_text_color(150, 150, 150)
+        pdf.cell(0, 5, "ScoutingApp Profesional v2.3 | Reporte generado automáticamente", ln=True, align="C")
+        
+        # =========================================
+        # RETORNAR PDF EN BUFFER
+        # =========================================
+        buffer = BytesIO()
+        pdf.output(buffer)
+        buffer.seek(0)
+        
+        return buffer
+        
+    except Exception as e:
+        st.error(f"⚠️ Error al generar PDF: {e}")
+        return None
 
 
 # ---------------------------------------------------------
@@ -1652,46 +1836,19 @@ if menu == "Ver informes":
                 # =========================================================
                 # EXPORTAR PDF SIMPLE
                 # =========================================================
-                if st.button("📥 Exportar informe simple", key=f"pdf_{j['ID_Jugador']}"):
-                    try:
-                        from fpdf import FPDF
-                        from io import BytesIO
-
-                        pdf = FPDF()
-                        pdf.add_page()
-                        pdf.set_font("Arial", "B", 14)
-                        pdf.cell(0, 10, "SCOUTING REPORT", ln=True)
-
-                        pdf.set_font("Arial", "", 11)
-                        pdf.ln(5)
-                        pdf.cell(0, 8, f"Jugador: {j['Nombre']}", ln=True)
-                        pdf.cell(0, 8, f"Club: {j.get('Club','-')}", ln=True)
-                        pdf.cell(0, 8, f"Posición: {j.get('Posición','-')}", ln=True)
-                        pdf.ln(4)
-
-                        informes_pdf = df_reports[df_reports["ID_Jugador"] == j["ID_Jugador"]]
-
-                        for _, inf in informes_pdf.iterrows():
-                            pdf.multi_cell(
-                                0, 6,
-                                f"- {inf['Fecha_Partido']} | {inf['Scout']} | {inf['Línea']}\n"
-                                f"{inf['Observaciones'][:1000]}"
-                            )
-                            pdf.ln(2)
-
-                        buffer = BytesIO()
-                        pdf.output(buffer)
-                        buffer.seek(0)
-
+                # EXPORTAR PDF COMPLETO (CON FOTO E INFORMACIÓN COMPLETA)
+                # =========================================================
+                if st.button("📥 Descargar informe completo", key=f"pdf_{j['ID_Jugador']}"):
+                    buffer = generar_pdf_reporte_completo(j, df_reports)
+                    
+                    if buffer:
                         st.download_button(
-                            "📄 Descargar PDF",
+                            "📥 Descargar informe completo",
                             buffer,
-                            file_name=f"Informe_{j['Nombre']}.pdf",
-                            mime="application/pdf"
+                            file_name=f"Reporte_Scouting_{j['Nombre'].replace(' ', '_')}.pdf",
+                            mime="application/pdf",
+                            key=f"descarga_{j['ID_Jugador']}"
                         )
-
-                    except Exception as e:
-                        st.error(f"⚠️ Error PDF: {e}")
 
                 # =========================================================
                 # EXPANDER — EDITAR / ELIMINAR INFORMES

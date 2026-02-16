@@ -601,7 +601,8 @@ def login_ui():
         st.session_state["user"] = None
         st.session_state["role"] = None
 
-    # Siempre mostrar el grabado y bloque de usuario
+
+    # Línea divisoria y título grande (solo una vez)
     st.sidebar.markdown("---")
     st.sidebar.markdown("<h4 style='color:#5a9a7c;'>🔐 Acceso de usuario</h4>", unsafe_allow_html=True)
 

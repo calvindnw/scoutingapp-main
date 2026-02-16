@@ -957,11 +957,13 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         fecha_generado = f"{ahora.day} de {meses_es[ahora.month - 1]} de {ahora.year}"
         pdf.cell(0, 6, f"Generado: {fecha_generado}", ln=True, align="C")
         pdf.ln(4)
-        # Línea decorativa superior
-        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(1)
+        # Línea decorativa superior (ajustada para simetría)
+        margen_linea = 18
+        ancho_linea = pdf.w - 2 * margen_linea
         y_linea_sup = pdf.get_y()
-        pdf.line(pdf.l_margin, y_linea_sup, pdf.w - pdf.r_margin, y_linea_sup)
+        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
+        pdf.set_line_width(1.2)
+        pdf.line(margen_linea, y_linea_sup, margen_linea + ancho_linea, y_linea_sup)
         pdf.ln(8)
         
         # =========================================
@@ -987,11 +989,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         x_inicio = pdf.get_x()
         y_inicio = pdf.get_y()
         
-        # Fondo sutil para la sección de datos
+        # (Eliminado recuadro blanco de fondo para datos del jugador)
         cuadro_y = y_inicio + 4
         cuadro_h = 48
-        pdf.set_fill_color(255, 255, 255)
-        pdf.rect(pdf.l_margin, cuadro_y, page_width, cuadro_h, 'F')
 
         # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO Y SOMBRA
         if foto_disponible and temp_path:
@@ -1063,10 +1063,10 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         pdf.set_y(y_separador)
         
-        # Línea decorativa inferior
+        # Línea decorativa inferior (ajustada para simetría)
         pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(1)
-        pdf.line(pdf.l_margin, y_separador, pdf.w - pdf.r_margin, y_separador)
+        pdf.set_line_width(1.2)
+        pdf.line(margen_linea, y_separador, margen_linea + ancho_linea, y_separador)
         pdf.ln(8)
         
         # =========================================

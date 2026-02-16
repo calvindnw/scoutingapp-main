@@ -1223,25 +1223,13 @@ if menu == "Jugadores":
         st.markdown("---")
         st.subheader("🗂️ Informes cargados sobre este jugador")
         try:
-            # DEBUG: mostrar información rápida para depuración
-            try:
-                st.markdown("**Debug (player reports view)**")
-                st.write({
-                    "CURRENT_ROLE": CURRENT_ROLE,
-                    "id_jugador": id_jugador,
-                    "len(df_reports_all)": len(df_reports_all) if 'df_reports_all' in globals() else None,
-                    "len(df_reports_user)": len(df_reports_user) if 'df_reports_user' in globals() else None,
-                    "ID_Jugador_in_reports_all": ("ID_Jugador" in df_reports_all.columns) if 'df_reports_all' in globals() else None
-                })
-            except Exception:
-                pass
-            # Construir df_reports y df_players según rol, luego unir y filtrar por jugador
+            # Construir df_reports y df_players según rol
             if CURRENT_ROLE == "admin":
                 df_reports_v = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
-                df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
             else:
                 df_reports_v = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
-                df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
+
+            df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
 
             # Normalizar IDs
             if not df_reports_v.empty and "ID_Jugador" in df_reports_v.columns:
@@ -1249,32 +1237,41 @@ if menu == "Jugadores":
             if not df_players_v.empty and "ID_Jugador" in df_players_v.columns:
                 df_players_v["ID_Jugador"] = df_players_v["ID_Jugador"].astype(str)
 
-            # Unir
-            df_merged_local = df_reports_v.merge(df_players_v, on="ID_Jugador", how="left")
+            # Filtrar informes del jugador directamente
+            informes_j = df_reports_v[df_reports_v["ID_Jugador"] == str(id_jugador)].copy()
 
-            # Filtrar solo los informes del jugador actual
-            df_filtrado_j = df_merged_local[df_merged_local["ID_Jugador"] == str(id_jugador)].copy()
+            # Si no hay informes desde las fuentes habituales, intentar cargar `informes.csv` local como fallback
+            if informes_j.empty:
+                try:
+                    local_path = os.path.join(os.getcwd(), "informes.csv")
+                    if os.path.exists(local_path):
+                        df_local = pd.read_csv(local_path, dtype=str)
+                        if "ID_Jugador" in df_local.columns:
+                            df_local["ID_Jugador"] = df_local["ID_Jugador"].astype(str)
+                            informes_local = df_local[df_local["ID_Jugador"] == str(id_jugador)].copy()
+                            if not informes_local.empty:
+                                st.info("Mostrando informes desde el archivo local `informes.csv` (fallback)")
+                                informes_j = informes_local
+                except Exception:
+                    pass
 
-            if df_filtrado_j.empty:
+            if informes_j.empty:
                 st.info("No hay informes cargados para este jugador.")
             else:
-                columnas = [
-                    "Fecha_Informe", "Nombre", "Club",
-                    "Línea", "Scout", "Equipos_Resultados", "Observaciones"
-                ]
-                df_tabla = df_filtrado_j[[c for c in columnas if c in df_filtrado_j.columns]].copy()
+                # Añadir Nombre y Club a partir de df_players_v (si están disponibles)
+                try:
+                    lookup = df_players_v.set_index("ID_Jugador")
+                    informes_j["Nombre"] = informes_j["ID_Jugador"].map(lambda x: lookup.loc[str(x), "Nombre"] if str(x) in lookup.index else "")
+                    informes_j["Club"] = informes_j["ID_Jugador"].map(lambda x: lookup.loc[str(x), "Club"] if str(x) in lookup.index else "")
+                except Exception:
+                    pass
+
+                columnas = ["Fecha_Informe", "Nombre", "Club", "Línea", "Scout", "Equipos_Resultados", "Observaciones"]
+                df_tabla = informes_j[[c for c in columnas if c in informes_j.columns]].copy()
 
                 try:
-                    df_tabla["Fecha_dt"] = pd.to_datetime(
-                        df_tabla["Fecha_Informe"],
-                        format="%d/%m/%Y",
-                        errors="coerce"
-                    )
-                    df_tabla = (
-                        df_tabla
-                        .sort_values("Fecha_dt", ascending=False)
-                        .drop(columns="Fecha_dt")
-                    )
+                    df_tabla["Fecha_dt"] = pd.to_datetime(df_tabla["Fecha_Informe"], format="%d/%m/%Y", errors="coerce")
+                    df_tabla = df_tabla.sort_values("Fecha_dt", ascending=False).drop(columns="Fecha_dt")
                 except Exception:
                     pass
 
@@ -1283,37 +1280,14 @@ if menu == "Jugadores":
                 gb.configure_pagination(enabled=True, paginationAutoPageSize=True)
                 gb.configure_grid_options(domLayout="normal")
 
-                widths = {
-                    "Fecha_Informe": 100,
-                    "Nombre": 150,
-                    "Club": 130,
-                    "Línea": 120,
-                    "Scout": 120,
-                    "Equipos_Resultados": 150,
-                    "Observaciones": 420
-                }
-
+                widths = {"Fecha_Informe": 100, "Nombre": 150, "Club": 130, "Línea": 120, "Scout": 120, "Equipos_Resultados": 150, "Observaciones": 420}
                 for c in df_tabla.columns:
                     if c == "Observaciones":
                         gb.configure_column(c, wrapText=True, autoHeight=True, width=widths[c])
                     else:
                         gb.configure_column(c, width=widths.get(c, 120))
 
-                grid_response = AgGrid(
-                    df_tabla,
-                    gridOptions=gb.build(),
-                    fit_columns_on_grid_load=True,
-                    theme="blue",
-                    height=300,
-                    allow_unsafe_jscode=True,
-                    update_mode="MODEL_CHANGED",
-                    custom_css={
-                        ".ag-header": {"background-color": "#1e3c72", "color": "white", "font-weight": "bold", "font-size": "13px"},
-                        ".ag-row-even": {"background-color": "#2a5298 !important", "color": "white !important"},
-                        ".ag-row-odd": {"background-color": "#3b6bbf !important", "color": "white !important"},
-                        ".ag-cell": {"white-space": "normal !important", "line-height": "1.25", "padding": "5px", "font-size": "12.5px"},
-                    },
-                )
+                grid_response = AgGrid(df_tabla, gridOptions=gb.build(), fit_columns_on_grid_load=True, theme="blue", height=300, allow_unsafe_jscode=True, update_mode="MODEL_CHANGED")
 
                 # Normalizar selección
                 selected_data = grid_response.get("selected_rows")

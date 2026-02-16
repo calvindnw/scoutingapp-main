@@ -1395,7 +1395,7 @@ if menu == "Jugadores":
                         ]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
                         st.cache_data.clear()
-                        st.experimental_rerun()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Error al guardar jugador: {e}")
 
@@ -1625,7 +1625,7 @@ if menu == "Jugadores":
 
                             st.cache_data.clear()
                             st.toast("✅ Datos actualizados correctamente.", icon="✅")
-                            st.experimental_rerun()
+                            st.rerun()
                         else:
                             st.warning("⚠️ No se encontró el jugador en la hoja.")
 
@@ -1775,7 +1775,7 @@ if menu == "Jugadores":
                             f"✅ Informe guardado correctamente para {jugador['Nombre']}",
                             icon="✅"
                         )
-                        st.experimental_rerun()
+                        st.rerun()
 
                     except Exception as e:
                         st.error(f"⚠️ Error al guardar el informe: {e}")
@@ -2524,7 +2524,7 @@ if menu == "Lista corta":
                             icon="🗑️"
                         )
                         st.cache_data.clear()
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.warning("⚠️ No se encontró el jugador en tu lista corta.")
                 except Exception as e:

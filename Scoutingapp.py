@@ -1260,50 +1260,50 @@ if menu == "Jugadores":
 
 
         # ---------------------------------------------------------
-            # INFORMES EXISTENTES DEL JUGADOR (vista)
-            # ---------------------------------------------------------
-            st.markdown("---")
-            st.subheader("🗂️ Informes cargados sobre este jugador")
-            try:
-                # Usar todos los informes para admin, o solo los del usuario para scout
-                if CURRENT_ROLE == "admin":
-                    df_reports_local = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
-                else:
-                    df_reports_local = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
+        # INFORMES EXISTENTES DEL JUGADOR (vista)
+        # ---------------------------------------------------------
+        st.markdown("---")
+        st.subheader("🗂️ Informes cargados sobre este jugador")
+        try:
+            # Usar todos los informes para admin, o solo los del usuario para scout
+            if CURRENT_ROLE == "admin":
+                df_reports_local = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
+            else:
+                df_reports_local = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
 
-                if not df_reports_local.empty and "ID_Jugador" in df_reports_local.columns:
-                    df_reports_local["ID_Jugador"] = df_reports_local["ID_Jugador"].astype(str)
+            if not df_reports_local.empty and "ID_Jugador" in df_reports_local.columns:
+                df_reports_local["ID_Jugador"] = df_reports_local["ID_Jugador"].astype(str)
 
-                informes_j = df_reports_local[df_reports_local["ID_Jugador"] == str(id_jugador)].copy()
+            informes_j = df_reports_local[df_reports_local["ID_Jugador"] == str(id_jugador)].copy()
 
-                if informes_j.empty:
-                    st.info("No hay informes cargados para este jugador.")
-                else:
-                    columnas_inf_view = ["Fecha_Informe", "Scout", "Línea", "Equipos_Resultados", "Observaciones"]
-                    df_tabla_inf = informes_j[[c for c in columnas_inf_view if c in informes_j.columns]].copy()
+            if informes_j.empty:
+                st.info("No hay informes cargados para este jugador.")
+            else:
+                columnas_inf_view = ["Fecha_Informe", "Scout", "Línea", "Equipos_Resultados", "Observaciones"]
+                df_tabla_inf = informes_j[[c for c in columnas_inf_view if c in informes_j.columns]].copy()
 
-                    gb_inf = GridOptionsBuilder.from_dataframe(df_tabla_inf)
-                    gb_inf.configure_selection("single", use_checkbox=False)
-                    gb_inf.configure_pagination(enabled=True, paginationAutoPageSize=True)
-                    gb_inf.configure_grid_options(domLayout="normal")
+                gb_inf = GridOptionsBuilder.from_dataframe(df_tabla_inf)
+                gb_inf.configure_selection("single", use_checkbox=False)
+                gb_inf.configure_pagination(enabled=True, paginationAutoPageSize=True)
+                gb_inf.configure_grid_options(domLayout="normal")
 
-                    grid_resp = AgGrid(
-                        df_tabla_inf,
-                        gridOptions=gb_inf.build(),
-                        fit_columns_on_grid_load=True,
-                        theme="blue",
-                        height=300,
-                        allow_unsafe_jscode=True,
-                        update_mode="NO_UPDATE",
-                    )
+                grid_resp = AgGrid(
+                    df_tabla_inf,
+                    gridOptions=gb_inf.build(),
+                    fit_columns_on_grid_load=True,
+                    theme="blue",
+                    height=300,
+                    allow_unsafe_jscode=True,
+                    update_mode="NO_UPDATE",
+                )
 
-                    selected = grid_resp.get("selected_rows")
-                    if selected and len(selected) > 0:
-                        sel0 = selected[0]
-                        st.markdown("#### Informe seleccionado")
-                        st.write(sel0)
-            except Exception as e:
-                st.error(f"⚠️ Error al mostrar informes del jugador: {e}")
+                selected = grid_resp.get("selected_rows")
+                if selected and len(selected) > 0:
+                    sel0 = selected[0]
+                    st.markdown("#### Informe seleccionado")
+                    st.write(sel0)
+        except Exception as e:
+            st.error(f"⚠️ Error al mostrar informes del jugador: {e}")
 
             # ---------------------------------------------------------
             # CARGAR NUEVO INFORME

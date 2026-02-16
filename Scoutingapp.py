@@ -995,90 +995,89 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
             pdf.set_line_width(1.5)
             pdf.rect(pdf.l_margin - 1.5, cuadro_y - 1.5, 35 + 3, 44 + 3)
-            try:
-                # --- Configuración general ---
-                pdf = FPDF_SEGURO(orientation="P", unit="mm", format="A4")
-                pdf.add_page()
-                pdf.set_auto_page_break(auto=False, margin=0)
+            # --- Configuración general ---
+            pdf = FPDF_SEGURO(orientation="P", unit="mm", format="A4")
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=False, margin=0)
 
-                # --- Fondo claro y líneas decorativas ---
-                pdf.set_fill_color(245, 248, 250)  # fondo general
-                pdf.rect(0, 0, 210, 297, 'F')
+            # --- Fondo claro y líneas decorativas ---
+            pdf.set_fill_color(245, 248, 250)  # fondo general
+            pdf.rect(0, 0, 210, 297, 'F')
 
-                # Líneas decorativas (simétricas, sutiles)
-                pdf.set_draw_color(90, 154, 124)
-                pdf.set_line_width(1.2)
-                pdf.line(15, 22, 195, 22)  # superior
-                pdf.line(15, 285, 195, 285)  # inferior
-                pdf.set_line_width(0.5)
-                pdf.line(15, 32, 195, 32)  # debajo del título
+            # Líneas decorativas (simétricas, sutiles)
+            pdf.set_draw_color(90, 154, 124)
+            pdf.set_line_width(1.2)
+            pdf.line(15, 22, 195, 22)  # superior
+            pdf.line(15, 285, 195, 285)  # inferior
+            pdf.set_line_width(0.5)
+            pdf.line(15, 32, 195, 32)  # debajo del título
 
-                # --- Título: Nombre del jugador (centrado, grande, ÚNICO) ---
-                pdf.set_xy(0, 24)
-                pdf.set_font("Arial", 'B', 22)
-                pdf.set_text_color(30, 60, 114)
-                nombre_jugador = sanitizar_texto_pdf(jugador.get("Nombre", ""))
-                pdf.cell(210, 16, nombre_jugador, 0, 2, 'C')
+            # --- Título: Nombre del jugador (centrado, grande, ÚNICO) ---
+            pdf.set_xy(0, 24)
+            pdf.set_font("Arial", 'B', 22)
+            pdf.set_text_color(30, 60, 114)
+            nombre_jugador = sanitizar_texto_pdf(jugador.get("Nombre", ""))
+            pdf.cell(210, 16, nombre_jugador, 0, 2, 'C')
 
-                # --- Foto y datos principales perfectamente alineados ---
-                foto_url = jugador.get("Foto", "")
-                foto_x = 22
-                foto_y = 40
-                foto_w = 38
-                foto_h = 38
-                datos_x = foto_x + foto_w + 14  # más espacio para simetría
-                datos_y = foto_y
+            # --- Foto y datos principales perfectamente alineados ---
+            foto_url = jugador.get("Foto", "")
+            foto_x = 22
+            foto_y = 40
+            foto_w = 38
+            foto_h = 38
+            datos_x = foto_x + foto_w + 14  # más espacio para simetría
+            datos_y = foto_y
 
-                # Foto del jugador (izquierda)
-                if foto_url:
-                    try:
-                        response = requests.get(foto_url, timeout=4)
-                        if response.status_code == 200:
-                            img = Image.open(BytesIO(response.content)).convert("RGB")
-                            img = img.resize((int(foto_w*3.8), int(foto_h*3.8)))
-                            temp = BytesIO()
-                            img.save(temp, format="JPEG")
-                            temp.seek(0)
-                            pdf.image(temp, x=foto_x, y=foto_y, w=foto_w, h=foto_h)
-                            # Marco verde
-                            pdf.set_draw_color(90, 154, 124)
-                            pdf.set_line_width(1.5)
-                            pdf.ellipse(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
-                    except Exception:
-                        pass
+            # Foto del jugador (izquierda)
+            if foto_url:
+                try:
+                    response = requests.get(foto_url, timeout=4)
+                    if response.status_code == 200:
+                        img = Image.open(BytesIO(response.content)).convert("RGB")
+                        img = img.resize((int(foto_w*3.8), int(foto_h*3.8)))
+                        temp = BytesIO()
+                        img.save(temp, format="JPEG")
+                        temp.seek(0)
+                        pdf.image(temp, x=foto_x, y=foto_y, w=foto_w, h=foto_h)
+                        # Marco verde
+                        pdf.set_draw_color(90, 154, 124)
+                        pdf.set_line_width(1.5)
+                        pdf.ellipse(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
+                except Exception:
+                    pass
 
-                # Datos principales (alineados a la derecha de la foto)
-                pdf.set_xy(datos_x, datos_y)
-                pdf.set_font("Arial", 'B', 13)
-                pdf.set_text_color(30, 60, 114)
-                pdf.cell(0, 8, "Información del jugador", 0, 1, 'L')
-                pdf.set_font("Arial", '', 11)
-                pdf.set_text_color(30, 60, 114)
-                info = []
-                info.append(f"Club: {sanitizar_texto_pdf(jugador.get('Club', ''))}")
-                info.append(f"Posición: {sanitizar_texto_pdf(jugador.get('Posición', ''))}")
-                info.append(f"Edad: {sanitizar_texto_pdf(str(jugador.get('Edad', '')))}")
-                info.append(f"Nacionalidad: {sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))}")
-                info.append(f"Pie hábil: {sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))}")
-                for dato in info:
-                    pdf.set_x(datos_x)
-                    pdf.cell(0, 7, dato, 0, 1, 'L')
+            # Datos principales (alineados a la derecha de la foto)
+            pdf.set_xy(datos_x, datos_y)
+            pdf.set_font("Arial", 'B', 13)
+            pdf.set_text_color(30, 60, 114)
+            pdf.cell(0, 8, "Información del jugador", 0, 1, 'L')
+            pdf.set_font("Arial", '', 11)
+            pdf.set_text_color(30, 60, 114)
+            info = []
+            info.append(f"Club: {sanitizar_texto_pdf(jugador.get('Club', ''))}")
+            info.append(f"Posición: {sanitizar_texto_pdf(jugador.get('Posición', ''))}")
+            info.append(f"Edad: {sanitizar_texto_pdf(str(jugador.get('Edad', '')))}")
+            info.append(f"Nacionalidad: {sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))}")
+            info.append(f"Pie hábil: {sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))}")
+            for dato in info:
+                pdf.set_x(datos_x)
+                pdf.cell(0, 7, dato, 0, 1, 'L')
 
-                # Descripción del jugador (debajo de datos, alineada con datos)
-                desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
-                if desc:
-                    pdf.set_xy(datos_x, datos_y + 40)
-                    pdf.set_font("Arial", 'I', 11)
-                    pdf.set_text_color(90, 154, 124)
-                    pdf.multi_cell(120, 7, desc, 0, 'L')
+            # Descripción del jugador (debajo de datos, alineada con datos)
+            desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
+            if desc:
+                pdf.set_xy(datos_x, datos_y + 40)
+                pdf.set_font("Arial", 'I', 11)
+                pdf.set_text_color(90, 154, 124)
+                pdf.multi_cell(120, 7, desc, 0, 'L')
 
-                # Línea decorativa debajo de la sección de datos y descripción
-                pdf.set_draw_color(90, 154, 124)
-                pdf.set_line_width(0.5)
-                y_linea = max(datos_y + 48, pdf.get_y() + 4)
-                pdf.line(15, y_linea, 195, y_linea)
+            # Línea decorativa debajo de la sección de datos y descripción
+            pdf.set_draw_color(90, 154, 124)
+            pdf.set_line_width(0.5)
+            y_linea = max(datos_y + 48, pdf.get_y() + 4)
+            pdf.line(15, y_linea, 195, y_linea)
 
-                # ...resto del código...
+            # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         # Asegurar ID_Jugador es string en dataframe limpio
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

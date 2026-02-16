@@ -1629,7 +1629,7 @@ if menu == "Ver informes":
                             pdf.multi_cell(
                                 0, 6,
                                 f"- {inf['Fecha_Partido']} | {inf['Scout']} | {inf['Línea']}\n"
-                                f"{inf['Observaciones'][:300]}"
+                                f"{inf['Observaciones'][:1000]}"
                             )
                             pdf.ln(2)
 

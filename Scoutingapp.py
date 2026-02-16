@@ -945,12 +945,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # Aplicar fondo claro a toda la página
         pdf.set_fill_color(*COLOR_GRIS_FONDO)
         pdf.rect(0, 0, pdf.w, pdf.h, 'F')  # Fondo completo
-
-        # Líneas decorativas horizontales
-        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(0.5)
-        for y in range(30, int(pdf.h), 40):
-            pdf.line(10, y, pdf.w - 10, y)
+        # Eliminar líneas decorativas horizontales innecesarias
 
         # Ancho disponible
         page_width = pdf.w - pdf.l_margin - pdf.r_margin  # ~186mm en A4
@@ -958,23 +953,24 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # =========================================
         # ENCABEZADO: Título con diseño futurista
         # =========================================
+        pdf.ln(8)
         pdf.set_font("Arial", "B", 22)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        pdf.cell(0, 12, "Reporte de Scouting Profesional", ln=True, align="C")
-
+        pdf.cell(0, 12, "Reporte de Scouting", ln=True, align="C")
+        pdf.ln(2)
         pdf.set_font("Arial", "I", 10)
         pdf.set_text_color(120, 120, 120)
         ahora = datetime.now()
         meses_es = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
         fecha_generado = f"{ahora.day} de {meses_es[ahora.month - 1]} de {ahora.year}"
         pdf.cell(0, 6, f"Generado: {fecha_generado}", ln=True, align="C")
-
-        # Línea decorativa inferior
+        pdf.ln(4)
+        # Línea decorativa superior
         pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
         pdf.set_line_width(1)
-        y_linea = pdf.get_y() + 2
-        pdf.line(pdf.l_margin, y_linea, pdf.w - pdf.r_margin, y_linea)
+        y_linea_sup = pdf.get_y()
+        pdf.line(pdf.l_margin, y_linea_sup, pdf.w - pdf.r_margin, y_linea_sup)
         pdf.ln(8)
         
         # =========================================
@@ -1002,7 +998,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         # Fondo sutil para la sección de datos
         pdf.set_fill_color(255, 255, 255)
-        pdf.rect(pdf.l_margin, y_inicio - 1, page_width, 50, 'F')
+        pdf.rect(pdf.l_margin, y_inicio + 2, page_width, 48, 'F')
 
         # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO Y SOMBRA
         if foto_disponible and temp_path:
@@ -1068,9 +1064,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         pdf.set_y(y_separador)
         
-        # Línea decorativa verde
+        # Línea decorativa inferior
         pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(1.2)
+        pdf.set_line_width(1)
         pdf.line(pdf.l_margin, y_separador, pdf.w - pdf.r_margin, y_separador)
         pdf.ln(8)
         

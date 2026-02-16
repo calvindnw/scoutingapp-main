@@ -607,7 +607,6 @@ def login_ui():
 
     if st.session_state["user"]:
         st.sidebar.markdown(f"<b>Usuario:</b> {st.session_state['user']}", unsafe_allow_html=True)
-        st.sidebar.markdown(f"<b>Rol:</b> {st.session_state['role']}", unsafe_allow_html=True)
         if st.sidebar.button("Cerrar sesión"):
             st.session_state["user"] = None
             st.session_state["role"] = None

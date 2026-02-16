@@ -1395,6 +1395,7 @@ if menu == "Jugadores":
                             nuevo_representante or ""                 # 19 Representante
                         ]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
+                        st.success("✅ Jugador guardado correctamente.")
                         st.cache_data.clear()
                         st.rerun()
                     except Exception as e:

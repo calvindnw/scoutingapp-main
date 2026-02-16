@@ -1012,8 +1012,22 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         if posicion:
             info.append(f"Posición: {posicion}")
 
-        # Edad
-        edad = sanitizar_texto_pdf(str(jugador.get('Edad', '')))
+        # Edad: calcular si no está presente o es inválida
+        edad_val = jugador.get('Edad', '')
+        if not edad_val or edad_val in ['-', 'None', None, 'nan', 'NaN', '']:
+            # Intentar calcular desde Fecha_Nac
+            fecha_nac = jugador.get('Fecha_Nac', '')
+            try:
+                from datetime import datetime, date
+                if fecha_nac and fecha_nac not in ['-', 'None', None, 'nan', 'NaN', '']:
+                    fn = datetime.strptime(str(fecha_nac), "%d/%m/%Y")
+                    hoy = date.today()
+                    edad_val = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+                else:
+                    edad_val = "-"
+            except Exception:
+                edad_val = "-"
+        edad = sanitizar_texto_pdf(str(edad_val))
         if edad and edad != "-":
             info.append(f"Edad: {edad} años")
 

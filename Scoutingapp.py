@@ -997,27 +997,29 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         y_inicio = pdf.get_y()
         
         # Fondo sutil para la sección de datos
+        cuadro_y = y_inicio + 4
+        cuadro_h = 48
         pdf.set_fill_color(255, 255, 255)
-        pdf.rect(pdf.l_margin, y_inicio + 2, page_width, 48, 'F')
+        pdf.rect(pdf.l_margin, cuadro_y, page_width, cuadro_h, 'F')
 
         # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO Y SOMBRA
         if foto_disponible and temp_path:
             # Sombra
             pdf.set_draw_color(200, 220, 200)
             pdf.set_line_width(2)
-            pdf.rect(pdf.l_margin + 2, y_inicio + 2, 35, 44)
+            pdf.rect(pdf.l_margin + 2, cuadro_y + 2, 35, 44)
             # Marco verde sutil alrededor de la foto
             pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
             pdf.set_line_width(1.5)
-            pdf.rect(pdf.l_margin - 1.5, y_inicio - 1.5, 35 + 3, 44 + 3)
+            pdf.rect(pdf.l_margin - 1.5, cuadro_y - 1.5, 35 + 3, 44 + 3)
             # Foto en el centro del marco
-            pdf.image(temp_path, x=pdf.l_margin, y=y_inicio, w=35, h=44)
-            x_datos = pdf.l_margin + 35 + 6  # 6mm de espaciado
+            pdf.image(temp_path, x=pdf.l_margin, y=cuadro_y, w=35, h=44)
+            x_datos = pdf.l_margin + 35 + 12  # 12mm de espaciado para mejor alineación
         else:
-            x_datos = pdf.l_margin + 6
+            x_datos = pdf.l_margin + 12
 
         # COLUMNA DERECHA: DATOS DEL JUGADOR
-        pdf.set_xy(x_datos, y_inicio)
+        pdf.set_xy(x_datos, cuadro_y + 2)
         pdf.set_font("Arial", "B", 16)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
 
@@ -1025,7 +1027,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         col_width = pdf.w - x_datos - pdf.r_margin
 
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 8, nombre, ln=True)
+        pdf.cell(col_width, 10, nombre, ln=True)
 
         # Datos del jugador - Compacto y limpio
         pdf.set_font("Arial", "", 12)
@@ -1034,12 +1036,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         club = jugador_limpio.get("Club", "-").strip()
         posicion = jugador_limpio.get("Posición", "-").strip()
-        pdf.cell(col_width, 6, f"Club: {club}  |  Posición: {posicion}", ln=True)
+        pdf.cell(col_width, 8, f"Club: {club}  |  Posición: {posicion}", ln=True)
 
         liga = jugador_limpio.get("Liga", "-").strip()
         nacionalidad = jugador_limpio.get("Nacionalidad", "-").strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 6, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
+        pdf.cell(col_width, 8, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
 
         # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
@@ -1050,7 +1052,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "", 11)
         pdf.set_text_color(100, 100, 100)
         info_fisica = f"Edad: {edad} años  |  Altura: {altura} cm  |  Pie: {pie}"
-        pdf.cell(col_width, 5, info_fisica, ln=True)
+        pdf.cell(col_width, 7, info_fisica, ln=True)
         
         # =========================================
         # SEPARADOR ELEGANTE ENTRE SECCIONES
@@ -1108,16 +1110,16 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.ln(2)
                 
                 # Fecha y Partido (YA SANITIZADOS DEL DATAFRAME LIMPIO)
-                pdf.set_font("Arial", "B", 10)
+                pdf.set_font("Arial", "B", 12)
                 pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
-                
+
                 fecha_str = inf.get("Fecha_Partido", "").strip()
                 equipos_str = inf.get("Equipos_Resultados", "").strip()
-                
+
                 if fecha_str:
-                    pdf.cell(0, 4, f"Fecha: {fecha_str}", ln=True)
+                    pdf.cell(0, 6, f"Fecha: {fecha_str}", ln=True)
                 if equipos_str:
-                    pdf.cell(0, 4, f"Partido: {equipos_str}", ln=True)
+                    pdf.cell(0, 6, f"Partido: {equipos_str}", ln=True)
                 
                 # Observaciones - AUMENTADO A 11pt (+1 punto) - YA SANITIZADO
                 observaciones = inf.get("Observaciones", "").strip()

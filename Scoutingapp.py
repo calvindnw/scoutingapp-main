@@ -1344,6 +1344,7 @@ if menu == "Jugadores":
                     nueva_liga = st.selectbox("Liga", opciones_ligas, index=0)
                     nueva_nacionalidad = st.selectbox("Nacionalidad", opciones_paises, index=0)
                     nueva_seg_nac = st.selectbox("Segunda nacionalidad", [""] + opciones_paises, index=0)
+                    nueva_descripcion = st.text_area("Descripción del jugador", value="", height=80)
                     nueva_caracteristica = st.multiselect("Características", opciones_caracteristicas, default=[])
                     nueva_url_foto = st.text_input("URL Foto", value="")
                     nueva_url_perfil = st.text_input("URL Perfil", value="")
@@ -1383,12 +1384,12 @@ if menu == "Jugadores":
                             car_str,                                   # 8 Caracteristica
                             nuevo_club or "",                         # 9 Club
                             nueva_liga or opciones_ligas[0],           # 10 Liga
-                            "",                                       # 11 Descripcion
+                            nueva_descripcion or "",                  # 11 Descripcion
                             "",                                       # 12 Sexo
                             nueva_url_foto or "",                     # 13 URL_Foto
                             nueva_url_perfil or "",                   # 14 URL_Perfil
-                            nueva_fecha_fin_contrato or "",           # 15 Fin de contrato
-                            nueva_instagram or "",                    # 16 Instagram
+                            nueva_instagram or "",                    # 15 Instagram
+                            nueva_fecha_fin_contrato or "",           # 16 Fin de contrato
                             nueva_video or "",                        # 17 URL Video
                             nuevo_telefono or "",                     # 18 Teléfono
                             nuevo_representante or ""                 # 19 Representante

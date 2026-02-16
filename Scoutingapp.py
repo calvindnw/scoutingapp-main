@@ -1203,6 +1203,11 @@ if menu == "Jugadores":
                     e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", "")))
                     e_representante = st.text_input("Representante", value=str(jugador.get("representante", "")))
 
+                # Campos full-width adicionales para asegurar visibilidad
+                e_video = st.text_input("URL Video", value=str(jugador.get("video_url", ""))) if 'e_video' not in locals() else e_video
+                e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", ""))) if 'e_telefono' not in locals() else e_telefono
+                e_representante = st.text_input("Representante", value=str(jugador.get("representante", ""))) if 'e_representante' not in locals() else e_representante
+
                 guardar_ed = st.form_submit_button("💾 Guardar cambios")
 
                 if guardar_ed:

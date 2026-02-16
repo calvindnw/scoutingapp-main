@@ -1011,20 +1011,19 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         # COLUMNA DERECHA: DATOS DEL JUGADOR
         pdf.set_xy(x_datos, cuadro_y + 2)
-        pdf.set_font("Arial", "B", 16)
-        pdf.set_text_color(*COLOR_GRIS_OSCURO)
-
-        nombre = jugador_limpio.get("Nombre", "SIN NOMBRE")
         col_width = pdf.w - x_datos - pdf.r_margin
 
+        # Nombre
+        pdf.set_font("Arial", "B", 16)
+        pdf.set_text_color(*COLOR_GRIS_OSCURO)
+        nombre = jugador_limpio.get("Nombre", "SIN NOMBRE")
         pdf.set_x(x_datos)
         pdf.cell(col_width, 10, nombre, ln=True)
 
-        # Datos del jugador - Compacto y limpio
+        # Resto de datos (unificados en color y tamaño)
         pdf.set_font("Arial", "", 12)
         pdf.set_text_color(*COLOR_TEXTO)
         pdf.set_x(x_datos)
-
         club = jugador_limpio.get("Club", "-").strip()
         posicion = jugador_limpio.get("Posición", "-").strip()
         pdf.cell(col_width, 8, f"Club: {club}  |  Posición: {posicion}", ln=True)
@@ -1034,16 +1033,23 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_x(x_datos)
         pdf.cell(col_width, 8, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
 
-        # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
         altura = jugador_limpio.get("Altura", "-").strip()
         pie = jugador_limpio.get("Pie_Hábil", "-").strip()
-
         pdf.set_x(x_datos)
-        pdf.set_font("Arial", "", 11)
-        pdf.set_text_color(100, 100, 100)
         info_fisica = f"Edad: {edad} años  |  Altura: {altura} cm  |  Pie: {pie}"
-        pdf.cell(col_width, 7, info_fisica, ln=True)
+        pdf.cell(col_width, 8, info_fisica, ln=True)
+
+        # Descripción del jugador (si existe)
+        descripcion = jugador.get("Descripcion", "") or jugador.get("Descripción", "")
+        descripcion = sanitizar_texto_pdf(str(descripcion)) if descripcion else ""
+        if descripcion and descripcion.strip() and descripcion.lower() not in ["-", "nan", "none"]:
+            pdf.set_x(x_datos)
+            pdf.set_font("Arial", "I", 12)
+            pdf.set_text_color(80, 80, 80)
+            pdf.multi_cell(col_width, 7, descripcion, align="L")
+            pdf.set_font("Arial", "", 12)
+            pdf.set_text_color(*COLOR_TEXTO)
         
         # =========================================
         # SEPARADOR ELEGANTE ENTRE SECCIONES

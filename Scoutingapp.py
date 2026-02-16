@@ -968,7 +968,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         pdf.set_font("Arial", "B", 13)
         pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.cell(0, 8, "📋 Evaluaciones", ln=True)
+        pdf.cell(0, 8, "Evaluaciones", ln=True)
         
         pdf.set_text_color(0, 0, 0)
         pdf.ln(1)
@@ -999,9 +999,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 equipos_str = str(inf.get("Equipos_Resultados", "")).strip()
                 
                 if fecha_str:
-                    pdf.cell(0, 4, f"📅 {fecha_str}", ln=True)
+                    pdf.cell(0, 4, f"Fecha: {fecha_str}", ln=True)
                 if equipos_str:
-                    pdf.cell(0, 4, f"⚽ {equipos_str}", ln=True)
+                    pdf.cell(0, 4, f"Partido: {equipos_str}", ln=True)
                 
                 # Observaciones - AUMENTADO A 9.5pt (+1 punto)
                 observaciones = str(inf.get("Observaciones", "")).strip()
@@ -1915,12 +1915,12 @@ if menu == "Ver informes":
                 # =========================================================
                 # EXPORTAR PDF COMPLETO (CON FOTO E INFORMACIÓN COMPLETA)
                 # =========================================================
-                if st.button("📥 Descargar informe completo", key=f"pdf_{j['ID_Jugador']}"):
+                if st.button("📥 Descargar ahora", key=f"pdf_{j['ID_Jugador']}"):
                     buffer = generar_pdf_reporte_completo(j, df_reports)
                     
                     if buffer:
                         st.download_button(
-                            "📥 Descargar informe completo",
+                            "📥 Descargar ahora",
                             buffer,
                             file_name=f"Reporte_Scouting_{j['Nombre'].replace(' ', '_')}.pdf",
                             mime="application/pdf",

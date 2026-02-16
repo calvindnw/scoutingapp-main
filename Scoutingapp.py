@@ -611,7 +611,7 @@ def login_ui():
         if st.sidebar.button("Cerrar sesión"):
             st.session_state["user"] = None
             st.session_state["role"] = None
-            st.experimental_rerun()
+            st.rerun()
         return True
 
     with st.sidebar.form("login_form"):
@@ -625,7 +625,7 @@ def login_ui():
             st.session_state["user"] = match.iloc[0]["Usuario"]
             st.session_state["role"] = match.iloc[0]["Rol"]
             st.success(f"Bienvenido, {st.session_state['user']} ({st.session_state['role']})")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuario o contraseña incorrectos")
     return False

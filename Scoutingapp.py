@@ -77,117 +77,75 @@ from datetime import datetime, timedelta
 # --- CONFIGURACIÓN GENERAL ---
 SCOPE = [
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
-CREDS_PATH = os.path.join("credentials", "credentials.json")
+        try:
+            # Tomar informes según rol
+            if CURRENT_ROLE == "admin":
+                df_reports_v = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
+            else:
+                df_reports_v = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
 
-# Control de lectura para evitar exceso de requests
-if "ultima_lectura" not in st.session_state:
-    st.session_state["ultima_lectura"] = datetime.now() - timedelta(seconds=5)
+            df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
 
+            # Normalizar
+            if not df_reports_v.empty and "ID_Jugador" in df_reports_v.columns:
+                df_reports_v["ID_Jugador"] = df_reports_v["ID_Jugador"].astype(str)
+            if not df_players_v.empty and "ID_Jugador" in df_players_v.columns:
+                df_players_v["ID_Jugador"] = df_players_v["ID_Jugador"].astype(str)
 
-# =========================================================
-# CONEXIÓN
-# =========================================================
-def conectar_sheets():
-    try:
-        if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
-            creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
-            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
-        else:
-            if not os.path.exists(CREDS_PATH):
-                st.error("❌ Falta credentials.json o secreto en Streamlit Cloud.")
-                st.stop()
-            creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
+            # Filtrar informes del jugador directamente
+            informes_j = df_reports_v[df_reports_v["ID_Jugador"] == str(id_jugador)].copy()
 
-        client = gspread.authorize(creds)
-        return client.open_by_key(SHEET_ID)
-    except Exception as e:
-        st.error(f"⚠️ No se pudo conectar con Google Sheets: {e}")
-        st.stop()
+            if informes_j.empty:
+                st.info("No hay informes cargados para este jugador.")
+            else:
+                # Añadir Nombre y Club a partir de df_players_v
+                try:
+                    lookup = df_players_v.set_index("ID_Jugador")
+                    informes_j["Nombre"] = informes_j["ID_Jugador"].map(lambda x: lookup.loc[str(x), "Nombre"] if str(x) in lookup.index else "")
+                    informes_j["Club"] = informes_j["ID_Jugador"].map(lambda x: lookup.loc[str(x), "Club"] if str(x) in lookup.index else "")
+                except Exception:
+                    pass
 
+                columnas = ["Fecha_Informe", "Nombre", "Club", "Línea", "Scout", "Equipos_Resultados", "Observaciones"]
+                df_tabla = informes_j[[c for c in columnas if c in informes_j.columns]].copy()
 
-# =========================================================
-# OBTENER O CREAR HOJA
-# =========================================================
-def obtener_hoja(nombre_hoja: str, columnas_base: list = None):
-    try:
-        book = conectar_sheets()
-        hojas = [ws.title for ws in book.worksheets()]
-        if nombre_hoja not in hojas:
-            ws = book.add_worksheet(title=nombre_hoja, rows=500, cols=20)
-            if columnas_base:
-                ws.append_row(columnas_base)
-            st.warning(f"⚠️ Hoja '{nombre_hoja}' creada automáticamente.")
-            return ws
-        return book.worksheet(nombre_hoja)
-    except Exception as e:
-        st.error(f"⚠️ Error al obtener hoja '{nombre_hoja}': {e}")
-        st.stop()
+                try:
+                    df_tabla["Fecha_dt"] = pd.to_datetime(df_tabla["Fecha_Informe"], format="%d/%m/%Y", errors="coerce")
+                    df_tabla = df_tabla.sort_values("Fecha_dt", ascending=False).drop(columns="Fecha_dt")
+                except Exception:
+                    pass
 
+                gb = GridOptionsBuilder.from_dataframe(df_tabla)
+                gb.configure_selection("single", use_checkbox=False)
+                gb.configure_pagination(enabled=True, paginationAutoPageSize=True)
+                gb.configure_grid_options(domLayout="normal")
 
-def col_letter(n: int) -> str:
-    """Convierte un índice 1-based a la letra(s) correspondiente de columna (A, B, ..., Z, AA, AB...)."""
-    s = ""
-    while n > 0:
-        n, r = divmod(n - 1, 26)
-        s = chr(65 + r) + s
-    return s
+                widths = {"Fecha_Informe": 100, "Nombre": 150, "Club": 130, "Línea": 120, "Scout": 120, "Equipos_Resultados": 150, "Observaciones": 420}
+                for c in df_tabla.columns:
+                    if c == "Observaciones":
+                        gb.configure_column(c, wrapText=True, autoHeight=True, width=widths[c])
+                    else:
+                        gb.configure_column(c, width=widths.get(c, 120))
 
+                grid_response = AgGrid(df_tabla, gridOptions=gb.build(), fit_columns_on_grid_load=True, theme="blue", height=300, allow_unsafe_jscode=True, update_mode="MODEL_CHANGED")
 
-# =========================================================
-# CARGAR DATOS (con control de tiempo)
-# =========================================================
-@st.cache_data(ttl=30)
-def _leer_datos(nombre_hoja: str):
-    ws = obtener_hoja(nombre_hoja)
-    return ws.get_all_records()
+                # Normalizar selección
+                selected_data = grid_response.get("selected_rows")
+                if selected_data is None:
+                    selected_data = []
+                elif isinstance(selected_data, pd.DataFrame):
+                    selected_data = selected_data.to_dict("records")
+                elif isinstance(selected_data, dict):
+                    selected_data = [selected_data]
+                elif not isinstance(selected_data, list):
+                    selected_data = []
 
-
-def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
-    try:
-        ahora = datetime.now()
-        if ahora - st.session_state["ultima_lectura"] < timedelta(seconds=2):
-            time.sleep(1)
-        st.session_state["ultima_lectura"] = ahora
-
-        data = _leer_datos(nombre_hoja)
-        df = pd.DataFrame(data)
-        if df.empty and columnas_base:
-            df = pd.DataFrame(columns=columnas_base)
-        return df
-    except Exception as e:
-        st.error(f"⚠️ Error al cargar '{nombre_hoja}': {e}")
-        return pd.DataFrame(columns=columnas_base or [])
-
-
-# =========================================================
-# ACTUALIZAR HOJA (BLINDADA - SIN BORRAR)
-# =========================================================
-def actualizar_hoja(nombre_hoja: str, df: pd.DataFrame):
-    """
-    Actualiza sin borrar datos previos.
-    Si existe el ID, actualiza esa fila. Si no, la agrega.
-    Nunca borra toda la hoja.
-    """
-    try:
-        ws = obtener_hoja(nombre_hoja, list(df.columns))
-        data_actual = ws.get_all_records()
-        df_actual = pd.DataFrame(data_actual)
-
-        # Si la hoja está vacía, crea desde cero
-        if df_actual.empty:
-            ws.update([df.columns.values.tolist()] + df.values.tolist())
-            st.toast(f"✅ Hoja '{nombre_hoja}' creada y actualizada.", icon="💾")
-            return
-
-        # Detectar columna de ID
-        id_col = None
-        for posible in ["ID_Jugador", "ID_Informe"]:
-            if posible in df.columns:
-                id_col = posible
-                break
+                if len(selected_data) > 0:
+                    jugador_sel = selected_data[0]
+                    st.markdown("#### Informe seleccionado")
+                    st.write(jugador_sel)
+        except Exception as e:
+            st.error(f"⚠️ Error al mostrar informes del jugador: {e}")
 
         # Fusión segura sin borrar
         if id_col:

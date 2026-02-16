@@ -794,6 +794,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
     Título: "Reporte de scouting"
     Excluye el nombre del Scout en los informes.
     Mantiene diseño simple y profesional.
+    Arregla: Márgenes y espacios horizontales correctos.
     """
     try:
         from fpdf import FPDF
@@ -801,27 +802,57 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         import requests
         from PIL import Image
         
+        # =========================================
+        # CONFIGURACIÓN INICIAL DEL PDF
+        # =========================================
         pdf = FPDF()
+        pdf.set_margins(left=10, top=10, right=10)  # Márgenes explícitos (10mm)
         pdf.add_page()
+        
+        # Ancho disponible: 210 - 10 (izq) - 10 (der) = 190mm
+        page_width = pdf.w - pdf.l_margin - pdf.r_margin
         
         # =========================================
         # ENCABEZADO: Título
         # =========================================
-        pdf.set_font("Arial", "B", 20)
+        pdf.set_font("Arial", "B", 16)
         pdf.set_text_color(90, 154, 124)  # Color acento #5a9a7c
-        pdf.cell(0, 15, "Reporte de Scouting", ln=True, align="C")
+        pdf.cell(0, 12, "Reporte de Scouting", ln=True, align="C")
         
         pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font("Arial", "", 9)
         pdf.cell(0, 5, f"Generado: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align="C")
-        pdf.ln(5)
+        pdf.ln(3)
         
         # =========================================
-        # SECCIÓN: FOTO + DATOS PRINCIPALES (lado a lado)
+        # SECCIÓN: DATOS PRINCIPALES DEL JUGADOR
         # =========================================
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(0, 0, 0)
         
-        # Intentar descargar y insertar foto
-        foto_disponible = False
+        nombre = str(jugador.get("Nombre", "SIN NOMBRE")).strip()
+        pdf.cell(0, 6, nombre, ln=True)
+        
+        pdf.set_font("Arial", "", 9)
+        
+        # Datos en formato clave: valor sin posicionamiento complejo
+        club = str(jugador.get("Club", "-")).strip()
+        posicion = str(jugador.get("Posición", "-")).strip()
+        pdf.cell(0, 4, f"Club: {club}  |  Posición: {posicion}", ln=True)
+        
+        liga = str(jugador.get("Liga", "-")).strip()
+        nacionalidad = str(jugador.get("Nacionalidad", "-")).strip()
+        pdf.cell(0, 4, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
+        
+        edad = calcular_edad(jugador.get("Fecha_Nac", ""))
+        altura = str(jugador.get("Altura", "-")).strip()
+        pdf.cell(0, 4, f"Edad: {edad} años  |  Altura: {altura} cm", ln=True)
+        
+        pie = str(jugador.get("Pie_Hábil", "-")).strip()
+        pdf.cell(0, 4, f"Pie hábil: {pie}", ln=True)
+        
+        # Intentar descargar e insertar foto (después de los datos principales)
+        foto_insertada = False
         try:
             url_foto = str(jugador.get("URL_Foto", "")).strip()
             if url_foto.startswith("http"):
@@ -833,128 +864,85 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     temp_path = "/tmp/temp_foto.jpg"
                     img.save(temp_path)
                     
-                    # Crear tabla con foto + datos
-                    pdf.set_font("Arial", "", 10)
+                    # Insertar foto con tamaño controlado
+                    # Ancho máximo 40mm para que quepa bien
+                    y_antes = pdf.get_y()
+                    pdf.ln(2)
+                    pdf.image(temp_path, x=10, w=40, h=50)
+                    foto_insertada = True
                     
-                    # Fila con foto a la izquierda
-                    col_x = pdf.get_x()
-                    col_y = pdf.get_y()
-                    
-                    # Foto (60mm de ancho)
-                    pdf.image(temp_path, x=15, y=col_y, w=50, h=60)
-                    
-                    # Datos a la derecha de la foto
-                    pdf.set_xy(75, col_y)
-                    pdf.set_font("Arial", "B", 12)
-                    pdf.cell(0, 8, jugador.get("Nombre", "SIN NOMBRE"), ln=True)
-                    
-                    pdf.set_font("Arial", "", 10)
-                    pdf.set_x(75)
-                    pdf.cell(0, 6, f"Club: {jugador.get('Club', '-')}", ln=True)
-                    pdf.set_x(75)
-                    pdf.cell(0, 6, f"Posición: {jugador.get('Posición', '-')}", ln=True)
-                    pdf.set_x(75)
-                    pdf.cell(0, 6, f"Liga: {jugador.get('Liga', '-')}", ln=True)
-                    pdf.set_x(75)
-                    pdf.cell(0, 6, f"Nacionalidad: {jugador.get('Nacionalidad', '-')}", ln=True)
-                    pdf.set_x(75)
-                    edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-                    pdf.cell(0, 6, f"Edad: {edad} años", ln=True)
-                    pdf.set_x(75)
-                    pdf.cell(0, 6, f"Altura: {jugador.get('Altura', '-')} cm", ln=True)
-                    
-                    # Avanzar más abajo para el siguiente contenido
-                    pdf.ln(15)
-                    
-                    foto_disponible = True
+                    # Saltar espacio después de la foto
+                    pdf.ln(8)
                     
         except Exception:
             pass
         
-        # Si no hay foto, mostrar datos solo
-        if not foto_disponible:
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 8, jugador.get("Nombre", "SIN NOMBRE"), ln=True)
-            
-            pdf.set_font("Arial", "", 10)
-            pdf.cell(0, 6, f"Club: {jugador.get('Club', '-')}", ln=True)
-            pdf.cell(0, 6, f"Posición: {jugador.get('Posición', '-')}", ln=True)
-            pdf.cell(0, 6, f"Liga: {jugador.get('Liga', '-')}", ln=True)
-            pdf.cell(0, 6, f"Nacionalidad: {jugador.get('Nacionalidad', '-')}", ln=True)
-            edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-            pdf.cell(0, 6, f"Edad: {edad} años", ln=True)
-            pdf.cell(0, 6, f"Altura: {jugador.get('Altura', '-')} cm", ln=True)
-            pdf.cell(0, 6, f"Pie hábil: {jugador.get('Pie_Hábil', '-')}", ln=True)
-            pdf.ln(5)
+        pdf.ln(3)
         
         # =========================================
-        # SECCIÓN: INFORMES EVALUACIÓN (Partido a Partido)
+        # SECCIÓN: INFORMES EVALUACIÓN
         # =========================================
-        pdf.set_font("Arial", "B", 12)
+        pdf.set_font("Arial", "B", 11)
         pdf.set_text_color(90, 154, 124)
-        pdf.cell(0, 8, "Evaluaciones Partido a Partido", ln=True)
+        pdf.cell(0, 7, "Evaluaciones Partido a Partido", ln=True)
         
         pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "", 9)
+        pdf.set_font("Arial", "", 8)
+        pdf.ln(1)
         
         informes = df_reports[df_reports["ID_Jugador"] == jugador["ID_Jugador"]].sort_values(
             "Fecha_Partido", ascending=False
         )
         
         if informes.empty:
-            pdf.multi_cell(0, 6, "Sin evaluaciones registradas", border=1)
+            pdf.multi_cell(0, 5, "Sin evaluaciones registradas")
         else:
             for idx, (_, inf) in enumerate(informes.iterrows()):
                 # Separador entre informes
                 if idx > 0:
-                    pdf.ln(2)
+                    pdf.ln(1)
                 
                 # Encabezado del informe (sin Scout)
-                pdf.set_font("Arial", "B", 10)
-                pdf.set_fill_color(230, 230, 230)  # Fondo gris claro
+                pdf.set_font("Arial", "B", 9)
                 fecha_str = str(inf.get("Fecha_Partido", "")).strip()
                 linea_str = str(inf.get("Línea", "")).strip()
                 
                 titulo_inf = f"Fecha: {fecha_str} | Decisión: {linea_str}"
-                pdf.multi_cell(0, 6, titulo_inf, fill=True, border=1)
+                # Usar ancho calculated correctamente
+                pdf.set_fill_color(220, 220, 220)
+                pdf.multi_cell(page_width, 4, titulo_inf, fill=True, border=1)
                 
                 # Equipos y resultado
                 equipos = str(inf.get("Equipos_Resultados", "")).strip()
                 if equipos:
-                    pdf.set_font("Arial", "", 9)
-                    pdf.multi_cell(0, 5, f"Equipos: {equipos}", border=0)
+                    pdf.set_font("Arial", "", 8)
+                    pdf.multi_cell(page_width, 3, f"Equipos: {equipos}")
                 
                 # Formación
                 formacion = str(inf.get("Formación", "")).strip()
                 if formacion and formacion != "-":
-                    pdf.set_font("Arial", "", 9)
-                    pdf.multi_cell(0, 5, f"Formación: {formacion}", border=0)
+                    pdf.set_font("Arial", "", 8)
+                    pdf.multi_cell(page_width, 3, f"Formación: {formacion}")
                 
-                # Línea de juego
-                linea_juego = str(inf.get("Línea", "")).strip()
-                if linea_juego and linea_juego != "-":
-                    pdf.set_font("Arial", "", 9)
-                    pdf.cell(0, 5, f"Línea de juego: {linea_juego}", ln=True)
-                
-                # Observaciones (truncadas a 500 caracteres)
+                # Observaciones
                 observaciones = str(inf.get("Observaciones", "")).strip()
                 if observaciones:
-                    pdf.set_font("Arial", "", 9)
-                    obs_truncada = observaciones[:800]  # Limitar a 800 caracteres
-                    pdf.multi_cell(0, 5, f"Observaciones: {obs_truncada}", border=0)
+                    pdf.set_font("Arial", "", 8)
+                    obs_truncada = observaciones[:1000]
+                    pdf.multi_cell(page_width, 3, f"Observaciones: {obs_truncada}")
                 
-                pdf.ln(3)
+                pdf.ln(1)
         
         # =========================================
         # FOOTER
         # =========================================
-        pdf.ln(10)
-        pdf.set_font("Arial", "", 8)
+        pdf.ln(3)
+        pdf.set_font("Arial", "", 7)
         pdf.set_text_color(150, 150, 150)
-        pdf.cell(0, 5, "ScoutingApp Profesional v2.3 | Reporte generado automáticamente", ln=True, align="C")
+        pdf.cell(0, 4, "ScoutingApp Profesional v2.3 | Reporte generado automáticamente", ln=True, align="C")
         
         # =========================================
-        # RETORNAR PDF EN BUFFER
+        # RETORNAR PDF EN BUFFER (SIN ERRORES)
         # =========================================
         buffer = BytesIO()
         pdf.output(buffer)

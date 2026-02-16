@@ -953,21 +953,28 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(6)
 
         # FOTO Y DATOS (en la misma línea)
+
         foto_x = pdf.l_margin
         foto_y = pdf.get_y()
-        foto_w = 36
-        foto_h = 36
-        datos_x = foto_x + foto_w + 8
+        foto_w = 38
+        foto_h = 38
+        datos_x = foto_x + foto_w + 10
         datos_y = foto_y
         datos_w = pdf.w - pdf.r_margin - datos_x
 
-        # Foto del jugador
+        # Foto del jugador (cuadrada y alineada)
         url_foto = str(jugador.get("URL_Foto", "")).strip()
         if url_foto.startswith("http"):
             try:
                 response = requests.get(url_foto, timeout=5)
                 if response.status_code == 200:
                     img = Image.open(BytesIO(response.content)).convert("RGB")
+                    # Recortar a cuadrado si es necesario
+                    min_side = min(img.size)
+                    left = (img.width - min_side) // 2
+                    top = (img.height - min_side) // 2
+                    img = img.crop((left, top, left + min_side, top + min_side))
+                    img = img.resize((int(foto_w), int(foto_h)))
                     temp = BytesIO()
                     img.save(temp, format="JPEG")
                     temp.seek(0)
@@ -975,7 +982,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     # Marco verde
                     pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
                     pdf.set_line_width(1.2)
-                    pdf.ellipse(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
+                    pdf.rect(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
             except Exception:
                 pass
 
@@ -989,20 +996,25 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         info = []
         info.append(f"Club: {sanitizar_texto_pdf(jugador.get('Club', ''))}")
         info.append(f"Posición: {sanitizar_texto_pdf(jugador.get('Posición', ''))}")
-        info.append(f"Edad: {sanitizar_texto_pdf(str(jugador.get('Edad', '')))}")
+        edad = sanitizar_texto_pdf(str(jugador.get('Edad', '')))
+        altura = sanitizar_texto_pdf(str(jugador.get('Altura', '')))
+        if edad and edad != "-":
+            info.append(f"Edad: {edad}")
+        if altura and altura != "-":
+            info.append(f"Altura: {altura} cm")
         info.append(f"Nacionalidad: {sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))}")
         info.append(f"Pie hábil: {sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))}")
         for dato in info:
             pdf.set_x(datos_x)
             pdf.cell(datos_w, 7, dato, ln=True, align='L')
 
-        # Descripción del jugador (debajo de datos, alineada con datos)
+        # Descripción del jugador (debajo de datos, alineada con datos, justificada)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
         if desc:
             pdf.set_xy(datos_x, pdf.get_y())
             pdf.set_font("Arial", 'I', 11)
             pdf.set_text_color(90, 154, 124)
-            pdf.multi_cell(datos_w, 7, desc, 0, 'L')
+            pdf.multi_cell(datos_w, 7, desc, 0, 'J')
 
         # Línea decorativa debajo de la sección de datos y descripción
         pdf.set_draw_color(90, 154, 124)
@@ -1010,6 +1022,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         y_linea = max(foto_y + foto_h, pdf.get_y() + 2)
         pdf.line(margen_linea, y_linea, margen_linea + ancho_linea, y_linea)
         pdf.ln(4)
+
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         # Asegurar ID_Jugador es string en dataframe limpio
@@ -1051,7 +1064,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.set_text_color(*COLOR_TEXTO)
                     obs_truncada = observaciones[:1200]
                     obs_truncada = sanitizar_texto_pdf(obs_truncada)
-                    pdf.multi_cell(0, 6, obs_truncada, align="L")
+                    pdf.multi_cell(0, 6, obs_truncada, align="J")
         
         pdf.ln(2)
         

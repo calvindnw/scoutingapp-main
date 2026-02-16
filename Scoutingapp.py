@@ -616,33 +616,33 @@ def login_ui():
 
     if enviar:
         match = df_users[(df_users["Usuario"] == usuario) & (df_users["Contraseña"] == clave)]
-        if not match.empty:
-            rol = match.iloc[0]["Rol"]
-            st.session_state["user"] = usuario
-            st.session_state["role"] = rol
-            st.success(f"Bienvenido {usuario} ({rol})")
-            st.rerun()
-        else:
-            st.sidebar.error("Usuario o contraseña incorrectos")
-    return False
 
-
-if not login_ui():
-    st.stop()
-
-CURRENT_USER = st.session_state["user"]
-CURRENT_ROLE = st.session_state["role"]
-
-st.markdown(f"### 👤 {CURRENT_USER} ({CURRENT_ROLE})")
-st.markdown("---")
-
-# =========================================================
-# BLOQUE 2 / 5 — Funciones base + carga de datos + menú
-# =========================================================
-
-# ---------------------------------------------------------
-# FUNCIONES AUXILIARES
-# ---------------------------------------------------------
+                        if not index_row.empty:
+                            row_number = index_row[0] + 2
+                            e_car_str = ", ".join(e_car) if e_car else ""
+                            # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
+                            valores = [
+                                id_jugador,           # 0
+                                e_nombre,             # 1
+                                e_fecha,              # 2
+                                e_nac,                # 3
+                                e_seg,                # 4
+                                e_altura,             # 5
+                                e_pie,                # 6
+                                e_pos,                # 7
+                                e_car_str,            # 8
+                                e_club,               # 9
+                                e_liga,               # 10
+                                e_descripcion,        # 11 (NUEVO)
+                                "",                  # 12 (Sexo, si se usa)
+                                e_foto,               # 13
+                                e_link,               # 14
+                                e_instagram,          # 15
+                                e_fin_contrato,       # 16
+                                e_video,              # 17
+                                e_telefono,           # 18
+                                e_representante       # 19
+                            ]
 
 def calcular_edad(fecha_nac):
     try:
@@ -1172,6 +1172,7 @@ def cargar_datos():
     columnas_jug = [
         "ID_Jugador","Nombre","Fecha_Nac","Nacionalidad","Segunda_Nacionalidad",
         "Altura","Pie_Hábil","Posición","Caracteristica","Club","Liga",
+        "Descripcion",  # NUEVO CAMPO
         "Sexo","URL_Foto","URL_Perfil","Instagram","Fecha_Fin_Contrato",
         "video_url","telefono","representante"
     ]
@@ -1293,7 +1294,7 @@ if menu == "Jugadores":
 
     opciones_ligas = [
         "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A",
-        "Argentina - Proyección", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
+        "Argentina - Proyección", "Argentina - Regional Amateur", "Argentina - Promocional Amateur" "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
         "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
         "Uruguay - Segunda División", "Paraguay - División Profesional",
         "Colombia - Primera A", "Ecuador - LigaPro Serie A",
@@ -1388,6 +1389,8 @@ if menu == "Jugadores":
 
                         car_str = ", ".join(nueva_caracteristica)
 
+
+                        # Agregar campo de descripción (vacío por defecto en alta)
                         fila = [
                             nuevo_id,
                             nuevo_nombre,
@@ -1400,7 +1403,8 @@ if menu == "Jugadores":
                             car_str,
                             nuevo_club,
                             nueva_liga,
-                            "",
+                            "",  # Descripción (vacío en alta)
+                            "",  # Sexo
                             nueva_url_foto,
                             nueva_url_perfil,
                             nueva_instagram,
@@ -1589,6 +1593,13 @@ if menu == "Jugadores":
                     e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", "")))
                     e_representante = st.text_input("Representante", value=str(jugador.get("representante", "")))
 
+                    # Campo de descripción (debajo de las columnas)
+                    e_descripcion = st.text_area(
+                        "Descripción del jugador (párrafo introductorio)",
+                        value=str(jugador.get("Descripcion", "")),
+                        height=80
+                    )
+
                 # Campos full-width adicionales para asegurar visibilidad
                 e_video = st.text_input("URL Video", value=str(jugador.get("video_url", ""))) if 'e_video' not in locals() else e_video
                 e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", ""))) if 'e_telefono' not in locals() else e_telefono
@@ -1610,27 +1621,30 @@ if menu == "Jugadores":
                             row_number = index_row[0] + 2
                             e_car_str = ", ".join(e_car) if e_car else ""
 
-                            valores = [
-                                id_jugador,
-                                e_nombre,
-                                e_fecha,
-                                e_nac,
-                                e_seg,
-                                e_altura,
-                                e_pie,
-                                e_pos,
-                                e_car_str,
-                                e_club,
-                                e_liga,
-                                "",
-                                e_foto,
-                                e_link,
-                                e_instagram,
-                                e_fin_contrato,
-                                e_video,
-                                e_telefono,
-                                e_representante
-                            ]
+
+                                # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
+                                valores = [
+                                    id_jugador,           # 0
+                                    e_nombre,             # 1
+                                    e_fecha,              # 2
+                                    e_nac,                # 3
+                                    e_seg,                # 4
+                                    e_altura,             # 5
+                                    e_pie,                # 6
+                                    e_pos,                # 7
+                                    e_car_str,            # 8
+                                    e_club,               # 9
+                                    e_liga,               # 10
+                                    e_descripcion,        # 11 (NUEVO)
+                                    "",                  # 12 (Sexo, si se usa)
+                                    e_foto,               # 13
+                                    e_link,               # 14
+                                    e_instagram,          # 15
+                                    e_fin_contrato,       # 16
+                                    e_video,              # 17
+                                    e_telefono,           # 18
+                                    e_representante       # 19
+                                ]
 
                             last_col = col_letter(len(valores))
                             ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
@@ -1781,9 +1795,8 @@ if menu == "Jugadores":
                         ws_inf = obtener_hoja("Informes")
                         ws_inf.append_row(nuevo, value_input_option="USER_ENTERED")
 
-                        st.cache_data.clear()
-                        df_reports = df_reports_usercargar_datos_sheets("Informes")
 
+                        st.cache_data.clear()
                         st.toast(
                             f"✅ Informe guardado correctamente para {jugador['Nombre']}",
                             icon="✅"

@@ -948,14 +948,6 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "B", 22)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(0, 12, "Reporte de Scouting", ln=True, align="C")
-        pdf.ln(2)
-        pdf.set_font("Arial", "I", 10)
-        pdf.set_text_color(120, 120, 120)
-        ahora = datetime.now()
-        meses_es = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-        fecha_generado = f"{ahora.day} de {meses_es[ahora.month - 1]} de {ahora.year}"
-        pdf.cell(0, 6, f"Generado: {fecha_generado}", ln=True, align="C")
         pdf.ln(4)
         # Línea decorativa superior (ajustada para simetría)
         margen_linea = 18
@@ -2047,12 +2039,11 @@ if menu == "Ver informes":
                 # =========================================================
                 # EXPORTAR PDF COMPLETO (CON FOTO E INFORMACIÓN COMPLETA)
                 # =========================================================
-                if st.button("📥 Descargar ahora", key=f"pdf_{j['ID_Jugador']}"):
+                if st.button("📝 Generar informe", key=f"pdf_{j['ID_Jugador']}"):
                     buffer = generar_pdf_reporte_completo(j, df_reports)
-                    
                     if buffer:
                         st.download_button(
-                            "📥 Descargar ahora",
+                            "⬇️ Descargar PDF",
                             buffer,
                             file_name=f"Reporte_Scouting_{j['Nombre'].replace(' ', '_')}.pdf",
                             mime="application/pdf",

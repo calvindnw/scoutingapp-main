@@ -790,13 +790,15 @@ def radar_chart(prom_jugador, prom_posicion):
 # ---------------------------------------------------------
 def sanitizar_texto_pdf(texto):
     """
-    Sanitización AGRESIVA de caracteres especiales no soportados por FPDF.
-    Enfoque: Convertir CUALQUIER carácter especial a ASCII equivalente.
+    Sanitización SELECTIVA de caracteres especiales no soportados por FPDF.
+    - MANTIENE caracteres acentuados (á, é, í, ó, ú, ñ, etc.)
+    - ELIMINA solo símbolos especiales problemáticos
+    - Compatible con fuentes Latin-1 de FPDF
     """
     if not isinstance(texto, str):
         texto = str(texto)
     
-    # Primero: Reemplazos específicos de caracteres problemáticos
+    # Primero: Reemplazos de símbolos especiales PELIGROSOS (no acentos)
     reemplazos_especificos = {
         "•": "-",           # bullet point
         "○": "o",           # círculo vacío
@@ -860,17 +862,19 @@ def sanitizar_texto_pdf(texto):
     for viejo, nuevo in reemplazos_especificos.items():
         texto = texto.replace(viejo, nuevo)
     
-    # Segundo: Enfoque nuclear - convertir TODO a ASCII puro
-    # Usar 'replace' para caracteres no-ASCII en lugar de 'ignore'
-    texto = texto.encode('ascii', errors='replace').decode('ascii')
+    # Segundo: Usar encoding latin-1 (que FPDF SOPORTA natively)
+    # latin-1 soporta: á, é, í, ó, ú, ñ, ü y otros caracteres europeos
+    try:
+        # Intentar codificar como latin-1 (si falla, usamos replace)
+        texto = texto.encode('latin-1', errors='replace').decode('latin-1')
+    except:
+        # Fallback: usar ascii con replace
+        texto = texto.encode('ascii', errors='replace').decode('ascii')
     
-    # Tercero: Limpiar caracteres de reemplazo (?) que quedan
-    texto = texto.replace('?', '-')
-    
-    # Cuarto: Eliminar caracteres de control y no-imprimibles
+    # Tercero: Limpiar caracteres de control no-imprimibles
     texto = ''.join(c for c in texto if c.isprintable() or c.isspace())
     
-    # Quinto: Limpiar espacios múltiples
+    # Cuarto: Limpiar espacios múltiples
     texto = ' '.join(texto.split())
     
     return texto
@@ -959,10 +963,13 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
         pdf.cell(0, 10, "Reporte de Scouting", ln=True, align="C")
         
-        # Subtítulo con fecha
+        # Subtítulo con fecha en español
         pdf.set_font("Arial", "I", 9)
         pdf.set_text_color(120, 120, 120)
-        fecha_generado = sanitizar_texto_pdf(datetime.now().strftime('%d de %B de %Y'))
+        ahora = datetime.now()
+        meses_es = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+        fecha_generado = f"{ahora.day} de {meses_es[ahora.month - 1]} de {ahora.year}"
         pdf.cell(0, 5, f"Generado: {fecha_generado}", ln=True, align="C")
         
         # Línea decorativa inferior
@@ -1022,41 +1029,32 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         col_width = pdf.w - x_datos - pdf.r_margin
         
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 7, nombre, ln=True)
+        pdf.cell(col_width, 6, nombre, ln=True)
         
-        # Datos del jugador - Tipografía mejorada
-        pdf.set_font("Arial", "", 11)
-        pdf.set_text_color(80, 80, 80)
+        # Datos del jugador - Compacto y limpio
+        pdf.set_font("Arial", "", 10)
+        pdf.set_text_color(60, 60, 60)
+        pdf.set_x(x_datos)
         
-        datos = [
-            ("Club", jugador_limpio.get("Club", "-")),
-            ("Posición", jugador_limpio.get("Posición", "-")),
-            ("Liga", jugador_limpio.get("Liga", "-")),
-            ("Nacionalidad", jugador_limpio.get("Nacionalidad", "-")),
-        ]
+        club = jugador_limpio.get("Club", "-").strip()
+        posicion = jugador_limpio.get("Posición", "-").strip()
+        pdf.cell(col_width, 3.5, f"Club: {club}  |  Posición: {posicion}", ln=True)
         
-        for etiqueta, valor in datos:
-            pdf.set_x(x_datos)
-            pdf.set_font("Arial", "B", 10)
-            pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
-            pdf.cell(30, 4, f"{etiqueta}:", ln=False)
-            
-            pdf.set_font("Arial", "", 11)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(0, 4, valor.strip(), ln=True)
+        liga = jugador_limpio.get("Liga", "-").strip()
+        nacionalidad = jugador_limpio.get("Nacionalidad", "-").strip()
+        pdf.set_x(x_datos)
+        pdf.cell(col_width, 3.5, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
         
         # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-        altura = jugador_limpio.get("Altura", "-")
-        pie = jugador_limpio.get("Pie_Hábil", "-")
+        altura = jugador_limpio.get("Altura", "-").strip()
+        pie = jugador_limpio.get("Pie_Hábil", "-").strip()
         
         pdf.set_x(x_datos)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font("Arial", "", 9)
         pdf.set_text_color(100, 100, 100)
-        info_fisica = f"Edad: {edad} años | Altura: {altura} cm | Pie: {pie}"
-        pdf.cell(0, 4, info_fisica, ln=True)
-        
-        # Calcular Y position después de toda la sección
+        info_fisica = f"Edad: {edad} años  |  Altura: {altura} cm  |  Pie: {pie}"
+        pdf.cell(col_width, 3.5, info_fisica, ln=True)
         
         # =========================================
         # SEPARADOR ELEGANTE ENTRE SECCIONES
@@ -1144,21 +1142,20 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(2)
         
         # =========================================
-        # FOOTER PROFESIONAL
+        # FOOTER MINIMALISTA
         # =========================================
         pdf.ln(3)
-        pdf.set_font("Arial", "", 8)
+        pdf.set_font("Arial", "", 7)
         pdf.set_text_color(150, 150, 150)
         
-        # Línea divisoria antes del footer
+        # Línea divisoria sutil
         pdf.set_draw_color(200, 200, 200)
         pdf.set_line_width(0.3)
         y_footer_line = pdf.get_y()
         pdf.line(pdf.l_margin, y_footer_line, pdf.w - pdf.r_margin, y_footer_line)
         
         pdf.ln(2)
-        pdf.cell(0, 4, "ScoutingApp Profesional v2.3 | Reporte generado automaticamente", ln=True, align="C")
-        pdf.cell(0, 4, "Diseno futurista profesional - Fondo claro para maxima legibilidad", ln=True, align="C")
+        pdf.cell(0, 4, "ScoutingApp Profesional v2.3", ln=True, align="C")
         
         # =========================================
         # RETORNAR PDF EN BUFFER

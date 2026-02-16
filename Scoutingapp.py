@@ -1278,7 +1278,7 @@ if menu == "Jugadores":
 
     opciones_ligas = [
         "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A",
-        "Argentina - Proyección", "Argentina - Regional Amateur", "Argentina - Promocional Amateur" "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
+        "Argentina - Proyección", "Argentina - Regional Amateur", "Argentina - Promocional Amateur", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
         "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
         "Uruguay - Segunda División", "Paraguay - División Profesional",
         "Colombia - Primera A", "Ecuador - LigaPro Serie A",

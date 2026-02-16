@@ -1265,43 +1265,101 @@ if menu == "Jugadores":
         st.markdown("---")
         st.subheader("🗂️ Informes cargados sobre este jugador")
         try:
-            # Usar todos los informes para admin, o solo los del usuario para scout
+            # Construir df_reports y df_players según rol, luego unir y filtrar por jugador
             if CURRENT_ROLE == "admin":
-                df_reports_local = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
+                df_reports_v = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
+                df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
             else:
-                df_reports_local = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
+                df_reports_v = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
+                df_players_v = df_players_all.copy() if 'df_players_all' in globals() else df_players.copy()
 
-            if not df_reports_local.empty and "ID_Jugador" in df_reports_local.columns:
-                df_reports_local["ID_Jugador"] = df_reports_local["ID_Jugador"].astype(str)
+            # Normalizar IDs
+            if not df_reports_v.empty and "ID_Jugador" in df_reports_v.columns:
+                df_reports_v["ID_Jugador"] = df_reports_v["ID_Jugador"].astype(str)
+            if not df_players_v.empty and "ID_Jugador" in df_players_v.columns:
+                df_players_v["ID_Jugador"] = df_players_v["ID_Jugador"].astype(str)
 
-            informes_j = df_reports_local[df_reports_local["ID_Jugador"] == str(id_jugador)].copy()
+            # Unir
+            df_merged_local = df_reports_v.merge(df_players_v, on="ID_Jugador", how="left")
 
-            if informes_j.empty:
+            # Filtrar solo los informes del jugador actual
+            df_filtrado_j = df_merged_local[df_merged_local["ID_Jugador"] == str(id_jugador)].copy()
+
+            if df_filtrado_j.empty:
                 st.info("No hay informes cargados para este jugador.")
             else:
-                columnas_inf_view = ["Fecha_Informe", "Scout", "Línea", "Equipos_Resultados", "Observaciones"]
-                df_tabla_inf = informes_j[[c for c in columnas_inf_view if c in informes_j.columns]].copy()
+                columnas = [
+                    "Fecha_Informe", "Nombre", "Club",
+                    "Línea", "Scout", "Equipos_Resultados", "Observaciones"
+                ]
+                df_tabla = df_filtrado_j[[c for c in columnas if c in df_filtrado_j.columns]].copy()
 
-                gb_inf = GridOptionsBuilder.from_dataframe(df_tabla_inf)
-                gb_inf.configure_selection("single", use_checkbox=False)
-                gb_inf.configure_pagination(enabled=True, paginationAutoPageSize=True)
-                gb_inf.configure_grid_options(domLayout="normal")
+                try:
+                    df_tabla["Fecha_dt"] = pd.to_datetime(
+                        df_tabla["Fecha_Informe"],
+                        format="%d/%m/%Y",
+                        errors="coerce"
+                    )
+                    df_tabla = (
+                        df_tabla
+                        .sort_values("Fecha_dt", ascending=False)
+                        .drop(columns="Fecha_dt")
+                    )
+                except Exception:
+                    pass
 
-                grid_resp = AgGrid(
-                    df_tabla_inf,
-                    gridOptions=gb_inf.build(),
+                gb = GridOptionsBuilder.from_dataframe(df_tabla)
+                gb.configure_selection("single", use_checkbox=False)
+                gb.configure_pagination(enabled=True, paginationAutoPageSize=True)
+                gb.configure_grid_options(domLayout="normal")
+
+                widths = {
+                    "Fecha_Informe": 100,
+                    "Nombre": 150,
+                    "Club": 130,
+                    "Línea": 120,
+                    "Scout": 120,
+                    "Equipos_Resultados": 150,
+                    "Observaciones": 420
+                }
+
+                for c in df_tabla.columns:
+                    if c == "Observaciones":
+                        gb.configure_column(c, wrapText=True, autoHeight=True, width=widths[c])
+                    else:
+                        gb.configure_column(c, width=widths.get(c, 120))
+
+                grid_response = AgGrid(
+                    df_tabla,
+                    gridOptions=gb.build(),
                     fit_columns_on_grid_load=True,
                     theme="blue",
                     height=300,
                     allow_unsafe_jscode=True,
-                    update_mode="NO_UPDATE",
+                    update_mode="MODEL_CHANGED",
+                    custom_css={
+                        ".ag-header": {"background-color": "#1e3c72", "color": "white", "font-weight": "bold", "font-size": "13px"},
+                        ".ag-row-even": {"background-color": "#2a5298 !important", "color": "white !important"},
+                        ".ag-row-odd": {"background-color": "#3b6bbf !important", "color": "white !important"},
+                        ".ag-cell": {"white-space": "normal !important", "line-height": "1.25", "padding": "5px", "font-size": "12.5px"},
+                    },
                 )
 
-                selected = grid_resp.get("selected_rows")
-                if selected and len(selected) > 0:
-                    sel0 = selected[0]
+                # Normalizar selección
+                selected_data = grid_response.get("selected_rows")
+                if selected_data is None:
+                    selected_data = []
+                elif isinstance(selected_data, pd.DataFrame):
+                    selected_data = selected_data.to_dict("records")
+                elif isinstance(selected_data, dict):
+                    selected_data = [selected_data]
+                elif not isinstance(selected_data, list):
+                    selected_data = []
+
+                if len(selected_data) > 0:
+                    jugador_sel = selected_data[0]
                     st.markdown("#### Informe seleccionado")
-                    st.write(sel0)
+                    st.write(jugador_sel)
         except Exception as e:
             st.error(f"⚠️ Error al mostrar informes del jugador: {e}")
 

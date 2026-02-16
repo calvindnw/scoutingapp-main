@@ -1370,159 +1370,44 @@ if menu == "Jugadores":
                         df_sheet = pd.DataFrame(data_sheet)
 
                         if not df_sheet.empty and "ID_Jugador" in df_sheet.columns:
-                            max_id = pd.to_numeric(
-
-                                st.markdown(f"### {jugador['Nombre']}")
-
-                                if str(jugador.get("URL_Foto", "")).startswith("http"):
-                                    st.image(jugador["URL_Foto"], width=160)
-
-                                edad = calcular_edad(jugador.get("Fecha_Nac"))
-                                nac1 = jugador.get("Nacionalidad", "-")
-                                nac2 = jugador.get("Segunda_Nacionalidad", "")
-                                st.write(f"📅 Nacimiento: {jugador.get('Fecha_Nac', '')} ({edad} años)")
-                                st.write(f"🌍 Nacionalidad: {nac1 if not nac2 else f'{nac1}, {nac2}'})")
-                                st.write(f"📏 Altura: {jugador.get('Altura', '-') } cm")
-                                st.write(f"👟 Pie hábil: {jugador.get('Pie_Hábil', '-')}")
-                                st.write(f"🎯 Posición: {jugador.get('Posición', '-')}")
-                                st.write(f"🏟️ Club: {jugador.get('Club', '-') } ({jugador.get('Liga', '-')})")
-
-                                # Mostrar descripción si existe
-                                descripcion = jugador.get("Descripcion", "")
-                                if descripcion and str(descripcion).strip():
-                                    st.markdown("---")
-                                    st.markdown(f"<b>📝 Descripción:</b><br><span style='font-size:15px;color:#5a9a7c'>{descripcion}</span>", unsafe_allow_html=True)
-
-                                if jugador.get("Fecha_Fin_Contrato"):
-                                    st.write(f"📄 Fin de contrato: {jugador['Fecha_Fin_Contrato']}")
-
-                                if str(jugador.get("URL_Perfil", "")).startswith("http"):
-                                    st.markdown(f"[🌐 Perfil externo]({jugador['URL_Perfil']})")
-
-                                if str(jugador.get("video_url", "")).startswith("http"):
-                                    st.markdown(f"[🎬 Ver video]({jugador['video_url']})")
-
-                                if str(jugador.get("Instagram", "")).startswith("http"):
-                                    st.markdown(f"[📸 Instagram]({jugador['Instagram']})")
-
-                                st.write(f"📞 Teléfono: {jugador.get('telefono', '-')}")
-                                st.write(f"🧾 Representante: {jugador.get('representante', '-')}")
-
-                                # ⭐ AGREGAR A LISTA CORTA (POR SEMESTRE)
-                                if CURRENT_ROLE in ["admin", "scout"]:
-                                    if st.button("⭐ Agregar a lista corta"):
-                                        try:
-                                            ws_short = obtener_hoja("Lista corta")
-                                            data_short = ws_short.get_all_records()
-                                            df_short_local = pd.DataFrame(data_short)
-
-                                            from datetime import date
-                                            hoy = date.today()
-                                            ANIO_ACTUAL = hoy.year
-                                            SEMESTRE_ACTUAL = 1 if hoy.month <= 6 else 2
-
-                                            if not df_short_local.empty:
-                                                df_short_local["Fecha_Agregado_dt"] = pd.to_datetime(
-                                                    df_short_local["Fecha_Agregado"],
-                                                    format="%d/%m/%Y",
-                                                    errors="coerce"
-                                                )
-
-                                                df_short_local["Año"] = df_short_local["Fecha_Agregado_dt"].dt.year
-                                                df_short_local["Semestre"] = df_short_local["Fecha_Agregado_dt"].dt.month.apply(
-                                                    lambda m: 1 if m <= 6 else 2
-                                                )
-
-                                                existe = df_short_local[
-                                                    (df_short_local["ID_Jugador"].astype(str) == str(jugador["ID_Jugador"])) &
-                                                    (df_short_local["Agregado_Por"] == CURRENT_USER) &
-                                                    (df_short_local["Año"] == ANIO_ACTUAL) &
-                                                    (df_short_local["Semestre"] == SEMESTRE_ACTUAL)
-                                                ]
-                                            else:
-                                                existe = pd.DataFrame()
-
-                                            if not existe.empty:
-                                                st.info("⚠️ Ya agregaste este jugador a tu lista corta en este semestre")
-                                            else:
-                                                nueva_fila = [
-                                                    jugador["ID_Jugador"],
-                                                    jugador["Nombre"],
-                                                    edad,
-                                                    jugador.get("Altura", "-"),
-                                                    jugador.get("Club", "-"),
-                                                    jugador.get("Posición", "-"),
-                                                    jugador.get("URL_Foto", ""),
-                                                    jugador.get("URL_Perfil", ""),
-                                                    CURRENT_USER,
-                                                    hoy.strftime("%d/%m/%Y")
-                                                ]
-                                                # Convertir todos los valores a tipos nativos de Python
-                                                nueva_fila = [
-                                                    int(x) if isinstance(x, (np.integer,)) else
-                                                    float(x) if isinstance(x, (np.floating,)) else
-                                                    str(x) if x is not None else ""
-                                                    for x in nueva_fila
-                                                ]
-                                                ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
-                                                st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
-                                                st.cache_data.clear()
-
-                                        except Exception as e:
-                                            st.error(f"Error al agregar a lista corta: {e}")
-                        hoy = date.today()
-                        ANIO_ACTUAL = hoy.year
-                        SEMESTRE_ACTUAL = 1 if hoy.month <= 6 else 2
-
-                        if not df_short_local.empty:
-                            df_short_local["Fecha_Agregado_dt"] = pd.to_datetime(
-                                df_short_local["Fecha_Agregado"],
-                                format="%d/%m/%Y",
-                                errors="coerce"
-                            )
-
-                            df_short_local["Año"] = df_short_local["Fecha_Agregado_dt"].dt.year
-                            df_short_local["Semestre"] = df_short_local["Fecha_Agregado_dt"].dt.month.apply(
-                                lambda m: 1 if m <= 6 else 2
-                            )
-
-                            existe = df_short_local[
-                                (df_short_local["ID_Jugador"].astype(str) == str(jugador["ID_Jugador"])) &
-                                (df_short_local["Agregado_Por"] == CURRENT_USER) &
-                                (df_short_local["Año"] == ANIO_ACTUAL) &
-                                (df_short_local["Semestre"] == SEMESTRE_ACTUAL)
-                            ]
+                            max_id = pd.to_numeric(df_sheet["ID_Jugador"], errors="coerce").max()
+                            nuevo_id = int(max_id) + 1 if pd.notna(max_id) else 1
                         else:
-                            existe = pd.DataFrame()
+                            nuevo_id = 1
 
-                        if not existe.empty:
-                            st.info("⚠️ Ya agregaste este jugador a tu lista corta en este semestre")
-                        else:
-                            nueva_fila = [
-                                jugador["ID_Jugador"],
-                                jugador["Nombre"],
-                                edad,
-                                jugador.get("Altura", "-"),
-                                jugador.get("Club", "-"),
-                                jugador.get("Posición", "-"),
-                                jugador.get("URL_Foto", ""),
-                                jugador.get("URL_Perfil", ""),
-                                CURRENT_USER,
-                                hoy.strftime("%d/%m/%Y")
-                            ]
-                            # Convertir todos los valores a tipos nativos de Python
-                            nueva_fila = [
-                                int(x) if isinstance(x, (np.integer,)) else
-                                float(x) if isinstance(x, (np.floating,)) else
-                                str(x) if x is not None else ""
-                                for x in nueva_fila
-                            ]
-                            ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
-                            st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
-                            st.cache_data.clear()
+                        car_str = ", ".join(nueva_caracteristica)
+
+                        # Agregar campo de descripción (vacío por defecto en alta)
+                        fila = [
+                            nuevo_id,
+                            nuevo_nombre,
+                            nueva_fecha,
+                            nueva_nacionalidad,
+                            nueva_seg_nac,
+                            nueva_altura,
+                            nuevo_pie,
+                            nueva_posicion,
+                            car_str,
+                            nuevo_club,
+                            nueva_liga,
+                            "",  # Descripción (vacío en alta)
+                            "",  # Sexo
+                            nueva_url_foto,
+                            nueva_url_perfil,
+                            nueva_instagram,
+                            nueva_fecha_fin_contrato,
+                            nueva_video,
+                            nuevo_telefono,
+                            nuevo_representante
+                        ]
+
+                        ws.append_row(fila, value_input_option="USER_ENTERED")
+
+                        st.cache_data.clear()
+                        st.experimental_rerun()
 
                     except Exception as e:
-                        st.error(f"Error al agregar a lista corta: {e}")
+                        st.error(f"Error al guardar jugador: {e}")
 
             
         # ---------------------------------------------------------

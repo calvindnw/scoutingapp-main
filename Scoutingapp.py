@@ -944,7 +944,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # =========================================
         # ENCABEZADO: Título con diseño futurista
         # =========================================
-        pdf.ln(8)
+        pdf.ln(3)  # Reducido el espacio para acercar la foto y datos a la línea superior
         pdf.set_font("Arial", "B", 22)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(0, 12, "Reporte de Scouting", ln=True, align="C")
@@ -988,9 +988,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # Posición inicial
         x_inicio = pdf.get_x()
         y_inicio = pdf.get_y()
-        
-        # (Eliminado recuadro blanco de fondo para datos del jugador)
-        cuadro_y = y_inicio + 4
+
+        # Ajuste: Alinear la parte superior de la foto y los datos con la línea superior
+        cuadro_y = y_inicio  # Sin desplazamiento extra
         cuadro_h = 48
 
         # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO Y SOMBRA
@@ -1010,7 +1010,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             x_datos = pdf.l_margin + 12
 
         # COLUMNA DERECHA: DATOS DEL JUGADOR
-        pdf.set_xy(x_datos, cuadro_y + 2)
+        pdf.set_xy(x_datos, cuadro_y)  # Alineado exacto con la parte superior de la foto
         col_width = pdf.w - x_datos - pdf.r_margin
 
         # Nombre

@@ -934,51 +934,48 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf = FPDF_SEGURO()
         pdf.set_margins(left=12, top=12, right=12)  # Márgenes (12mm)
         pdf.add_page()
-        
+
         # Colores del diseño futurista
         COLOR_VERDE_PRINCIPAL = (90, 154, 124)      # #5a9a7c
         COLOR_VERDE_CLARO = (180, 220, 200)         # Verde suave para fondos
-        COLOR_GRIS_FONDO = (245, 245, 245)          # Gris muy claro
-        COLOR_GRIS_OSCURO = (60, 60, 60)            # Gris oscuro para texto
-        
+        COLOR_GRIS_FONDO = (240, 245, 250)          # Gris muy claro (más suave)
+        COLOR_GRIS_OSCURO = (30, 60, 114)           # Azul oscuro para títulos
+        COLOR_TEXTO = (50, 50, 50)                  # Gris oscuro para texto
+
         # Aplicar fondo claro a toda la página
-        pdf.set_fill_color(245, 245, 245)  # Gris claro
+        pdf.set_fill_color(*COLOR_GRIS_FONDO)
         pdf.rect(0, 0, pdf.w, pdf.h, 'F')  # Fondo completo
-        
+
+        # Líneas decorativas horizontales
+        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
+        pdf.set_line_width(0.5)
+        for y in range(30, int(pdf.h), 40):
+            pdf.line(10, y, pdf.w - 10, y)
+
         # Ancho disponible
         page_width = pdf.w - pdf.l_margin - pdf.r_margin  # ~186mm en A4
         
         # =========================================
         # ENCABEZADO: Título con diseño futurista
         # =========================================
-        # Línea decorativa superior
-        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(3)
-        pdf.line(pdf.l_margin, 15, pdf.w - pdf.r_margin, 15)
-        
-        pdf.ln(4)
-        
-        # Título principal
         pdf.set_font("Arial", "B", 22)
-        pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.cell(0, 10, "Reporte de Scouting", ln=True, align="C")
-        
-        # Subtítulo con fecha en español
-        pdf.set_font("Arial", "I", 9)
+        pdf.set_text_color(*COLOR_GRIS_OSCURO)
+        pdf.cell(0, 12, "Reporte de Scouting Profesional", ln=True, align="C")
+
+        pdf.set_font("Arial", "I", 10)
         pdf.set_text_color(120, 120, 120)
         ahora = datetime.now()
         meses_es = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
         fecha_generado = f"{ahora.day} de {meses_es[ahora.month - 1]} de {ahora.year}"
-        pdf.cell(0, 5, f"Generado: {fecha_generado}", ln=True, align="C")
-        
+        pdf.cell(0, 6, f"Generado: {fecha_generado}", ln=True, align="C")
+
         # Línea decorativa inferior
-        pdf.set_draw_color(200, 200, 200)
-        pdf.set_line_width(0.5)
+        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
+        pdf.set_line_width(1)
         y_linea = pdf.get_y() + 2
         pdf.line(pdf.l_margin, y_linea, pdf.w - pdf.r_margin, y_linea)
-        
-        pdf.ln(6)
+        pdf.ln(8)
         
         # =========================================
         # SECCIÓN: FOTO + DATOS (LADO A LADO)
@@ -1004,57 +1001,60 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         y_inicio = pdf.get_y()
         
         # Fondo sutil para la sección de datos
-        pdf.set_fill_color(240, 248, 245)  # Blanco azulado muy claro
+        pdf.set_fill_color(255, 255, 255)
         pdf.rect(pdf.l_margin, y_inicio - 1, page_width, 50, 'F')
-        
-        # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO
+
+        # COLUMNA IZQUIERDA: FOTO (35mm de ancho) CON MARCO Y SOMBRA
         if foto_disponible and temp_path:
+            # Sombra
+            pdf.set_draw_color(200, 220, 200)
+            pdf.set_line_width(2)
+            pdf.rect(pdf.l_margin + 2, y_inicio + 2, 35, 44)
             # Marco verde sutil alrededor de la foto
-            pdf.set_draw_color(*COLOR_VERDE_CLARO)
+            pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
             pdf.set_line_width(1.5)
             pdf.rect(pdf.l_margin - 1.5, y_inicio - 1.5, 35 + 3, 44 + 3)
-            
             # Foto en el centro del marco
             pdf.image(temp_path, x=pdf.l_margin, y=y_inicio, w=35, h=44)
-            x_datos = pdf.l_margin + 35 + 3  # 3mm de espaciado
+            x_datos = pdf.l_margin + 35 + 6  # 6mm de espaciado
         else:
-            x_datos = pdf.l_margin + 3
-        
+            x_datos = pdf.l_margin + 6
+
         # COLUMNA DERECHA: DATOS DEL JUGADOR
         pdf.set_xy(x_datos, y_inicio)
         pdf.set_font("Arial", "B", 16)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        
+
         nombre = jugador_limpio.get("Nombre", "SIN NOMBRE")
         col_width = pdf.w - x_datos - pdf.r_margin
-        
+
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 6, nombre, ln=True)
-        
+        pdf.cell(col_width, 8, nombre, ln=True)
+
         # Datos del jugador - Compacto y limpio
-        pdf.set_font("Arial", "", 10)
-        pdf.set_text_color(60, 60, 60)
+        pdf.set_font("Arial", "", 12)
+        pdf.set_text_color(*COLOR_TEXTO)
         pdf.set_x(x_datos)
-        
+
         club = jugador_limpio.get("Club", "-").strip()
         posicion = jugador_limpio.get("Posición", "-").strip()
-        pdf.cell(col_width, 3.5, f"Club: {club}  |  Posición: {posicion}", ln=True)
-        
+        pdf.cell(col_width, 6, f"Club: {club}  |  Posición: {posicion}", ln=True)
+
         liga = jugador_limpio.get("Liga", "-").strip()
         nacionalidad = jugador_limpio.get("Nacionalidad", "-").strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 3.5, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
-        
+        pdf.cell(col_width, 6, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
+
         # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
         altura = jugador_limpio.get("Altura", "-").strip()
         pie = jugador_limpio.get("Pie_Hábil", "-").strip()
-        
+
         pdf.set_x(x_datos)
-        pdf.set_font("Arial", "", 9)
+        pdf.set_font("Arial", "", 11)
         pdf.set_text_color(100, 100, 100)
         info_fisica = f"Edad: {edad} años  |  Altura: {altura} cm  |  Pie: {pie}"
-        pdf.cell(col_width, 3.5, info_fisica, ln=True)
+        pdf.cell(col_width, 5, info_fisica, ln=True)
         
         # =========================================
         # SEPARADOR ELEGANTE ENTRE SECCIONES
@@ -1068,17 +1068,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         pdf.set_y(y_separador)
         
-        # Línea decorativa verde degradada (simulada con dos líneas)
+        # Línea decorativa verde
         pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(1.5)
+        pdf.set_line_width(1.2)
         pdf.line(pdf.l_margin, y_separador, pdf.w - pdf.r_margin, y_separador)
-        
-        # Línea sutil gris debajo
-        pdf.set_draw_color(200, 200, 200)
-        pdf.set_line_width(0.3)
-        pdf.line(pdf.l_margin, y_separador + 1.5, pdf.w - pdf.r_margin, y_separador + 1.5)
-        
-        pdf.ln(5)
+        pdf.ln(8)
         
         # =========================================
         # SECCIÓN: EVALUACIONES PARTIDO A PARTIDO (CON FONDO)
@@ -1086,14 +1080,14 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         y_eval_inicio = pdf.get_y()
         
         # Fondo sutil para la sección de evaluaciones
-        pdf.set_fill_color(240, 248, 245)
-        
-        pdf.set_font("Arial", "B", 13)
-        pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.cell(0, 8, "Evaluaciones", ln=True)
-        
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(1)
+        pdf.set_fill_color(245, 250, 255)
+
+        pdf.set_font("Arial", "B", 14)
+        pdf.set_text_color(*COLOR_GRIS_OSCURO)
+        pdf.cell(0, 9, "Evaluaciones", ln=True)
+
+        pdf.set_text_color(*COLOR_TEXTO)
+        pdf.ln(2)
         
         # Usar dataframe limpio con caracteres sanitizados
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
@@ -1129,15 +1123,14 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 if equipos_str:
                     pdf.cell(0, 4, f"Partido: {equipos_str}", ln=True)
                 
-                # Observaciones - AUMENTADO A 9.5pt (+1 punto) - YA SANITIZADO
+                # Observaciones - AUMENTADO A 11pt (+1 punto) - YA SANITIZADO
                 observaciones = inf.get("Observaciones", "").strip()
                 if observaciones:
-                    pdf.set_font("Arial", "", 9.5)  # +1 punto: de 8.5pt a 9.5pt
-                    pdf.set_text_color(60, 60, 60)
+                    pdf.set_font("Arial", "", 11)  # +1 punto respecto a métricas
+                    pdf.set_text_color(*COLOR_TEXTO)
                     obs_truncada = observaciones[:1200]
-                    # DOBLE SANITIZACIÓN COMO PRECAUCIÓN EXTRA
                     obs_truncada = sanitizar_texto_pdf(obs_truncada)
-                    pdf.multi_cell(0, 4, obs_truncada, align="L")
+                    pdf.multi_cell(0, 6, obs_truncada, align="L")
         
         pdf.ln(2)
         

@@ -1327,6 +1327,12 @@ if menu == "Jugadores":
     # ---------------------------------------------------------
     if not seleccion_jug:
 
+
+        # Mostrar toast persistente si corresponde
+        if st.session_state.get("toast_guardado_jugador"):
+            st.toast("✅ Jugador guardado correctamente.", icon="✅")
+            st.session_state["toast_guardado_jugador"] = False
+
         with st.expander("➕ Agregar nuevo jugador", expanded=False):
             with st.form("nuevo_jugador_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
@@ -1395,8 +1401,8 @@ if menu == "Jugadores":
                             nuevo_representante or ""                 # 19 Representante
                         ]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
-                        st.success("✅ Jugador guardado correctamente.")
                         st.cache_data.clear()
+                        st.session_state["toast_guardado_jugador"] = True
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error al guardar jugador: {e}")
@@ -1598,7 +1604,6 @@ if menu == "Jugadores":
                         if not index_row.empty:
                             row_number = index_row[0] + 2
                             e_car_str = ", ".join(e_car) if e_car else ""
-                            # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
                             valores = [
                                 id_jugador,           # 0
                                 e_nombre,             # 1
@@ -1626,7 +1631,7 @@ if menu == "Jugadores":
                             ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
 
                             st.cache_data.clear()
-                            st.toast("✅ Datos actualizados correctamente.", icon="✅")
+                            st.session_state["toast_guardado_jugador"] = True
                             st.rerun()
                         else:
                             st.warning("⚠️ No se encontró el jugador en la hoja.")
@@ -1771,16 +1776,19 @@ if menu == "Jugadores":
                         ws_inf = obtener_hoja("Informes")
                         ws_inf.append_row(nuevo, value_input_option="USER_ENTERED")
 
-
                         st.cache_data.clear()
-                        st.toast(
-                            f"✅ Informe guardado correctamente para {jugador['Nombre']}",
-                            icon="✅"
-                        )
+                        st.session_state["toast_guardado_informe"] = jugador["Nombre"]
                         st.rerun()
-
                     except Exception as e:
                         st.error(f"⚠️ Error al guardar el informe: {e}")
+
+        # Mostrar toast persistente si corresponde (edición jugador o informe)
+        if st.session_state.get("toast_guardado_jugador"):
+            st.toast("✅ Datos actualizados correctamente.", icon="✅")
+            st.session_state["toast_guardado_jugador"] = False
+        if st.session_state.get("toast_guardado_informe"):
+            st.toast(f"✅ Informe guardado correctamente para {st.session_state['toast_guardado_informe']}", icon="✅")
+            st.session_state["toast_guardado_informe"] = False
 
 
 

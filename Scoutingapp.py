@@ -997,19 +997,44 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", '', 11)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []
-        info.append(f"Club: {sanitizar_texto_pdf(jugador.get('Club', ''))}")
-        info.append(f"Posición: {sanitizar_texto_pdf(jugador.get('Posición', ''))}")
+        # Club y Liga
+        club = sanitizar_texto_pdf(jugador.get('Club', ''))
+        liga = sanitizar_texto_pdf(jugador.get('Liga', ''))
+        if club and liga and liga != "-":
+            info.append(f"Club: {club}  |  Liga: {liga}")
+        elif club:
+            info.append(f"Club: {club}")
+        elif liga:
+            info.append(f"Liga: {liga}")
+
+        # Posición
+        posicion = sanitizar_texto_pdf(jugador.get('Posición', ''))
+        if posicion:
+            info.append(f"Posición: {posicion}")
+
+        # Edad
         edad = sanitizar_texto_pdf(str(jugador.get('Edad', '')))
-        altura = sanitizar_texto_pdf(str(jugador.get('Altura', '')))
         if edad and edad != "-":
-            info.append(f"Edad: {edad}")
+            info.append(f"Edad: {edad} años")
+
+        # Altura
+        altura = sanitizar_texto_pdf(str(jugador.get('Altura', '')))
         if altura and altura != "-":
             info.append(f"Altura: {altura} cm")
-        info.append(f"Nacionalidad: {sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))}")
-        info.append(f"Pie hábil: {sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))}")
+
+        # Nacionalidad
+        nacionalidad = sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))
+        if nacionalidad:
+            info.append(f"Nacionalidad: {nacionalidad}")
+
+        # Pie hábil
+        pie_habil = sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))
+        if pie_habil:
+            info.append(f"Pie hábil: {pie_habil}")
+
         for dato in info:
             pdf.set_x(datos_x)
-            pdf.cell(datos_w, 7, dato, ln=True, align='L')
+            pdf.cell(datos_w, 7, dato, ln=True, align='J')
 
         # Descripción del jugador (debajo de datos, alineada con datos, justificada)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))

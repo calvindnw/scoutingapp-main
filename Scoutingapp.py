@@ -1664,11 +1664,11 @@ if menu == "Jugadores":
                 linea = st.selectbox(
                     "Línea de seguimiento",
                     [
-                        "1ra (Fichar)",
-                        "2da (Seguir)",
-                        "3ra (Ver más adelante)",
-                        "4ta (Descartar)",
-                        "Joven Promesa"
+                        "Exponencial",
+                        "Destacado",
+                        "Acorde",
+                        "Desarrollo",
+                        "En observación"
                     ]
                 )
 
@@ -2061,9 +2061,9 @@ if menu == "Ver informes":
                             nuevos_equipos = st.text_input("Equipos y resultado", inf.Equipos_Resultados)
 
                             opciones_linea = [
-                                "1ra (Fichar)", "2da (Seguir)",
-                                "3ra (Ver más adelante)", "4ta (Descartar)",
-                                "Joven Promesa"
+                                "Exponencial", "Destacado",
+                                "Acorde", "Desarrollo",
+                                "En observación"
                             ]
 
                             nueva_linea = st.selectbox(
@@ -2878,7 +2878,7 @@ if menu == "Panel General":
     # =====================================================
     st.markdown("<div class='panel-title'>⏰ Seguimientos prioritarios vencidos</div>", unsafe_allow_html=True)
 
-    lineas_prioritarias = ["1ra (Fichar)", "2da (Seguir)", "Joven Promesa"]
+    lineas_prioritarias = ["Exponencial", "Destacado", "En observación"]
 
     df_last = (
         df_reports
@@ -3199,9 +3199,9 @@ if menu == "Panel Scouts":
     # 🏆 RANKING
     # -----------------------------------------------------
     pesos = {
-        "1ra (Fichar)": 3,
-        "2da (Seguir)": 2,
-        "3ra (Ver más adelante)": 1
+        "Exponencial": 3,
+        "Destacado": 2,
+        "Acorde": 1
     }
 
     df_rank = df_f.copy()

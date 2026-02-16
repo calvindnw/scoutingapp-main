@@ -2143,13 +2143,15 @@ if menu == "Ver informes":
                                         id_col="ID_Informe",
                                         id_valor=inf.ID_Informe
                                     )
-
                                     st.cache_data.clear()
-                                    st.toast("🗑️ Informe eliminado correctamente", icon="🗑️")
+                                    st.session_state["toast_eliminado_informe"] = True
                                     st.rerun()
-
                                 except Exception as e:
                                     st.error(f"⚠️ Error al eliminar el informe: {e}")
+    # Mostrar toast persistente si corresponde (eliminación de informe)
+    if st.session_state.get("toast_eliminado_informe"):
+        st.toast("🗑️ Informe eliminado correctamente", icon="🗑️")
+        st.session_state["toast_eliminado_informe"] = False
 
 
 # =========================================================

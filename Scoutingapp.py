@@ -1034,7 +1034,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         for dato in info:
             pdf.set_x(datos_x)
-            pdf.cell(datos_w, 7, dato, ln=True, align='J')
+            pdf.cell(datos_w, 7, dato, ln=True, align='L')
 
         # Descripción del jugador (debajo de datos, alineada con datos, justificada)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))

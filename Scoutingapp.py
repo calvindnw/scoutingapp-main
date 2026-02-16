@@ -855,7 +855,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # COLUMNA DERECHA: DATOS DEL JUGADOR (centrado)
         # Usar márgenes y ancho para posicionar el texto a la derecha
         pdf.set_xy(x_datos, y_inicio)
-        pdf.set_font("Arial", "B", 13)
+        pdf.set_font("Arial", "B", 15)  # Aumentado de 13 a 15
         pdf.set_text_color(0, 0, 0)
         
         nombre = str(jugador.get("Nombre", "SIN NOMBRE")).strip()
@@ -864,51 +864,55 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         
         # Usando multi_cell sin ln para escribir en la misma posición
         pdf.set_x(x_datos)
-        pdf.set_font("Arial", "B", 13)
+        pdf.set_font("Arial", "B", 15)  # Aumentado de 13 a 15
         pdf.cell(col_width, 6, nombre, ln=True)
         
-        # Datos del jugador en formato limpio
-        pdf.set_font("Arial", "", 9)
+        # Datos del jugador en formato limpio (AUMENTADO DE 9 A 11)
+        pdf.set_font("Arial", "", 11)  # Aumentado de 9 a 11 (+2 puntos)
         
         club = str(jugador.get("Club", "-")).strip()
         posicion = str(jugador.get("Posición", "-")).strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Club: {club}", ln=True)
+        pdf.cell(col_width, 5, f"Club: {club}", ln=True)
         
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Posición: {posicion}", ln=True)
+        pdf.cell(col_width, 5, f"Posición: {posicion}", ln=True)
         
         liga = str(jugador.get("Liga", "-")).strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Liga: {liga}", ln=True)
+        pdf.cell(col_width, 5, f"Liga: {liga}", ln=True)
         
         nacionalidad = str(jugador.get("Nacionalidad", "-")).strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Nacionalidad: {nacionalidad}", ln=True)
+        pdf.cell(col_width, 5, f"Nacionalidad: {nacionalidad}", ln=True)
         
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
         altura = str(jugador.get("Altura", "-")).strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Edad: {edad} años | Altura: {altura} cm", ln=True)
+        pdf.cell(col_width, 5, f"Edad: {edad} años | Altura: {altura} cm", ln=True)
         
         pie = str(jugador.get("Pie_Hábil", "-")).strip()
         pdf.set_x(x_datos)
-        pdf.cell(col_width, 4, f"Pie hábil: {pie}", ln=True)
+        pdf.cell(col_width, 5, f"Pie hábil: {pie}", ln=True)
         
-        # Saltar espacio después de foto/datos
+        # =========================================
+        # SEPARADOR VERDE (OPTIMIZADO - DESPUÉS DE TODA LA FOTO)
+        # =========================================
+        # Calcular Y position después de toda la foto
+        # Si hay foto (44mm), asegurar que estamos después de ella
         if foto_disponible:
-            pdf.ln(6)
+            y_foto_fin = y_inicio + 44 + 5  # Alto foto + espaciado
+            y_datos_fin = pdf.get_y()
+            y_separador = max(y_foto_fin, y_datos_fin) + 2  # Máximo de ambos + 2mm
         else:
-            pdf.ln(3)
+            y_separador = pdf.get_y() + 2
         
-        # =========================================
-        # SEPARADOR VERDE
-        # =========================================
-        y_separador = pdf.get_y()
-        pdf.set_draw_color(90, 154, 124)  # Color verde acento
+        # Dibujar línea sin solapes
+        pdf.set_y(y_separador)
+        pdf.set_draw_color(90, 154, 124)  # Color verde acento #5a9a7c
         pdf.set_line_width(0.5)  # Línea delgada
         pdf.line(pdf.l_margin, y_separador, pdf.w - pdf.r_margin, y_separador)
-        pdf.ln(3)
+        pdf.ln(4)  # Espaciado más generoso después de la línea
         
         # =========================================
         # SECCIÓN: EVALUACIONES PARTIDO A PARTIDO

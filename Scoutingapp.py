@@ -1265,6 +1265,18 @@ if menu == "Jugadores":
         st.markdown("---")
         st.subheader("🗂️ Informes cargados sobre este jugador")
         try:
+            # DEBUG: mostrar información rápida para depuración
+            try:
+                st.markdown("**Debug (player reports view)**")
+                st.write({
+                    "CURRENT_ROLE": CURRENT_ROLE,
+                    "id_jugador": id_jugador,
+                    "len(df_reports_all)": len(df_reports_all) if 'df_reports_all' in globals() else None,
+                    "len(df_reports_user)": len(df_reports_user) if 'df_reports_user' in globals() else None,
+                    "ID_Jugador_in_reports_all": ("ID_Jugador" in df_reports_all.columns) if 'df_reports_all' in globals() else None
+                })
+            except Exception:
+                pass
             # Construir df_reports y df_players según rol, luego unir y filtrar por jugador
             if CURRENT_ROLE == "admin":
                 df_reports_v = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()

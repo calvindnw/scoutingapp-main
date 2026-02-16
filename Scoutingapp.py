@@ -1265,7 +1265,12 @@ if menu == "Jugadores":
             st.markdown("---")
             st.subheader("🗂️ Informes cargados sobre este jugador")
             try:
-                df_reports_local = df_reports.copy()
+                # Usar todos los informes para admin, o solo los del usuario para scout
+                if CURRENT_ROLE == "admin":
+                    df_reports_local = df_reports_all.copy() if 'df_reports_all' in globals() else df_reports.copy()
+                else:
+                    df_reports_local = df_reports_user.copy() if 'df_reports_user' in globals() else df_reports.copy()
+
                 if not df_reports_local.empty and "ID_Jugador" in df_reports_local.columns:
                     df_reports_local["ID_Jugador"] = df_reports_local["ID_Jugador"].astype(str)
 

@@ -1261,10 +1261,6 @@ menu = st.sidebar.radio(
 # =========================================================
 
 if menu == "Jugadores":
-    # Botón de refresco manual
-    if st.button("🔄 Refrescar datos de jugadores"):
-        st.cache_data.clear()
-        st.rerun()
 
     st.subheader("Gestión de jugadores e informes individuales")
 
@@ -1408,182 +1404,145 @@ if menu == "Jugadores":
                         ws.append_row(fila, value_input_option="USER_ENTERED")
 
                         st.cache_data.clear()
-                        st.rerun()
+                        st.experimental_rerun()
 
                     except Exception as e:
                         st.error(f"Error al guardar jugador: {e}")
 
             
         # ---------------------------------------------------------
-        # MOSTRAR INFORMACIÓN DEL JUGADOR AL SELECCIONAR
+        # EDITAR DATOS DEL JUGADOR
         # ---------------------------------------------------------
-        if seleccion_jug:
-            id_jugador = opciones[seleccion_jug]
-            jugador = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0].to_dict()
+        with st.expander("✏️ Editar información del jugador", expanded=False):
 
-            # Visualización de datos principales
-            st.markdown(f"### {jugador.get('Nombre', 'Sin nombre')}")
-            colA, colB = st.columns([2, 1])
-            with colA:
-                st.markdown(f"**Club:** {jugador.get('Club', '-')}")
-                st.markdown(f"**Posición:** {jugador.get('Posición', '-')}")
-                st.markdown(f"**Nacionalidad:** {jugador.get('Nacionalidad', '-')}")
-                st.markdown(f"**Altura:** {jugador.get('Altura', '-')}")
-                st.markdown(f"**Pie hábil:** {jugador.get('Pie_Hábil', '-')}")
-                st.markdown(f"**Liga:** {jugador.get('Liga', '-')}")
-                st.markdown(f"**Características:** {jugador.get('Caracteristica', '-')}")
-                st.markdown(f"**Fin de contrato:** {jugador.get('Fecha_Fin_Contrato', '-')}")
-                st.markdown(f"**Representante:** {jugador.get('representante', '-')}")
-                st.markdown(f"**Teléfono:** {jugador.get('telefono', '-')}")
-                st.markdown(f"**Instagram:** {jugador.get('Instagram', '-')}")
-                st.markdown(f"**URL Perfil:** {jugador.get('URL_Perfil', '-')}")
-                st.markdown(f"**URL Video:** {jugador.get('video_url', '-')}")
-            with colB:
-                foto_url = jugador.get('URL_Foto', '')
-                if foto_url:
-                    st.image(foto_url, width=180)
-            # Descripción
-            descripcion = jugador.get('Descripcion', '').strip()
-            if descripcion:
-                st.markdown(f"#### Descripción del jugador")
-                st.markdown(descripcion)
-            st.markdown("---")
+            with st.form(f"editar_jugador_form_{jugador['ID_Jugador']}"):
 
-            # Formulario de edición
-            with st.expander("✏️ Editar información del jugador", expanded=False):
+                col1, col2 = st.columns(2)
 
-                with st.form(f"editar_jugador_form_{jugador['ID_Jugador']}"):
+                with col1:
+                    e_nombre = st.text_input("Nombre completo", value=jugador.get("Nombre", ""))
+                    e_fecha = st.text_input("Fecha de nacimiento (dd/mm/aaaa)", value=jugador.get("Fecha_Nac", ""))
+                    e_altura = st.number_input(
+                        "Altura (cm)", 140, 210,
+                        int(float(jugador.get("Altura", 175))) if str(jugador.get("Altura", "")).strip() else 175
+                    )
+                    e_pie = st.selectbox(
+                        "Pie hábil", opciones_pies,
+                        index=opciones_pies.index(jugador["Pie_Hábil"]) if jugador["Pie_Hábil"] in opciones_pies else 0
+                    )
+                    e_pos = st.selectbox(
+                        "Posición", opciones_posiciones,
+                        index=opciones_posiciones.index(jugador["Posición"]) if jugador["Posición"] in opciones_posiciones else 0
+                    )
+                    e_fin_contrato = st.text_input(
+                        "Fin de contrato (dd/mm/aaaa)",
+                        value=str(jugador.get("Fecha_Fin_Contrato", ""))
+                    )
 
-                    col1, col2 = st.columns(2)
+                with col2:
+                    e_club = st.text_input("Club actual", value=jugador.get("Club", ""))
+                    e_liga = st.selectbox(
+                        "Liga", opciones_ligas,
+                        index=opciones_ligas.index(jugador["Liga"]) if jugador["Liga"] in opciones_ligas else 0
+                    )
+                    e_nac = st.selectbox(
+                        "Nacionalidad principal", opciones_paises,
+                        index=opciones_paises.index(jugador["Nacionalidad"]) if jugador["Nacionalidad"] in opciones_paises else 0
+                    )
 
-                    with col1:
-                        e_nombre = st.text_input("Nombre completo", value=jugador.get("Nombre", ""))
-                        e_fecha = st.text_input("Fecha de nacimiento (dd/mm/aaaa)", value=jugador.get("Fecha_Nac", ""))
-                        e_altura = st.number_input(
-                            "Altura (cm)", 140, 210,
-                            int(float(jugador.get("Altura", 175))) if str(jugador.get("Altura", "")).strip() else 175
-                        )
-                        e_pie = st.selectbox(
-                            "Pie hábil", opciones_pies,
-                            index=opciones_pies.index(jugador["Pie_Hábil"]) if jugador["Pie_Hábil"] in opciones_pies else 0
-                        )
-                        e_pos = st.selectbox(
-                            "Posición", opciones_posiciones,
-                            index=opciones_posiciones.index(jugador["Posición"]) if jugador["Posición"] in opciones_posiciones else 0
-                        )
-                        e_fin_contrato = st.text_input(
-                            "Fin de contrato (dd/mm/aaaa)",
-                            value=str(jugador.get("Fecha_Fin_Contrato", ""))
-                        )
+                    e_seg_opciones = [""] + opciones_paises
+                    e_seg = st.selectbox(
+                        "Segunda nacionalidad (opcional)",
+                        e_seg_opciones,
+                        index=e_seg_opciones.index(jugador.get("Segunda_Nacionalidad", "")) 
+                        if jugador.get("Segunda_Nacionalidad", "") in e_seg_opciones else 0
+                    )
 
-                    with col2:
-                        e_club = st.text_input("Club actual", value=jugador.get("Club", ""))
-                        e_liga = st.selectbox(
-                            "Liga", opciones_ligas,
-                            index=opciones_ligas.index(jugador["Liga"]) if jugador["Liga"] in opciones_ligas else 0
-                        )
-                        e_nac = st.selectbox(
-                            "Nacionalidad principal", opciones_paises,
-                            index=opciones_paises.index(jugador["Nacionalidad"]) if jugador["Nacionalidad"] in opciones_paises else 0
-                        )
+                    e_car = st.multiselect(
+                        "Características",
+                        opciones_caracteristicas,
+                        default=[
+                            c.strip().lower()
+                            for c in str(jugador.get("Caracteristica", "")).split(",")
+                            if c.strip().lower() in [o.lower() for o in opciones_caracteristicas]
+                        ]
+                    )
 
-                        e_seg_opciones = [""] + opciones_paises
-                        e_seg = st.selectbox(
-                            "Segunda nacionalidad (opcional)",
-                            e_seg_opciones,
-                            index=e_seg_opciones.index(jugador.get("Segunda_Nacionalidad", "")) 
-                            if jugador.get("Segunda_Nacionalidad", "") in e_seg_opciones else 0
-                        )
+                    e_foto = st.text_input("URL de foto", value=str(jugador.get("URL_Foto", "")))
+                    e_link = st.text_input("URL perfil externo", value=str(jugador.get("URL_Perfil", "")))
+                    e_instagram = st.text_input("URL Instagram", value=str(jugador.get("Instagram", "")))
+                    e_video = st.text_input("URL Video", value=str(jugador.get("video_url", "")))
+                    e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", "")))
+                    e_representante = st.text_input("Representante", value=str(jugador.get("representante", "")))
 
-                        e_car = st.multiselect(
-                            "Características",
-                            opciones_caracteristicas,
-                            default=[
-                                c.strip().lower()
-                                for c in str(jugador.get("Caracteristica", "")).split(",")
-                                if c.strip().lower() in [o.lower() for o in opciones_caracteristicas]
-                            ]
-                        )
+                    # Campo de descripción (debajo de las columnas)
+                    e_descripcion = st.text_area(
+                        "Descripción del jugador (párrafo introductorio)",
+                        value=str(jugador.get("Descripcion", "")),
+                        height=80
+                    )
 
-                        e_foto = st.text_input("URL de foto", value=str(jugador.get("URL_Foto", "")))
-                        e_link = st.text_input("URL perfil externo", value=str(jugador.get("URL_Perfil", "")))
-                        e_instagram = st.text_input("URL Instagram", value=str(jugador.get("Instagram", "")))
-                        e_video = st.text_input("URL Video", value=str(jugador.get("video_url", "")))
-                        e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", "")))
-                        e_representante = st.text_input("Representante", value=str(jugador.get("representante", "")))
+                # Campos full-width adicionales para asegurar visibilidad
+                e_video = st.text_input("URL Video", value=str(jugador.get("video_url", ""))) if 'e_video' not in locals() else e_video
+                e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", ""))) if 'e_telefono' not in locals() else e_telefono
+                e_representante = st.text_input("Representante", value=str(jugador.get("representante", ""))) if 'e_representante' not in locals() else e_representante
 
-                        # Campo de descripción (debajo de las columnas)
-                        e_descripcion = st.text_area(
-                            "Descripción del jugador (párrafo introductorio)",
-                            value=str(jugador.get("Descripcion", "")),
-                            height=80
-                        )
+                guardar_ed = st.form_submit_button("💾 Guardar cambios")
 
-                    # Campos full-width adicionales para asegurar visibilidad
-                    e_video = st.text_input("URL Video", value=str(jugador.get("video_url", ""))) if 'e_video' not in locals() else e_video
-                    e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", ""))) if 'e_telefono' not in locals() else e_telefono
-                    e_representante = st.text_input("Representante", value=str(jugador.get("representante", ""))) if 'e_representante' not in locals() else e_representante
+                if guardar_ed:
+                    try:
+                        ws = obtener_hoja("Jugadores")
+                        data = ws.get_all_records()
+                        df_actual = pd.DataFrame(data)
 
-                    guardar_ed = st.form_submit_button("💾 Guardar cambios")
+                        index_row = df_actual.index[
+                            df_actual["ID_Jugador"].astype(str) == str(id_jugador)
+                        ]
 
-                    if guardar_ed:
-                        try:
-                            ws = obtener_hoja("Jugadores")
-                            data = ws.get_all_records()
-                            df_actual = pd.DataFrame(data)
-
-                            index_row = df_actual.index[
-                                df_actual["ID_Jugador"].astype(str) == str(id_jugador)
+                        if not index_row.empty:
+                            row_number = index_row[0] + 2
+                            e_car_str = ", ".join(e_car) if e_car else ""
+                            # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
+                            valores = [
+                                id_jugador,           # 0
+                                e_nombre,             # 1
+                                e_fecha,              # 2
+                                e_nac,                # 3
+                                e_seg,                # 4
+                                e_altura,             # 5
+                                e_pie,                # 6
+                                e_pos,                # 7
+                                e_car_str,            # 8
+                                e_club,               # 9
+                                e_liga,               # 10
+                                e_descripcion,        # 11 (NUEVO)
+                                "",                  # 12 (Sexo, si se usa)
+                                e_foto,               # 13
+                                e_link,               # 14
+                                e_instagram,          # 15
+                                e_fin_contrato,       # 16
+                                e_video,              # 17
+                                e_telefono,           # 18
+                                e_representante       # 19
                             ]
 
-                            if not index_row.empty:
-                                row_number = index_row[0] + 2
-                                e_car_str = ", ".join(e_car) if e_car else ""
-                                # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
-                                valores = [
-                                    id_jugador,           # 0
-                                    e_nombre,             # 1
-                                    e_fecha,              # 2
-                                    e_nac,                # 3
-                                    e_seg,                # 4
-                                    e_altura,             # 5
-                                    e_pie,                # 6
-                                    e_pos,                # 7
-                                    e_car_str,            # 8
-                                    e_club,               # 9
-                                    e_liga,               # 10
-                                    e_descripcion,        # 11 (NUEVO)
-                                    "",                  # 12 (Sexo, si se usa)
-                                    e_foto,               # 13
-                                    e_link,               # 14
-                                    e_instagram,          # 15
-                                    e_fin_contrato,       # 16
-                                    e_video,              # 17
-                                    e_telefono,           # 18
-                                    e_representante       # 19
-                                ]
+                            last_col = col_letter(len(valores))
+                            ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
 
-                                last_col = col_letter(len(valores))
-                                ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
+                            st.cache_data.clear()
+                            st.toast("✅ Datos actualizados correctamente.", icon="✅")
+                            st.experimental_rerun()
+                        else:
+                            st.warning("⚠️ No se encontró el jugador en la hoja.")
 
-                                st.cache_data.clear()
-                                st.toast("✅ Datos actualizados correctamente.", icon="✅")
-                                st.rerun()
-                            else:
-                                st.warning("⚠️ No se encontró el jugador en la hoja.")
-
-                        except Exception as e:
-                            st.error(f"⚠️ Error al guardar: {e}")
+                    except Exception as e:
+                        st.error(f"⚠️ Error al guardar: {e}")
 
 
         # ---------------------------------------------------------
 
         # ---------------------------------------------------------
-        # Cargar nuevo informe SOLO si hay jugador seleccionado
-        # ---------------------------------------------------------
-        if seleccion_jug and CURRENT_ROLE in ["admin", "scout"]:
-            id_jugador = opciones[seleccion_jug]
-            jugador = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0].to_dict()
+        if CURRENT_ROLE in ["admin", "scout"]:
 
             st.markdown("---")
             st.subheader(f"📝 Cargar nuevo informe para {jugador['Nombre']}")

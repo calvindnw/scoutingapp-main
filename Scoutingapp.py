@@ -1261,6 +1261,10 @@ menu = st.sidebar.radio(
 # =========================================================
 
 if menu == "Jugadores":
+    # Botón de refresco manual
+    if st.button("🔄 Refrescar datos de jugadores"):
+        st.cache_data.clear()
+        st.experimental_rerun()
 
     st.subheader("Gestión de jugadores e informes individuales")
 

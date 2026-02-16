@@ -1085,11 +1085,11 @@ if menu == "Jugadores":
     ]
 
     opciones_ligas = [
-        "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - Federal A",
-        "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
-        "Chile - Primera División", "Uruguay - Primera División",
-        "Uruguay - Segunda División Profesional", "Paraguay - División Profesional",
-        "Colombia - Categoría Primera A", "Ecuador - LigaPro Serie A",
+        "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A",
+        "Argentina - Proyección", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
+        "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
+        "Uruguay - Segunda División", "Paraguay - División Profesional",
+        "Colombia - Primera A", "Ecuador - LigaPro Serie A",
         "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
         "España - LaLiga", "España - LaLiga 2", "Italia - Serie A", "Italia - Serie B",
         "Inglaterra - Premier League", "Inglaterra - Championship",

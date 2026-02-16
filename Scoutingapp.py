@@ -881,6 +881,7 @@ menu = st.sidebar.radio(
         "Lista corta",
         "Panel Scouts",
     ]
+    , key="menu"
 )
 
 
@@ -1260,7 +1261,7 @@ if menu == "Jugadores":
 
 
         # ---------------------------------------------------------
-        # CARGAR NUEVO INFORME
+
         # ---------------------------------------------------------
         if CURRENT_ROLE in ["admin", "scout"]:
 
@@ -1451,10 +1452,19 @@ if menu == "Ver informes":
         )
 
     with f2:
+        opciones_jugadores = sorted(df_merged["Nombre"].dropna().unique())
+        default_sel = st.session_state.get('filtro_jugador_default', None)
         filtro_jugador = st.multiselect(
             "Jugador",
-            sorted(df_merged["Nombre"].dropna().unique())
+            opciones_jugadores,
+            default=default_sel
         )
+        # Limpiar valor temporal si se usó
+        if 'filtro_jugador_default' in st.session_state:
+            try:
+                del st.session_state['filtro_jugador_default']
+            except Exception:
+                pass
 
     with f3:
         filtro_club = st.multiselect(

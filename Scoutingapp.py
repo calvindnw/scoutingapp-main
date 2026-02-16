@@ -995,88 +995,90 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
             pdf.set_line_width(1.5)
             pdf.rect(pdf.l_margin - 1.5, cuadro_y - 1.5, 35 + 3, 44 + 3)
-            # Foto en el centro del marco
-            pdf.image(temp_path, x=pdf.l_margin, y=cuadro_y, w=35, h=44)
-            x_datos = pdf.l_margin + 35 + 12  # 12mm de espaciado para mejor alineación
-        else:
-            x_datos = pdf.l_margin + 12
+            try:
+                # --- Configuración general ---
+                pdf = FPDF_SEGURO(orientation="P", unit="mm", format="A4")
+                pdf.add_page()
+                pdf.set_auto_page_break(auto=False, margin=0)
 
-        # COLUMNA DERECHA: DATOS DEL JUGADOR
-        pdf.set_xy(x_datos, cuadro_y)  # Alineado exacto con la parte superior de la foto
-        col_width = pdf.w - x_datos - pdf.r_margin
+                # --- Fondo claro y líneas decorativas ---
+                pdf.set_fill_color(245, 248, 250)  # fondo general
+                pdf.rect(0, 0, 210, 297, 'F')
 
-        # Nombre
-        pdf.set_font("Arial", "B", 16)
-        pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        nombre = jugador_limpio.get("Nombre", "SIN NOMBRE")
-        pdf.set_x(x_datos)
-        pdf.cell(col_width, 10, nombre, ln=True)
+                # Líneas decorativas (simétricas, sutiles)
+                pdf.set_draw_color(90, 154, 124)
+                pdf.set_line_width(1.2)
+                pdf.line(15, 22, 195, 22)  # superior
+                pdf.line(15, 285, 195, 285)  # inferior
+                pdf.set_line_width(0.5)
+                pdf.line(15, 32, 195, 32)  # debajo del título
 
-        # Resto de datos (unificados en color y tamaño)
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(*COLOR_TEXTO)
-        pdf.set_x(x_datos)
-        club = jugador_limpio.get("Club", "-").strip()
-        posicion = jugador_limpio.get("Posición", "-").strip()
-        pdf.cell(col_width, 8, f"Club: {club}  |  Posición: {posicion}", ln=True)
+                # --- Título: Nombre del jugador (centrado, grande, ÚNICO) ---
+                pdf.set_xy(0, 24)
+                pdf.set_font("Arial", 'B', 22)
+                pdf.set_text_color(30, 60, 114)
+                nombre_jugador = sanitizar_texto_pdf(jugador.get("Nombre", ""))
+                pdf.cell(210, 16, nombre_jugador, 0, 2, 'C')
 
-        liga = jugador_limpio.get("Liga", "-").strip()
-        nacionalidad = jugador_limpio.get("Nacionalidad", "-").strip()
-        pdf.set_x(x_datos)
-        pdf.cell(col_width, 8, f"Liga: {liga}  |  Nacionalidad: {nacionalidad}", ln=True)
+                # --- Foto y datos principales perfectamente alineados ---
+                foto_url = jugador.get("Foto", "")
+                foto_x = 22
+                foto_y = 40
+                foto_w = 38
+                foto_h = 38
+                datos_x = foto_x + foto_w + 14  # más espacio para simetría
+                datos_y = foto_y
 
-        edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-        altura = jugador_limpio.get("Altura", "-").strip()
-        pie = jugador_limpio.get("Pie_Hábil", "-").strip()
-        pdf.set_x(x_datos)
-        info_fisica = f"Edad: {edad} años  |  Altura: {altura} cm  |  Pie: {pie}"
-        pdf.cell(col_width, 8, info_fisica, ln=True)
+                # Foto del jugador (izquierda)
+                if foto_url:
+                    try:
+                        response = requests.get(foto_url, timeout=4)
+                        if response.status_code == 200:
+                            img = Image.open(BytesIO(response.content)).convert("RGB")
+                            img = img.resize((int(foto_w*3.8), int(foto_h*3.8)))
+                            temp = BytesIO()
+                            img.save(temp, format="JPEG")
+                            temp.seek(0)
+                            pdf.image(temp, x=foto_x, y=foto_y, w=foto_w, h=foto_h)
+                            # Marco verde
+                            pdf.set_draw_color(90, 154, 124)
+                            pdf.set_line_width(1.5)
+                            pdf.ellipse(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
+                    except Exception:
+                        pass
 
-        # Descripción del jugador (si existe)
-        descripcion = jugador.get("Descripcion", "") or jugador.get("Descripción", "")
-        descripcion = sanitizar_texto_pdf(str(descripcion)) if descripcion else ""
-        if descripcion and descripcion.strip() and descripcion.lower() not in ["-", "nan", "none"]:
-            pdf.set_x(x_datos)
-            pdf.set_font("Arial", "I", 12)
-            pdf.set_text_color(80, 80, 80)
-            pdf.multi_cell(col_width, 7, descripcion, align="L")
-            pdf.set_font("Arial", "", 12)
-            pdf.set_text_color(*COLOR_TEXTO)
-        
-        # =========================================
-        # SEPARADOR ELEGANTE ENTRE SECCIONES
-        # =========================================
-        if foto_disponible:
-            y_foto_fin = y_inicio + 44 + 5
-            y_datos_fin = pdf.get_y()
-            y_separador = max(y_foto_fin, y_datos_fin) + 3
-        else:
-            y_separador = pdf.get_y() + 3
-        
-        pdf.set_y(y_separador)
-        
-        # Línea decorativa inferior (ajustada para simetría)
-        pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
-        pdf.set_line_width(1.2)
-        pdf.line(margen_linea, y_separador, margen_linea + ancho_linea, y_separador)
-        pdf.ln(8)
-        
-        # =========================================
-        # SECCIÓN: EVALUACIONES PARTIDO A PARTIDO (CON FONDO)
-        # =========================================
-        y_eval_inicio = pdf.get_y()
-        
-        # Fondo sutil para la sección de evaluaciones
-        pdf.set_fill_color(245, 250, 255)
+                # Datos principales (alineados a la derecha de la foto)
+                pdf.set_xy(datos_x, datos_y)
+                pdf.set_font("Arial", 'B', 13)
+                pdf.set_text_color(30, 60, 114)
+                pdf.cell(0, 8, "Información del jugador", 0, 1, 'L')
+                pdf.set_font("Arial", '', 11)
+                pdf.set_text_color(30, 60, 114)
+                info = []
+                info.append(f"Club: {sanitizar_texto_pdf(jugador.get('Club', ''))}")
+                info.append(f"Posición: {sanitizar_texto_pdf(jugador.get('Posición', ''))}")
+                info.append(f"Edad: {sanitizar_texto_pdf(str(jugador.get('Edad', '')))}")
+                info.append(f"Nacionalidad: {sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))}")
+                info.append(f"Pie hábil: {sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))}")
+                for dato in info:
+                    pdf.set_x(datos_x)
+                    pdf.cell(0, 7, dato, 0, 1, 'L')
 
-        pdf.set_font("Arial", "B", 14)
-        pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        pdf.cell(0, 9, "Evaluaciones", ln=True)
+                # Descripción del jugador (debajo de datos, alineada con datos)
+                desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
+                if desc:
+                    pdf.set_xy(datos_x, datos_y + 40)
+                    pdf.set_font("Arial", 'I', 11)
+                    pdf.set_text_color(90, 154, 124)
+                    pdf.multi_cell(120, 7, desc, 0, 'L')
 
-        pdf.set_text_color(*COLOR_TEXTO)
-        pdf.ln(2)
-        
-        # Usar dataframe limpio con caracteres sanitizados
+                # Línea decorativa debajo de la sección de datos y descripción
+                pdf.set_draw_color(90, 154, 124)
+                pdf.set_line_width(0.5)
+                y_linea = max(datos_y + 48, pdf.get_y() + 4)
+                pdf.line(15, y_linea, 195, y_linea)
+
+                # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         # Asegurar ID_Jugador es string en dataframe limpio
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

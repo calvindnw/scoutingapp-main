@@ -1546,7 +1546,11 @@ if menu == "Jugadores":
         # ---------------------------------------------------------
 
         # ---------------------------------------------------------
-        if CURRENT_ROLE in ["admin", "scout"]:
+        # Cargar nuevo informe SOLO si hay jugador seleccionado
+        # ---------------------------------------------------------
+        if seleccion_jug and CURRENT_ROLE in ["admin", "scout"]:
+            id_jugador = opciones[seleccion_jug]
+            jugador = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0].to_dict()
 
             st.markdown("---")
             st.subheader(f"📝 Cargar nuevo informe para {jugador['Nombre']}")

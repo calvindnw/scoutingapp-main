@@ -5,7 +5,7 @@
 # =========================================================
 # - Carga directa desde "Scouting_DB" (Jugadores / Informes / Lista corta)
 # - Login por roles (admin / scout / viewer)
-# - Diseño oscuro #0e1117 + acento #00c6ff
+# - Diseño oscuro #0a1a14 + acento #5a9a7c
 # =========================================================
 
 # ----------------------
@@ -267,9 +267,9 @@ st.markdown("""
 ===================================================== */
 .stApp {
     background:
-        radial-gradient(circle at 20% 15%, rgba(0,198,255,0.22), transparent 38%),
-        radial-gradient(circle at 80% 35%, rgba(30,60,114,0.40), transparent 42%),
-        linear-gradient(120deg, #1e3c72, #16213e, #0e1117);
+        radial-gradient(circle at 20% 15%, rgba(90,154,124,0.22), transparent 38%),
+        radial-gradient(circle at 80% 35%, rgba(58,102,81,0.40), transparent 42%),
+        linear-gradient(120deg, #3a6651, #1a3a2a, #0a1a14);
     background-size: 220% 220%;
     animation: fondoVivo 15s ease-in-out infinite;
 }
@@ -301,7 +301,7 @@ div[data-testid="stContainer"] {
     margin-bottom: 18px;
     box-shadow:
         0 14px 36px rgba(0,0,0,0.55),
-        inset 0 0 24px rgba(0,198,255,0.06);
+        inset 0 0 24px rgba(90,154,124,0.06);
     animation: fadeUp 0.35s ease;
 }
 
@@ -322,14 +322,14 @@ div[data-testid="stContainer"] {
 }
 
 .kpi-card {
-    background: linear-gradient(135deg, #0e1117, #1e3c72);
+    background: linear-gradient(135deg, #0a1a14, #3a6651);
     border-radius:16px;
     padding:18px 22px;
     min-width:220px;
     text-align:center;
     box-shadow:
         0 10px 26px rgba(0,0,0,0.55),
-        inset 0 0 18px rgba(0,198,255,0.06);
+        inset 0 0 18px rgba(90,154,124,0.06);
     transition: all 0.25s ease;
 }
 
@@ -337,11 +337,11 @@ div[data-testid="stContainer"] {
     transform: translateY(-4px);
     box-shadow:
         0 16px 40px rgba(0,0,0,0.65),
-        0 0 24px rgba(0,198,255,0.45);
+        0 0 24px rgba(90,154,124,0.45);
 }
 
 .kpi-title {
-    color:#00c6ff;
+    color:#5a9a7c;
     font-size:14px;
     font-weight:700;
 }
@@ -356,7 +356,7 @@ div[data-testid="stContainer"] {
 🏆 RANKINGS — TARJETAS (FIX DEFINITIVO)
 ===================================================== */
 .panel-title {
-    color:#00c6ff;
+    color:#5a9a7c;
     font-weight:700;
     font-size:16px;
     margin:14px 0 8px 0;
@@ -364,7 +364,7 @@ div[data-testid="stContainer"] {
 }
 
 .rank-card {
-    background: linear-gradient(90deg, #0e1117, #1e3c72);
+    background: linear-gradient(90deg, #0a1a14, #3a6651);
     border-radius:12px;
     padding:10px 14px;
     margin-bottom:8px;
@@ -378,7 +378,7 @@ div[data-testid="stContainer"] {
 .rank-card:hover {
     transform: translateX(4px);
     box-shadow:
-        0 0 18px rgba(0,198,255,0.45),
+        0 0 18px rgba(90,154,124,0.45),
         0 0 30px rgba(0,0,0,0.6);
 }
 
@@ -402,7 +402,7 @@ div[data-testid="stContainer"] {
 }
 
 .rank-score {
-    color:#00c6ff;
+    color:#5a9a7c;
     font-weight:800;
 }
 
@@ -414,7 +414,7 @@ div[data-testid="stContainer"] {
    TRACK INACTIVO (lado derecho / fondo)
 ----------------------------------------------------- */
 .stSlider div[data-baseweb="slider"] > div {
-    background-color: rgba(12, 22, 38, 0.85) !important;  /* azul oscuro / negro */
+    background-color: rgba(10, 26, 20, 0.85) !important;  /* verde oscuro / negro */
     border-radius: 8px;
 }
 
@@ -424,8 +424,8 @@ div[data-testid="stContainer"] {
 .stSlider div[data-baseweb="slider"] > div > div {
     background: linear-gradient(
         90deg,
-        #00c6ff,
-        #1e3c72
+        #5a9a7c,
+        #3a6651
     ) !important;
     border-radius: 8px;
 }
@@ -434,11 +434,11 @@ div[data-testid="stContainer"] {
    THUMB / HANDLE (bolita)
 ----------------------------------------------------- */
 .stSlider [role="slider"] {
-    background-color: #00c6ff !important;
+    background-color: #5a9a7c !important;
     border: 2px solid #ffffff !important;
     box-shadow:
-        0 0 10px rgba(0,198,255,0.9),
-        0 0 18px rgba(0,198,255,0.45) !important;
+        0 0 10px rgba(90,154,124,0.9),
+        0 0 18px rgba(90,154,124,0.45) !important;
 }
 
 /* -----------------------------------------------------
@@ -446,7 +446,7 @@ div[data-testid="stContainer"] {
 ----------------------------------------------------- */
 .stSlider span,
 .stSlider [data-testid="stSliderThumbValue"] {
-    color: #00c6ff !important;
+    color: #5a9a7c !important;
     font-weight: 700;
 }
 
@@ -454,15 +454,15 @@ div[data-testid="stContainer"] {
    FIX EXTRA — COLOR PRIMARIO STREAMLIT (ANTI ROJO GLOBAL)
 ----------------------------------------------------- */
 :root {
-    --primary-color: #00c6ff !important;
-    --primary-color-hover: #00c6ff !important;
+    --primary-color: #5a9a7c !important;
+    --primary-color-hover: #5a9a7c !important;
 }
 
 .stApp,
 [data-testid="stAppViewContainer"],
 section[data-testid="stSidebar"] {
-    --primary-color: #00c6ff !important;
-    --primary-color-hover: #00c6ff !important;
+    --primary-color: #5a9a7c !important;
+    --primary-color-hover: #5a9a7c !important;
 }
 
 
@@ -470,37 +470,37 @@ section[data-testid="stSidebar"] {
 📂 SIDEBAR — MENU + RADIO (SIN ROJO)
 ===================================================== */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0e1117, #16213e);
+    background: linear-gradient(180deg, #0a1a14, #1a3a2a);
     border-right:1px solid rgba(255,255,255,0.06);
 }
 
 section[data-testid="stSidebar"]
 div[role="radiogroup"] > label[data-selected="true"] {
-    background: linear-gradient(90deg, rgba(0,198,255,0.30), rgba(0,198,255,0.05));
-    border-left:4px solid #00c6ff;
+    background: linear-gradient(90deg, rgba(90,154,124,0.30), rgba(90,154,124,0.05));
+    border-left:4px solid #5a9a7c;
     border-radius:6px;
 }
 
 /* Radio button interno (punto) */
 div[role="radiogroup"] label span div {
-    background-color:#00c6ff !important;
+    background-color:#5a9a7c !important;
 }
 
 /* Borde radio */
 div[role="radiogroup"] label span[aria-hidden="true"] {
-    border-color:#00c6ff !important;
+    border-color:#5a9a7c !important;
 }
 
 /* =====================================================
 📊 TABLAS — GLASS + HOVER
 ===================================================== */
 div[data-testid="stDataFrame"] {
-    background: linear-gradient(145deg, rgba(30,60,114,0.45), rgba(14,17,23,0.70));
+    background: linear-gradient(145deg, rgba(58,102,81,0.45), rgba(10,26,20,0.70));
     border-radius:16px;
     padding:8px;
     box-shadow:
         0 12px 30px rgba(0,0,0,0.40),
-        inset 0 0 18px rgba(0,198,255,0.05);
+        inset 0 0 18px rgba(90,154,124,0.05);
 }
 
 div[data-testid="stDataFrame"] table {
@@ -510,12 +510,12 @@ div[data-testid="stDataFrame"] table {
 
 div[data-testid="stDataFrame"] thead th {
     background:rgba(0,0,0,0.20) !important;
-    color:#00c6ff !important;
+    color:#5a9a7c !important;
     font-weight:700;
 }
 
 div[data-testid="stDataFrame"] tbody tr:hover td {
-    background:rgba(0,198,255,0.15) !important;
+    background:rgba(90,154,124,0.15) !important;
 }
 
 /* =====================================================
@@ -527,28 +527,28 @@ div[data-testid="stDataFrame"] tbody tr:hover td {
 }
 
 input, textarea {
-    caret-color:#00c6ff !important;
+    caret-color:#5a9a7c !important;
 }
 
 div[data-baseweb="input"] > div,
 div[data-baseweb="select"] > div,
 div[data-baseweb="textarea"] > div {
-    border:1px solid rgba(0,198,255,0.45) !important;
-    background-color:rgba(14,17,23,0.85) !important;
+    border:1px solid rgba(90,154,124,0.45) !important;
+    background-color:rgba(10,26,20,0.85) !important;
     box-shadow:none !important;
 }
 
 div[data-baseweb="input"] > div:focus-within,
 div[data-baseweb="select"] > div:focus-within,
 div[data-baseweb="textarea"] > div:focus-within {
-    border-color:#00c6ff !important;
-    box-shadow:0 0 10px rgba(0,198,255,0.45) !important;
+    border-color:#5a9a7c !important;
+    box-shadow:0 0 10px rgba(90,154,124,0.45) !important;
 }
 
 div[aria-invalid="true"],
 div[aria-invalid="true"] * {
-    border-color:#00c6ff !important;
-    box-shadow:0 0 10px rgba(0,198,255,0.45) !important;
+    border-color:#5a9a7c !important;
+    box-shadow:0 0 10px rgba(90,154,124,0.45) !important;
 }
 
 /* =====================================================
@@ -556,8 +556,8 @@ div[aria-invalid="true"] * {
 ===================================================== */
 .stAlert.success {
     background-color:rgba(0,51,102,0.97) !important;
-    color:#00c6ff !important;
-    border-left:4px solid #00c6ff !important;
+    color:#5a9a7c !important;
+    border-left:4px solid #5a9a7c !important;
 }
 .stAlert.warning {
     background-color:rgba(51,43,0,0.97) !important;
@@ -767,8 +767,8 @@ def radar_chart(prom_jugador, prom_posicion):
     angles += angles[:1]
 
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    fig.patch.set_facecolor("#0e1117")
-    ax.set_facecolor("#0e1117")
+    fig.patch.set_facecolor("#0a1a14")
+    ax.set_facecolor("#0a1a14")
 
     ax.plot(angles, valores_j, color="cyan", linewidth=2)
     ax.fill(angles, valores_j, color="cyan", alpha=0.25)
@@ -1566,17 +1566,17 @@ if menu == "Ver informes":
             update_mode="MODEL_CHANGED",
             custom_css={
                 ".ag-header": {
-                    "background-color": "#1e3c72",
+                    "background-color": "#3a6651",
                     "color": "white",
                     "font-weight": "bold",
                     "font-size": "13px"
                 },
                 ".ag-row-even": {
-                    "background-color": "#2a5298 !important",
+                    "background-color": "#2a4a3a !important",
                     "color": "white !important"
                 },
                 ".ag-row-odd": {
-                    "background-color": "#3b6bbf !important",
+                    "background-color": "#3a6651 !important",
                     "color": "white !important"
                 },
                 ".ag-cell": {
@@ -1955,7 +1955,7 @@ if menu == "Lista corta":
 
     st.markdown(
         f"### Vista táctica (sistema 4-2-3-1) — "
-        f"<span style='color:#00c6ff;'>Total jugadores: {total_jugadores}</span>",
+        f"<span style='color:#5a9a7c;'>Total jugadores: {total_jugadores}</span>",
         unsafe_allow_html=True
     )
 
@@ -1967,22 +1967,22 @@ if menu == "Lista corta":
         <style>
         .player-card {
             display:flex;align-items:center;justify-content:flex-start;
-            background:linear-gradient(90deg,#0e1117,#1e3c72);
+            background:linear-gradient(90deg,#0a1a14,#3a6651);
             padding:0.6em 0.8em;border-radius:12px;color:white;
             font-family:Arial, sans-serif;box-shadow:0 0 6px rgba(0,0,0,0.4);
             width:230px;min-height:75px;margin:6px auto;transition:0.2s;
         }
-        .player-card:hover {transform:scale(1.05);box-shadow:0 0 12px #00c6ff;}
+        .player-card:hover {transform:scale(1.05);box-shadow:0 0 12px #5a9a7c;}
         .player-photo {
             width:55px;height:55px;border-radius:50%;object-fit:cover;
-            border:2px solid #00c6ff;margin-right:10px;
+            border:2px solid #5a9a7c;margin-right:10px;
         }
-        .player-info h5 {font-size:13px;margin:0;color:#00c6ff;font-weight:bold;}
+        .player-info h5 {font-size:13px;margin:0;color:#5a9a7c;font-weight:bold;}
         .player-info p {font-size:11.5px;margin:1px 0;color:#ccc;}
-        .player-link a {color:#00c6ff;font-size:10.5px;text-decoration:none;}
+        .player-link a {color:#5a9a7c;font-size:10.5px;text-decoration:none;}}
         .player-link a:hover{text-decoration:underline;}
         .line-title {
-            color:#00c6ff;font-weight:bold;font-size:16px;
+            color:#5a9a7c;font-weight:bold;font-size:16px;
             margin:10px 0 5px;text-align:center;
         }
         </style>
@@ -2200,24 +2200,24 @@ if menu == "Agenda":
     import pandas as pd
     from datetime import datetime, timedelta
 
-    st.markdown("<h2 style='text-align:center;color:#00c6ff;'>📅 Agenda de Seguimiento — ScoutingApp PRO</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;color:#5a9a7c;'>📅 Agenda de Seguimiento — ScoutingApp PRO</h2>", unsafe_allow_html=True)
 
     # =========================================================
     # CSS PERSONALIZADO
     # =========================================================
     st.markdown("""
     <style>
-    body, .stApp { background-color:#0e1117 !important; color:white !important; font-family:'Segoe UI',sans-serif; }
+    body, .stApp { background-color:#0a1a14 !important; color:white !important; font-family:'Segoe UI',sans-serif; }
     h1,h2,h3,h4,h5,h6 { color:white !important; }
     .card-container { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; margin-bottom:1em; }
     .card {
-        background:linear-gradient(90deg,#0e1117,#1e3c72);
+        background:linear-gradient(90deg,#0a1a14,#3a6651);
         border-radius:10px; padding:0.7em 1em; color:white;
         box-shadow:0 0 8px rgba(0,0,0,0.5); transition:0.2s ease-in-out;
         width:220px; min-height:135px;
     }
-    .card:hover { transform:scale(1.04); box-shadow:0 0 10px #00c6ff; }
-    .card h5 { color:#00c6ff; font-size:14px; margin:0 0 3px 0; text-align:left; }
+    .card:hover { transform:scale(1.04); box-shadow:0 0 10px #5a9a7c; }
+    .card h5 { color:#5a9a7c; font-size:14px; margin:0 0 3px 0; text-align:left; }
     .card p { font-size:12px; color:#b0b0b0; margin:2px 0; }
     .card.visto { opacity:0.7; background:linear-gradient(90deg,#1a1f2e,#2a3a5a); }
     .label {
@@ -2393,7 +2393,7 @@ if menu == "Agenda":
 if menu == "Panel General":
 
     st.markdown(
-        "<h2 style='text-align:center;color:#00c6ff;'>📊 Panel General — ScoutingApp PRO</h2>",
+        "<h2 style='text-align:center;color:#5a9a7c;'>📊 Panel General — ScoutingApp PRO</h2>",
         unsafe_allow_html=True
     )
 
@@ -2749,7 +2749,7 @@ if menu == "Panel Scouts":
         st.stop()
 
     st.markdown(
-        "<h2 style='text-align:center;color:#00c6ff;'>Panel de Control de Scouts</h2>",
+        "<h2 style='text-align:center;color:#5a9a7c;'>Panel de Control de Scouts</h2>",
         unsafe_allow_html=True
     )
 
@@ -2951,7 +2951,7 @@ if menu == "Panel Scouts":
 # =========================================================
 st.markdown("---")
 st.markdown(f"""
-<div style="text-align:center;color:#00c6ff;margin-top:30px;">
+<div style="text-align:center;color:#5a9a7c;margin-top:30px;">
     <h4>ScoutingApp Profesional v2.3</h4>
     <p>Usuario activo: <strong>{CURRENT_USER}</strong> ({CURRENT_ROLE})</p>
     <p style="color:gray;font-size:13px;">

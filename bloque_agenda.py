@@ -13,7 +13,7 @@ from datetime import datetime
 import time
 
 def render_agenda(current_user, current_role, df_players):
-    st.markdown("<h2 style='text-align:center;color:#00c6ff;'>📅 Agenda de Seguimiento</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center;color:#5a9a7c;'>📅 Agenda de Seguimiento</h2>", unsafe_allow_html=True)
 
     # =========================================================
     # NAMESPACE ÚNICO (EVITA COLISIÓN DE BOTONES ENTRE MÓDULOS)
@@ -90,7 +90,7 @@ def render_agenda(current_user, current_role, df_players):
     st.markdown("""
     <style>
     .agenda-card {
-        background: linear-gradient(90deg,#0e1117,#1e3c72);
+        background: linear-gradient(90deg,#0a1a14,#3a6651);
         border-radius: 14px;
         padding: 10px 12px;
         margin: 8px 0;
@@ -101,9 +101,9 @@ def render_agenda(current_user, current_role, df_players):
     }
     .agenda-card:hover {
         transform: scale(1.03);
-        box-shadow: 0 0 12px #00c6ff;
+        box-shadow: 0 0 12px #5a9a7c;
     }
-    .agenda-title { color: #00c6ff; font-size: 14px; font-weight: bold; margin-bottom: 4px; text-align:center; }
+    .agenda-title { color: #5a9a7c; font-size: 14px; font-weight: bold; margin-bottom: 4px; text-align:center; }
     .agenda-sub { font-size: 12.5px; color: #b0b0b0; margin: 2px 0; text-align:center; }
     .agenda-date { font-size: 12px; color: white; margin-top: 3px; text-align:center; }
     </style>
@@ -177,7 +177,7 @@ def render_agenda(current_user, current_role, df_players):
                         else "-"
                     )
                     st.markdown(f"""
-                    <div class="agenda-card" style="background:linear-gradient(90deg,#1e3c72,#0e1117);">
+                    <div class="agenda-card" style="background:linear-gradient(90deg,#3a6651,#0a1a14);">
                         <div class="agenda-title">{row['Nombre']}</div>
                         <div class="agenda-sub">Scout: {row['Scout']}</div>
                         <div class="agenda-sub">Motivo: {row['Motivo']}</div>

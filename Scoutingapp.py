@@ -1411,12 +1411,41 @@ if menu == "Jugadores":
 
             
         # ---------------------------------------------------------
-        # EDITAR DATOS DEL JUGADOR SOLO SI HAY SELECCIÓN
+        # MOSTRAR INFORMACIÓN DEL JUGADOR AL SELECCIONAR
         # ---------------------------------------------------------
         if seleccion_jug:
             id_jugador = opciones[seleccion_jug]
             jugador = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0].to_dict()
 
+            # Visualización de datos principales
+            st.markdown(f"### {jugador.get('Nombre', 'Sin nombre')}")
+            colA, colB = st.columns([2, 1])
+            with colA:
+                st.markdown(f"**Club:** {jugador.get('Club', '-')}")
+                st.markdown(f"**Posición:** {jugador.get('Posición', '-')}")
+                st.markdown(f"**Nacionalidad:** {jugador.get('Nacionalidad', '-')}")
+                st.markdown(f"**Altura:** {jugador.get('Altura', '-')}")
+                st.markdown(f"**Pie hábil:** {jugador.get('Pie_Hábil', '-')}")
+                st.markdown(f"**Liga:** {jugador.get('Liga', '-')}")
+                st.markdown(f"**Características:** {jugador.get('Caracteristica', '-')}")
+                st.markdown(f"**Fin de contrato:** {jugador.get('Fecha_Fin_Contrato', '-')}")
+                st.markdown(f"**Representante:** {jugador.get('representante', '-')}")
+                st.markdown(f"**Teléfono:** {jugador.get('telefono', '-')}")
+                st.markdown(f"**Instagram:** {jugador.get('Instagram', '-')}")
+                st.markdown(f"**URL Perfil:** {jugador.get('URL_Perfil', '-')}")
+                st.markdown(f"**URL Video:** {jugador.get('video_url', '-')}")
+            with colB:
+                foto_url = jugador.get('URL_Foto', '')
+                if foto_url:
+                    st.image(foto_url, width=180)
+            # Descripción
+            descripcion = jugador.get('Descripcion', '').strip()
+            if descripcion:
+                st.markdown(f"#### Descripción del jugador")
+                st.markdown(descripcion)
+            st.markdown("---")
+
+            # Formulario de edición
             with st.expander("✏️ Editar información del jugador", expanded=False):
 
                 with st.form(f"editar_jugador_form_{jugador['ID_Jugador']}"):

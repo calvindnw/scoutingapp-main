@@ -877,6 +877,20 @@ def sanitizar_texto_pdf(texto):
 
 
 # ---------------------------------------------------------
+# CLASE FPDF CON SANITIZACIÓN AUTOMÁTICA
+# ---------------------------------------------------------
+class FPDF_SEGURO(FPDF):
+    """Extensión de FPDF que sanitiza automáticamente todos los strings."""
+    def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
+        text = sanitizar_texto_pdf(str(text)) if text else ""
+        return super().cell(w, h, text, border, ln, align, fill, link)
+    
+    def multi_cell(self, w=0, h=0, text="", border=0, align="", fill=False):
+        text = sanitizar_texto_pdf(str(text)) if text else ""
+        return super().multi_cell(w, h, text, border, align, fill)
+
+
+# ---------------------------------------------------------
 # FUNCION: GENERAR PDF REPORTE COMPLETO (OPTIMIZADO)
 # ---------------------------------------------------------
 def generar_pdf_reporte_completo(jugador, df_reports):
@@ -886,10 +900,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
     - Foto con marco verde sutil
     - Secciones con fondos gris claro
     - Tipografía jerárquica mejorada
-    - SANITIZACIÓN RADICAL DE TODOS LOS CARACTERES ESPECIALES
+    - SANITIZACIÓN RADICAL DE TODOS LOS CARACTERES ESPECIALES EN PUNTO DE ESCRITURA
     """
     try:
-        from fpdf import FPDF
         from io import BytesIO
         import requests
         from PIL import Image
@@ -912,9 +925,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 )
         
         # =========================================
-        # CONFIGURACIÓN INICIAL DEL PDF
+        # CONFIGURACIÓN INICIAL DEL PDF CON FPDF_SEGURO
         # =========================================
-        pdf = FPDF()
+        pdf = FPDF_SEGURO()
         pdf.set_margins(left=12, top=12, right=12)  # Márgenes (12mm)
         pdf.add_page()
         
@@ -1144,8 +1157,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.line(pdf.l_margin, y_footer_line, pdf.w - pdf.r_margin, y_footer_line)
         
         pdf.ln(2)
-        pdf.cell(0, 4, "ScoutingApp Profesional v2.3 | Reporte generado automáticamente", ln=True, align="C")
-        pdf.cell(0, 4, "Diseño futurista profesional • Fondo claro para máxima legibilidad", ln=True, align="C")
+        pdf.cell(0, 4, "ScoutingApp Profesional v2.3 | Reporte generado automaticamente", ln=True, align="C")
+        pdf.cell(0, 4, "Diseno futurista profesional - Fondo claro para maxima legibilidad", ln=True, align="C")
         
         # =========================================
         # RETORNAR PDF EN BUFFER

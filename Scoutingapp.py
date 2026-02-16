@@ -786,6 +786,44 @@ def radar_chart(prom_jugador, prom_posicion):
 
 
 # ---------------------------------------------------------
+# FUNCIÓN AUXILIAR: SANITIZAR CARACTERES PARA PDF
+# ---------------------------------------------------------
+def sanitizar_texto_pdf(texto):
+    """
+    Reemplaza caracteres especiales no soportados por FPDF
+    con equivalentes soportados.
+    """
+    if not isinstance(texto, str):
+        texto = str(texto)
+    
+    # Mapeo de caracteres problemáticos a soportados
+    reemplazos = {
+        "•": "-",           # bullet point
+        "°": "°",           # grado
+        "–": "-",           # dash
+        "—": "-",           # em dash
+        "'": "'",           # comilla inteligente
+        """: '"',           # comilla doble inteligente
+        """: '"',           # comilla doble inteligente
+        "…": "...",         # ellipsis
+        "™": "TM",          # trademark
+        "®": "R",           # registered
+        "©": "C",           # copyright
+        "€": "EUR",         # euro
+        "¥": "JPY",         # yen
+        "£": "GBP",         # libra
+    }
+    
+    for viejo, nuevo in reemplazos.items():
+        texto = texto.replace(viejo, nuevo)
+    
+    # Eliminar caracteres no ASCII problemáticos
+    texto = texto.encode('ascii', errors='replace').decode('ascii')
+    
+    return texto
+
+
+# ---------------------------------------------------------
 # FUNCION: GENERAR PDF REPORTE COMPLETO (OPTIMIZADO)
 # ---------------------------------------------------------
 def generar_pdf_reporte_completo(jugador, df_reports):
@@ -840,7 +878,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # Subtítulo con fecha
         pdf.set_font("Arial", "I", 9)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 5, f"Generado: {datetime.now().strftime('%d de %B de %Y')}", ln=True, align="C")
+        fecha_generado = sanitizar_texto_pdf(datetime.now().strftime('%d de %B de %Y'))
+        pdf.cell(0, 5, f"Generado: {fecha_generado}", ln=True, align="C")
         
         # Línea decorativa inferior
         pdf.set_draw_color(200, 200, 200)
@@ -894,7 +933,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "B", 16)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         
-        nombre = str(jugador.get("Nombre", "SIN NOMBRE")).strip()
+        nombre = sanitizar_texto_pdf(str(jugador.get("Nombre", "SIN NOMBRE")).strip())
         col_width = pdf.w - x_datos - pdf.r_margin
         
         pdf.set_x(x_datos)
@@ -905,10 +944,10 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(80, 80, 80)
         
         datos = [
-            ("Club", jugador.get("Club", "-")),
-            ("Posición", jugador.get("Posición", "-")),
-            ("Liga", jugador.get("Liga", "-")),
-            ("Nacionalidad", jugador.get("Nacionalidad", "-")),
+            ("Club", sanitizar_texto_pdf(str(jugador.get("Club", "-")))),
+            ("Posición", sanitizar_texto_pdf(str(jugador.get("Posición", "-")))),
+            ("Liga", sanitizar_texto_pdf(str(jugador.get("Liga", "-")))),
+            ("Nacionalidad", sanitizar_texto_pdf(str(jugador.get("Nacionalidad", "-")))),
         ]
         
         for etiqueta, valor in datos:
@@ -919,12 +958,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             
             pdf.set_font("Arial", "", 11)
             pdf.set_text_color(50, 50, 50)
-            pdf.cell(0, 4, str(valor).strip(), ln=True)
+            pdf.cell(0, 4, valor.strip(), ln=True)
         
         # Información física
         edad = calcular_edad(jugador.get("Fecha_Nac", ""))
-        altura = str(jugador.get("Altura", "-")).strip()
-        pie = str(jugador.get("Pie_Hábil", "-")).strip()
+        altura = sanitizar_texto_pdf(str(jugador.get("Altura", "-")).strip())
+        pie = sanitizar_texto_pdf(str(jugador.get("Pie_Hábil", "-")).strip())
         
         pdf.set_x(x_datos)
         pdf.set_font("Arial", "", 10)
@@ -995,8 +1034,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pdf.set_font("Arial", "B", 10)
                 pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
                 
-                fecha_str = str(inf.get("Fecha_Partido", "")).strip()
-                equipos_str = str(inf.get("Equipos_Resultados", "")).strip()
+                fecha_str = sanitizar_texto_pdf(str(inf.get("Fecha_Partido", "")).strip())
+                equipos_str = sanitizar_texto_pdf(str(inf.get("Equipos_Resultados", "")).strip())
                 
                 if fecha_str:
                     pdf.cell(0, 4, f"Fecha: {fecha_str}", ln=True)
@@ -1004,7 +1043,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.cell(0, 4, f"Partido: {equipos_str}", ln=True)
                 
                 # Observaciones - AUMENTADO A 9.5pt (+1 punto)
-                observaciones = str(inf.get("Observaciones", "")).strip()
+                observaciones = sanitizar_texto_pdf(str(inf.get("Observaciones", "")).strip())
                 if observaciones:
                     pdf.set_font("Arial", "", 9.5)  # +1 punto: de 8.5pt a 9.5pt
                     pdf.set_text_color(60, 60, 60)

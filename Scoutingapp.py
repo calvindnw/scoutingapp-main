@@ -974,13 +974,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     left = (img.width - min_side) // 2
                     top = (img.height - min_side) // 2
                     img = img.crop((left, top, left + min_side, top + min_side))
-                    # Mejorar calidad: redimensionar a mayor resolución y luego reducir
-                    upscale = 4  # factor de mejora
-                    highres_size = (int(foto_w*upscale), int(foto_h*upscale))
-                    img = img.resize(highres_size, Image.LANCZOS)
-                    img = img.resize((int(foto_w), int(foto_h)), Image.LANCZOS)
+                    # Solo redimensionar si la imagen es más grande que el espacio
+                    target_px = 300  # mayor resolución para impresión
+                    if img.width > target_px:
+                        img = img.resize((target_px, target_px), Image.LANCZOS)
                     temp = BytesIO()
-                    img.save(temp, format="JPEG", quality=95, optimize=True)
+                    img.save(temp, format="PNG", optimize=True)
                     temp.seek(0)
                     pdf.image(temp, x=foto_x, y=foto_y, w=foto_w, h=foto_h)
                     # Marco verde

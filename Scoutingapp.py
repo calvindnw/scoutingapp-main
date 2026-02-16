@@ -127,6 +127,15 @@ def obtener_hoja(nombre_hoja: str, columnas_base: list = None):
         st.stop()
 
 
+def col_letter(n: int) -> str:
+    """Convierte un índice 1-based a la letra(s) correspondiente de columna (A, B, ..., Z, AA, AB...)."""
+    s = ""
+    while n > 0:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
 # =========================================================
 # CARGAR DATOS (con control de tiempo)
 # =========================================================
@@ -781,9 +790,12 @@ def radar_chart(prom_jugador, prom_posicion):
 @st.cache_data(ttl=120)
 def cargar_datos():
 
-    columnas_jug = ["ID_Jugador","Nombre","Fecha_Nac","Nacionalidad","Segunda_Nacionalidad",
-                    "Altura","Pie_Hábil","Posición","Caracteristica","Club","Liga",
-                    "Sexo","URL_Foto","URL_Perfil","Instagram","Fecha_Fin_Contrato"]
+    columnas_jug = [
+        "ID_Jugador","Nombre","Fecha_Nac","Nacionalidad","Segunda_Nacionalidad",
+        "Altura","Pie_Hábil","Posición","Caracteristica","Club","Liga",
+        "Sexo","URL_Foto","URL_Perfil","Instagram","Fecha_Fin_Contrato",
+        "video_url","telefono","representante"
+    ]
 
     columnas_inf = ["ID_Informe","ID_Jugador","Scout","Fecha_Partido","Fecha_Informe",
                     "Equipos_Resultados","Formación","Observaciones","Línea",
@@ -972,6 +984,9 @@ if menu == "Jugadores":
                     nueva_url_foto = st.text_input("URL Foto")
                     nueva_url_perfil = st.text_input("URL Perfil")
                     nueva_instagram = st.text_input("Instagram")
+                    nueva_video = st.text_input("URL Video")
+                    nuevo_telefono = st.text_input("Teléfono")
+                    nuevo_representante = st.text_input("Representante")
 
                 guardar = st.form_submit_button("💾 Guardar jugador")
 
@@ -1009,7 +1024,10 @@ if menu == "Jugadores":
                             nueva_url_foto,
                             nueva_url_perfil,
                             nueva_instagram,
-                            nueva_fecha_fin_contrato
+                            nueva_fecha_fin_contrato,
+                            nueva_video,
+                            nuevo_telefono,
+                            nuevo_representante
                         ]
 
                         ws.append_row(fila, value_input_option="USER_ENTERED")
@@ -1053,8 +1071,14 @@ if menu == "Jugadores":
             if str(jugador.get("URL_Perfil", "")).startswith("http"):
                 st.markdown(f"[🌐 Perfil externo]({jugador['URL_Perfil']})")
 
+            if str(jugador.get("video_url", "")).startswith("http"):
+                st.markdown(f"[🎬 Ver video]({jugador['video_url']})")
+
             if str(jugador.get("Instagram", "")).startswith("http"):
                 st.markdown(f"[📸 Instagram]({jugador['Instagram']})")
+
+            st.write(f"📞 Teléfono: {jugador.get('telefono', '-')}")
+            st.write(f"🧾 Representante: {jugador.get('representante', '-')}")
 
             # ⭐ AGREGAR A LISTA CORTA (POR SEMESTRE)
             if CURRENT_ROLE in ["admin", "scout"]:
@@ -1175,6 +1199,14 @@ if menu == "Jugadores":
                     e_foto = st.text_input("URL de foto", value=str(jugador.get("URL_Foto", "")))
                     e_link = st.text_input("URL perfil externo", value=str(jugador.get("URL_Perfil", "")))
                     e_instagram = st.text_input("URL Instagram", value=str(jugador.get("Instagram", "")))
+                    e_video = st.text_input("URL Video", value=str(jugador.get("video_url", "")))
+                    e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", "")))
+                    e_representante = st.text_input("Representante", value=str(jugador.get("representante", "")))
+
+                # Campos full-width adicionales para asegurar visibilidad
+                e_video = st.text_input("URL Video", value=str(jugador.get("video_url", ""))) if 'e_video' not in locals() else e_video
+                e_telefono = st.text_input("Teléfono", value=str(jugador.get("telefono", ""))) if 'e_telefono' not in locals() else e_telefono
+                e_representante = st.text_input("Representante", value=str(jugador.get("representante", ""))) if 'e_representante' not in locals() else e_representante
 
                 guardar_ed = st.form_submit_button("💾 Guardar cambios")
 
@@ -1208,10 +1240,14 @@ if menu == "Jugadores":
                                 e_foto,
                                 e_link,
                                 e_instagram,
-                                e_fin_contrato
+                                e_fin_contrato,
+                                e_video,
+                                e_telefono,
+                                e_representante
                             ]
 
-                            ws.update(f"A{row_number}:P{row_number}", [valores])
+                            last_col = col_letter(len(valores))
+                            ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
 
                             st.cache_data.clear()
                             st.toast("✅ Datos actualizados correctamente.", icon="✅")

@@ -616,33 +616,24 @@ def login_ui():
 
     if enviar:
         match = df_users[(df_users["Usuario"] == usuario) & (df_users["Contraseña"] == clave)]
+        if not match.empty:
+            st.session_state["user"] = match.iloc[0]["Usuario"]
+            st.session_state["role"] = match.iloc[0]["Rol"]
+            st.success(f"Bienvenido, {st.session_state['user']} ({st.session_state['role']})")
+            st.rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos")
+    return False
+# =========================================================
+# INICIALIZACIÓN DE USUARIO Y ROL GLOBAL
+# =========================================================
+if "user" not in st.session_state or st.session_state["user"] is None:
+    login_success = login_ui()
+    if not login_success:
+        st.stop()
 
-                        if not index_row.empty:
-                            row_number = index_row[0] + 2
-                            e_car_str = ", ".join(e_car) if e_car else ""
-                            # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
-                            valores = [
-                                id_jugador,           # 0
-                                e_nombre,             # 1
-                                e_fecha,              # 2
-                                e_nac,                # 3
-                                e_seg,                # 4
-                                e_altura,             # 5
-                                e_pie,                # 6
-                                e_pos,                # 7
-                                e_car_str,            # 8
-                                e_club,               # 9
-                                e_liga,               # 10
-                                e_descripcion,        # 11 (NUEVO)
-                                "",                  # 12 (Sexo, si se usa)
-                                e_foto,               # 13
-                                e_link,               # 14
-                                e_instagram,          # 15
-                                e_fin_contrato,       # 16
-                                e_video,              # 17
-                                e_telefono,           # 18
-                                e_representante       # 19
-                            ]
+CURRENT_USER = st.session_state["user"]
+CURRENT_ROLE = st.session_state["role"]
 
 def calcular_edad(fecha_nac):
     try:
@@ -1620,31 +1611,29 @@ if menu == "Jugadores":
                         if not index_row.empty:
                             row_number = index_row[0] + 2
                             e_car_str = ", ".join(e_car) if e_car else ""
-
-
-                                # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
-                                valores = [
-                                    id_jugador,           # 0
-                                    e_nombre,             # 1
-                                    e_fecha,              # 2
-                                    e_nac,                # 3
-                                    e_seg,                # 4
-                                    e_altura,             # 5
-                                    e_pie,                # 6
-                                    e_pos,                # 7
-                                    e_car_str,            # 8
-                                    e_club,               # 9
-                                    e_liga,               # 10
-                                    e_descripcion,        # 11 (NUEVO)
-                                    "",                  # 12 (Sexo, si se usa)
-                                    e_foto,               # 13
-                                    e_link,               # 14
-                                    e_instagram,          # 15
-                                    e_fin_contrato,       # 16
-                                    e_video,              # 17
-                                    e_telefono,           # 18
-                                    e_representante       # 19
-                                ]
+                            # Insertar la descripción en la posición adecuada (después de 'Liga', antes de 'Sexo')
+                            valores = [
+                                id_jugador,           # 0
+                                e_nombre,             # 1
+                                e_fecha,              # 2
+                                e_nac,                # 3
+                                e_seg,                # 4
+                                e_altura,             # 5
+                                e_pie,                # 6
+                                e_pos,                # 7
+                                e_car_str,            # 8
+                                e_club,               # 9
+                                e_liga,               # 10
+                                e_descripcion,        # 11 (NUEVO)
+                                "",                  # 12 (Sexo, si se usa)
+                                e_foto,               # 13
+                                e_link,               # 14
+                                e_instagram,          # 15
+                                e_fin_contrato,       # 16
+                                e_video,              # 17
+                                e_telefono,           # 18
+                                e_representante       # 19
+                            ]
 
                             last_col = col_letter(len(valores))
                             ws.update(f"A{row_number}:{last_col}{row_number}", [valores])

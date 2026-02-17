@@ -1274,19 +1274,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.ln(2)
                 # Línea fuera de contexto eliminada para corregir IndentationError
 
-    columnas_short = ["ID_Jugador","Nombre","Edad","Altura","Club","Posición",
-                      "URL_Foto","URL_Perfil","Agregado_Por","Fecha_Agregado"]
-
-    df_players = cargar_datos_sheets("Jugadores", columnas_jug)
-    df_reports = cargar_datos_sheets("Informes", columnas_inf)
-    df_short   = cargar_datos_sheets("Lista corta", columnas_short)
-
-    # Normalización de IDs
-    for df in (df_players, df_reports, df_short):
-        if not df.empty and "ID_Jugador" in df.columns:
-            df["ID_Jugador"] = df["ID_Jugador"].astype(str)
-
-    return df_players, df_reports, df_short
+    # (Eliminado bloque duplicado/incompleto que causaba SyntaxError)
 
 # ---------------------------------------------------------
 # INICIALIZACIÓN

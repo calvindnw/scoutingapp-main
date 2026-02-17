@@ -1277,33 +1277,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
     # (Eliminado bloque duplicado/incompleto que causaba SyntaxError)
 
 # ---------------------------------------------------------
-# INICIALIZACIÓN
-# ---------------------------------------------------------
-
-# 1️⃣ Carga base desde Sheets (SIN filtros)
-    # (Eliminado código huérfano que causaba SyntaxError)
-
-# 2️⃣ Guardar como fuente única en session_state
-    # (Eliminado código huérfano que causaba SyntaxError)
-
-# =========================================================
-# 🔐 FILTRADO GLOBAL DE DATOS POR USUARIO (ÚNICO)
-# =========================================================
-
-# Fuente completa (ALL)
-    # (Eliminado código huérfano que causaba SyntaxError)
-
-    # (Eliminado código huérfano que causaba SyntaxError)
-
-# -----------------------------
-# Menú principal
-# -----------------------------
-    # (Eliminado código huérfano que causaba SyntaxError)
-
-
-# =========================================================
-# BLOQUE 3 / 5 — Sección Jugadores
-# =========================================================
+    # (Eliminados comentarios y líneas huérfanas que causaban SyntaxError)
 
 if menu == "Jugadores":
 

@@ -1098,33 +1098,24 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             promedio_grupo = round(np.mean(valores), 2) if valores else None
             promedios_grupos[grupo] = promedio_grupo
 
-        # Generar gráfico de radar (spider chart) con matplotlib
+        # Gráfico radar limpio (sin puntajes ni textos)
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
         radar_labels = list(promedios_grupos.keys())
         radar_values = [promedios_grupos[k] if promedios_grupos[k] is not None else 0 for k in radar_labels]
-        # Cerrar el círculo
         radar_values += radar_values[:1]
         radar_labels += radar_labels[:1]
         angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=True)
 
-        # --- Gráfico radar optimizado ---
-        fig, ax = plt.subplots(figsize=(2.2, 2.2), subplot_kw=dict(polar=True))  # Más pequeño
-        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=1.5)
+        fig, ax = plt.subplots(figsize=(2.7, 2.7), subplot_kw=dict(polar=True))
+        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=1.7)
         ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.18)
-        # Etiquetas más cortas y limpias
-        short_labels = [lbl.split()[0] for lbl in radar_labels[:-1]]
+        # Solo nombres de grupo, sin puntajes ni textos extra
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(short_labels, fontsize=8, color="#1e3c72")
+        ax.set_xticklabels(radar_labels[:-1], fontsize=8, color="#1e3c72")
         ax.set_yticks([2,4,6,8,10])
         ax.set_yticklabels(["2","4","6","8","10"], color="#bbbbbb", fontsize=7)
         ax.set_ylim(0, 10)
-        # Mostrar puntaje solo en el borde, no sobre el gráfico
-        for i, (angle, label) in enumerate(zip(angles, radar_labels)):
-            if i < len(radar_labels) - 1:
-                val = promedios_grupos[label[:-1]] if label.endswith(':') else promedios_grupos[label]
-                if val is not None:
-                    ax.text(angle, 10.7, f"{val}", color="#5a9a7c", fontsize=8, ha='center', va='center', fontweight='bold')
         ax.spines["polar"].set_color("#cccccc")
         ax.spines["polar"].set_linewidth(0.7)
         ax.grid(color="#cccccc", linewidth=0.5, alpha=0.5)
@@ -1140,10 +1131,26 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(90, 154, 124)
         pdf.cell(0, 8, "Valoración de aspectos", ln=True)
         y_img = pdf.get_y()
-        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.45  # 45% del ancho útil
+        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.38  # Más pequeño para dejar espacio
         x_centered = pdf.l_margin + ((pdf.w - pdf.l_margin - pdf.r_margin) - radar_width) / 2
         pdf.image(img_buffer, x=x_centered, y=y_img, w=radar_width)
-        pdf.ln(radar_width * 0.65)
+        # Tabla/lista de promedios por grupo, debajo del gráfico
+        pdf.set_y(y_img + radar_width + 4)
+        pdf.set_font("Arial", '', 10)
+        pdf.set_text_color(30, 60, 114)
+        pdf.cell(0, 7, "Detalle de puntajes por grupo:", ln=True)
+        pdf.ln(1)
+        col1_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.60
+        col2_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.20
+        for grupo, val in promedios_grupos.items():
+            pdf.set_font("Arial", '', 9)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(col1_w, 6, grupo, border=0)
+            pdf.set_font("Arial", 'B', 10)
+            pdf.set_text_color(90, 154, 124)
+            val_str = f"{val:.2f}" if val is not None else "-"
+            pdf.cell(col2_w, 6, val_str, border=0, ln=True, align="R")
+        pdf.ln(2)
         pdf.set_font("Arial", "I", 8)
         pdf.set_text_color(120, 120, 120)
         pdf.cell(0, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")

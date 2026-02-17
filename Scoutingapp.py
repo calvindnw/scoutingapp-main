@@ -1005,8 +1005,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pass
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
-        # Asegurarse de que no haya salto de línea extra antes del título
-        pdf.set_xy(datos_x, datos_y)
+        # Alinear el título con el marco superior de la foto
+        y_titulo = foto_y - 2  # el marco verde es 2px arriba
+        if y_titulo < pdf.t_margin:
+            y_titulo = pdf.t_margin  # nunca por encima del margen superior
+        pdf.set_xy(datos_x, y_titulo)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')

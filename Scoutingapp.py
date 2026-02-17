@@ -1009,7 +1009,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
-        pdf.set_font("Arial", '', 11)
+        # Font size medio punto más chica (antes 11, ahora 10.5)
+        pdf.set_font("Arial", '', 10.5)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []
         # Club y Liga
@@ -1065,13 +1066,20 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.set_x(datos_x)
             pdf.cell(datos_w, 7, dato, ln=True, align='L')
 
-        # Descripción del jugador (debajo de datos, alineada con datos, justificada)
+        # Línea divisoria verde entre info y descripción
+        pdf.set_draw_color(90, 154, 124)
+        pdf.set_line_width(1)
+        y_linea_desc = pdf.get_y() + 2
+        pdf.line(datos_x, y_linea_desc, datos_x + datos_w, y_linea_desc)
+        pdf.ln(6)
+
+        # Descripción del jugador (debajo de info, justificada, +1pt tamaño)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
         if desc:
             pdf.set_xy(datos_x, pdf.get_y())
-            pdf.set_font("Arial", 'I', 11)
-            pdf.set_text_color(90, 154, 124)
-            pdf.multi_cell(datos_w, 7, desc, 0, 'J')
+            pdf.set_font("Arial", '', 12)
+            pdf.set_text_color(50, 50, 50)
+            pdf.multi_cell(datos_w, 8, desc, 0, 'J')
 
         # Línea decorativa debajo de la sección de datos y descripción
         pdf.set_draw_color(90, 154, 124)

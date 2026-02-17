@@ -1155,7 +1155,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.cell(0, 8, titulo, ln=True, align="C")
 
         y_seccion = pdf.get_y()
-        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.44  # Tamaño medio
+        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.36  # Más pequeño
         radar_x = pdf.w - pdf.r_margin - radar_width  # Margen derecho
         tabla_x = pdf.l_margin  # Margen izquierdo
         y_max = y_seccion
@@ -1166,24 +1166,24 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         # Detalle de puntaje por grupo alineado a la izquierda, alineado verticalmente con el radar
         pdf.set_xy(tabla_x, y_seccion)
-        pdf.set_font("Arial", '', 10)
+        pdf.set_font("Arial", '', 12)  # Aumentar tamaño de letra
         pdf.set_text_color(30, 60, 114)
-        pdf.cell(radar_width * 0.95, 7, "Detalle de puntajes por grupo:", ln=True)
-        pdf.ln(1)
-        col1_w = radar_width * 0.60
-        col2_w = radar_width * 0.35
+        pdf.cell(radar_width * 1.05, 8, "Detalle de puntajes por grupo:", ln=True)
+        pdf.ln(2)
+        col1_w = radar_width * 0.62
+        col2_w = radar_width * 0.33
         for grupo, val in promedios_grupos.items():
-            pdf.set_font("Arial", '', 9)
+            pdf.set_font("Arial", '', 11)
             pdf.set_text_color(50, 50, 50)
-            pdf.cell(col1_w, 6, grupo, border=0)
-            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(col1_w, 7, grupo, border=0)
+            pdf.set_font("Arial", 'B', 12)
             pdf.set_text_color(90, 154, 124)
             val_str = f"{val:.2f}" if val is not None else "-"
-            pdf.cell(col2_w, 6, val_str, border=0, ln=True, align="R")
+            pdf.cell(col2_w, 7, val_str, border=0, ln=True, align="R")
         pdf.ln(2)
-        pdf.set_font("Arial", "I", 8)
+        pdf.set_font("Arial", "I", 9)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(radar_width * 0.95, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
+        pdf.cell(radar_width * 1.05, 7, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
         pdf.ln(2)
         # Ajustar la posición Y para continuar debajo del radar si es necesario
         y_post = y_seccion + radar_width + 6

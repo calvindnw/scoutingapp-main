@@ -1281,7 +1281,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 # ---------------------------------------------------------
 
 # 1️⃣ Carga base desde Sheets (SIN filtros)
-df_players, df_reports, df_short = cargar_datos()
+    # (Eliminado código huérfano que causaba SyntaxError)
 
 # 2️⃣ Guardar como fuente única en session_state
 st.session_state["df_players"] = df_players.copy()

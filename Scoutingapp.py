@@ -1108,41 +1108,45 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         radar_labels += radar_labels[:1]
         angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=True)
 
-        fig, ax = plt.subplots(figsize=(3.2, 3.2), subplot_kw=dict(polar=True))  # Tamaño reducido
-        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=2)
-        ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.25)
+        # --- Gráfico radar optimizado ---
+        fig, ax = plt.subplots(figsize=(2.2, 2.2), subplot_kw=dict(polar=True))  # Más pequeño
+        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=1.5)
+        ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.18)
+        # Etiquetas más cortas y limpias
+        short_labels = [lbl.split()[0] for lbl in radar_labels[:-1]]
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(radar_labels[:-1], fontsize=9, color="#1e3c72")
-        ax.set_yticks(range(1, 11))
-        ax.set_yticklabels([str(i) for i in range(1, 11)], color="#888888", fontsize=7)
+        ax.set_xticklabels(short_labels, fontsize=8, color="#1e3c72")
+        ax.set_yticks([2,4,6,8,10])
+        ax.set_yticklabels(["2","4","6","8","10"], color="#bbbbbb", fontsize=7)
         ax.set_ylim(0, 10)
+        # Mostrar puntaje solo en el borde, no sobre el gráfico
         for i, (angle, label) in enumerate(zip(angles, radar_labels)):
             if i < len(radar_labels) - 1:
                 val = promedios_grupos[label[:-1]] if label.endswith(':') else promedios_grupos[label]
                 if val is not None:
-                    ax.text(angle, val + 0.5, f"{val}", color="#5a9a7c", fontsize=9, ha='center', va='center', fontweight='bold')
-
-        plt.tight_layout(pad=1.0)
+                    ax.text(angle, 10.7, f"{val}", color="#5a9a7c", fontsize=8, ha='center', va='center', fontweight='bold')
+        ax.spines["polar"].set_color("#cccccc")
+        ax.spines["polar"].set_linewidth(0.7)
+        ax.grid(color="#cccccc", linewidth=0.5, alpha=0.5)
+        plt.tight_layout(pad=0.5)
         img_buffer = BytesIO()
-        plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=150)
+        plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=140)
         plt.close(fig)
         img_buffer.seek(0)
 
-        # Insertar imagen del radar en el PDF
-        pdf.ln(4)
+        # --- Distribución PDF mejorada ---
+        pdf.ln(3)
         pdf.set_font("Arial", "B", 12)
         pdf.set_text_color(90, 154, 124)
         pdf.cell(0, 8, "Valoración de aspectos", ln=True)
         y_img = pdf.get_y()
-        # Centrar el gráfico y reducir tamaño
-        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.6  # 60% del ancho útil
+        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.45  # 45% del ancho útil
         x_centered = pdf.l_margin + ((pdf.w - pdf.l_margin - pdf.r_margin) - radar_width) / 2
         pdf.image(img_buffer, x=x_centered, y=y_img, w=radar_width)
-        pdf.ln(radar_width * 0.85)  # Espacio proporcional al tamaño del gráfico
-        # Leyenda debajo del gráfico
-        pdf.set_font("Arial", "I", 9)
+        pdf.ln(radar_width * 0.65)
+        pdf.set_font("Arial", "I", 8)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 7, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")
+        pdf.cell(0, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")
         pdf.ln(2)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación

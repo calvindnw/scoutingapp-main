@@ -1108,21 +1108,21 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         radar_labels += radar_labels[:1]
         angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=True)
 
-        fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+        fig, ax = plt.subplots(figsize=(3.2, 3.2), subplot_kw=dict(polar=True))  # Tamaño reducido
         ax.plot(angles, radar_values, color="#5a9a7c", linewidth=2)
         ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.25)
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(radar_labels[:-1], fontsize=10, color="#1e3c72")
+        ax.set_xticklabels(radar_labels[:-1], fontsize=9, color="#1e3c72")
         ax.set_yticks(range(1, 11))
-        ax.set_yticklabels([str(i) for i in range(1, 11)], color="#888888", fontsize=8)
+        ax.set_yticklabels([str(i) for i in range(1, 11)], color="#888888", fontsize=7)
         ax.set_ylim(0, 10)
         for i, (angle, label) in enumerate(zip(angles, radar_labels)):
             if i < len(radar_labels) - 1:
                 val = promedios_grupos[label[:-1]] if label.endswith(':') else promedios_grupos[label]
                 if val is not None:
-                    ax.text(angle, val + 0.5, f"{val}", color="#5a9a7c", fontsize=11, ha='center', va='center', fontweight='bold')
+                    ax.text(angle, val + 0.5, f"{val}", color="#5a9a7c", fontsize=9, ha='center', va='center', fontweight='bold')
 
-        plt.tight_layout()
+        plt.tight_layout(pad=1.0)
         img_buffer = BytesIO()
         plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=150)
         plt.close(fig)
@@ -1132,10 +1132,18 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(4)
         pdf.set_font("Arial", "B", 12)
         pdf.set_text_color(90, 154, 124)
-        pdf.cell(0, 8, "Radar de promedios por grupo de aspectos:", ln=True)
+        pdf.cell(0, 8, "Valoración de aspectos", ln=True)
         y_img = pdf.get_y()
-        pdf.image(img_buffer, x=pdf.l_margin, y=y_img, w=pdf.w - pdf.l_margin - pdf.r_margin)
-        pdf.ln(70)  # Espacio después del gráfico (ajustar si es necesario)
+        # Centrar el gráfico y reducir tamaño
+        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.6  # 60% del ancho útil
+        x_centered = pdf.l_margin + ((pdf.w - pdf.l_margin - pdf.r_margin) - radar_width) / 2
+        pdf.image(img_buffer, x=x_centered, y=y_img, w=radar_width)
+        pdf.ln(radar_width * 0.85)  # Espacio proporcional al tamaño del gráfico
+        # Leyenda debajo del gráfico
+        pdf.set_font("Arial", "I", 9)
+        pdf.set_text_color(120, 120, 120)
+        pdf.cell(0, 7, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")
+        pdf.ln(2)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

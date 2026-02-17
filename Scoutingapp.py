@@ -1298,18 +1298,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 # -----------------------------
 # Menú principal
 # -----------------------------
-menu = st.sidebar.radio(
-    "📋 Menú principal",
-    [
-        "Panel General",
-        "Agenda",
-        "Jugadores",
-        "Ver informes",
-        "Lista corta",
-        "Panel Scouts",
-    ]
-    , key="menu"
-)
+    # (Eliminado código huérfano que causaba SyntaxError)
 
 
 # =========================================================

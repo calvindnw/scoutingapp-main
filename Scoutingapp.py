@@ -1088,44 +1088,54 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             "Aspectos tácticos": ["Inteligencia_tactica", "Posicionamiento", "Vision_de_juego", "Movimientos_sin_pelota"],
         }
 
-        # Calcular promedios y mostrar detalle por grupo
-        pdf.ln(4)
-        pdf.set_font("Arial", "B", 12)
-        pdf.set_text_color(90, 154, 124)
-        pdf.cell(0, 8, "Promedios por aspecto (1 a 10):", ln=True)
-
+        # Calcular promedios por grupo para el radar
+        promedios_grupos = {}
         for grupo, metricas in grupos_aspectos.items():
-            # Filtrar métricas existentes
             metricas_existentes = [m for m in metricas if m in informes_jugador.columns]
             valores_metricas = informes_jugador[metricas_existentes].apply(pd.to_numeric, errors="coerce")
-            # Calcular promedio del grupo
             valores = valores_metricas.values.flatten()
             valores = [v for v in valores if pd.notna(v)]
             promedio_grupo = round(np.mean(valores), 2) if valores else None
+            promedios_grupos[grupo] = promedio_grupo
 
-            pdf.set_font("Arial", "B", 11)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(0, 7, f"{grupo}:", ln=True)
-            pdf.set_font("Arial", "", 11)
-            if promedio_grupo is not None:
-                pdf.cell(0, 7, f"Promedio: {promedio_grupo}", ln=True)
-            else:
-                pdf.cell(0, 7, "Sin datos disponibles", ln=True)
+        # Generar gráfico de radar (spider chart) con matplotlib
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+        radar_labels = list(promedios_grupos.keys())
+        radar_values = [promedios_grupos[k] if promedios_grupos[k] is not None else 0 for k in radar_labels]
+        # Cerrar el círculo
+        radar_values += radar_values[:1]
+        radar_labels += radar_labels[:1]
+        angles = np.linspace(0, 2 * np.pi, len(radar_labels), endpoint=True)
 
-            # Mostrar puntajes individuales
-            for m in metricas_existentes:
-                valores_m = valores_metricas[m].values
-                valores_m = [v for v in valores_m if pd.notna(v)]
-                if valores_m:
-                    promedio_m = round(np.mean(valores_m), 2)
-                    pdf.set_font("Arial", "", 10)
-                    pdf.set_text_color(90, 154, 124)
-                    pdf.cell(0, 6, f"- {m}: {promedio_m}", ln=True)
-                else:
-                    pdf.set_font("Arial", "", 10)
-                    pdf.set_text_color(150, 150, 150)
-                    pdf.cell(0, 6, f"- {m}: Sin datos", ln=True)
-            pdf.ln(2)
+        fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=2)
+        ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.25)
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(radar_labels[:-1], fontsize=10, color="#1e3c72")
+        ax.set_yticks(range(1, 11))
+        ax.set_yticklabels([str(i) for i in range(1, 11)], color="#888888", fontsize=8)
+        ax.set_ylim(0, 10)
+        for i, (angle, label) in enumerate(zip(angles, radar_labels)):
+            if i < len(radar_labels) - 1:
+                val = promedios_grupos[label[:-1]] if label.endswith(':') else promedios_grupos[label]
+                if val is not None:
+                    ax.text(angle, val + 0.5, f"{val}", color="#5a9a7c", fontsize=11, ha='center', va='center', fontweight='bold')
+
+        plt.tight_layout()
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=150)
+        plt.close(fig)
+        img_buffer.seek(0)
+
+        # Insertar imagen del radar en el PDF
+        pdf.ln(4)
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(90, 154, 124)
+        pdf.cell(0, 8, "Radar de promedios por grupo de aspectos:", ln=True)
+        y_img = pdf.get_y()
+        pdf.image(img_buffer, x=pdf.l_margin, y=y_img, w=pdf.w - pdf.l_margin - pdf.r_margin)
+        pdf.ln(70)  # Espacio después del gráfico (ajustar si es necesario)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

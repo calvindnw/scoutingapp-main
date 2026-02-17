@@ -1283,7 +1283,7 @@ if menu == "Jugadores":
         "Uruguay - Segunda División", "Paraguay - División Profesional",
         "Colombia - Primera A", "Ecuador - LigaPro Serie A",
         "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
-        "España - LaLiga", "España - LaLiga 2", "Italia - Serie A", "Italia - Serie B",
+        "España - LaLiga", "España - LaLiga 2", "España - 1 RFEF", "España - 2 RFEF", "Italia - Serie A", "Italia - Serie B",
         "Inglaterra - Premier League", "Inglaterra - Championship",
         "Francia - Ligue 1", "Alemania - Bundesliga", "Portugal - Primeira Liga",
         "Países Bajos - Eredivisie", "Suiza - Super League",

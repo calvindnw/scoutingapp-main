@@ -1071,31 +1071,61 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.line(margen_linea, y_linea, margen_linea + ancho_linea, y_linea)
         pdf.ln(4)
 
+
         # =========================================
-        # PROMEDIO DE EVALUACIÓN TÉCNICA (AL FINAL)
+        # PROMEDIOS POR GRUPO DE ASPECTOS (DETALLADO)
         # =========================================
         jugador_id = str(jugador.get("ID_Jugador"))
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
         informes_jugador = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id]
-        # Buscar todas las columnas de puntaje (sliders)
-        columnas_puntaje = [
-            "Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado",
-            "1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos",
-            "Regate", "Velocidad", "Duelos_ofensivos",
-            "Resiliencia", "Liderazgo", "Inteligencia_tactica",
-            "Inteligencia_emocional", "Posicionamiento", "Vision_de_juego",
-            "Movimientos_sin_pelota"
-        ]
-        # Filtrar solo las columnas que existen en el DataFrame
-        columnas_existentes = [col for col in columnas_puntaje if col in informes_jugador.columns]
-        promedio_eval_tecnica = None
-        if columnas_existentes:
-            valores = informes_jugador[columnas_existentes].apply(pd.to_numeric, errors="coerce")
-            valores = valores.values.flatten()
-            valores = [v for v in valores if pd.notna(v)]
-            if valores:
-                promedio_eval_tecnica = round(np.mean(valores), 2)
 
+        # Definir grupos de aspectos y sus métricas
+        grupos_aspectos = {
+            "Habilidades técnicas": ["Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado"],
+            "Aspectos defensivos": ["1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos"],
+            "Aspectos ofensivos": ["Regate", "Velocidad", "Duelos_ofensivos"],
+            "Aspectos mentales": ["Resiliencia", "Liderazgo", "Inteligencia_emocional"],
+            "Aspectos tácticos": ["Inteligencia_tactica", "Posicionamiento", "Vision_de_juego", "Movimientos_sin_pelota"],
+        }
+
+        # Calcular promedios y mostrar detalle por grupo
+        pdf.ln(4)
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(90, 154, 124)
+        pdf.cell(0, 8, "Promedios por aspecto (1 a 10):", ln=True)
+
+        for grupo, metricas in grupos_aspectos.items():
+            # Filtrar métricas existentes
+            metricas_existentes = [m for m in metricas if m in informes_jugador.columns]
+            valores_metricas = informes_jugador[metricas_existentes].apply(pd.to_numeric, errors="coerce")
+            # Calcular promedio del grupo
+            valores = valores_metricas.values.flatten()
+            valores = [v for v in valores if pd.notna(v)]
+            promedio_grupo = round(np.mean(valores), 2) if valores else None
+
+            pdf.set_font("Arial", "B", 11)
+            pdf.set_text_color(50, 50, 50)
+            pdf.cell(0, 7, f"{grupo}:", ln=True)
+            pdf.set_font("Arial", "", 11)
+            if promedio_grupo is not None:
+                pdf.cell(0, 7, f"Promedio: {promedio_grupo}", ln=True)
+            else:
+                pdf.cell(0, 7, "Sin datos disponibles", ln=True)
+
+            # Mostrar puntajes individuales
+            for m in metricas_existentes:
+                valores_m = valores_metricas[m].values
+                valores_m = [v for v in valores_m if pd.notna(v)]
+                if valores_m:
+                    promedio_m = round(np.mean(valores_m), 2)
+                    pdf.set_font("Arial", "", 10)
+                    pdf.set_text_color(90, 154, 124)
+                    pdf.cell(0, 6, f"- {m}: {promedio_m}", ln=True)
+                else:
+                    pdf.set_font("Arial", "", 10)
+                    pdf.set_text_color(150, 150, 150)
+                    pdf.cell(0, 6, f"- {m}: Sin datos", ln=True)
+            pdf.ln(2)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
@@ -1135,17 +1165,6 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     obs_truncada = observaciones[:1200]
                     obs_truncada = sanitizar_texto_pdf(obs_truncada)
                     pdf.multi_cell(0, 6, obs_truncada, align="J")
-            # Mostrar el promedio al final
-            pdf.ln(4)
-            pdf.set_font("Arial", "B", 12)
-            pdf.set_text_color(90, 154, 124)
-            pdf.cell(0, 8, "Promedio de Evaluación técnica (1 a 10):", ln=True)
-            pdf.set_font("Arial", "", 12)
-            pdf.set_text_color(50, 50, 50)
-            if promedio_eval_tecnica is not None:
-                pdf.cell(0, 8, f"{promedio_eval_tecnica}", ln=True)
-            else:
-                pdf.cell(0, 8, "Sin datos disponibles", ln=True)
         
         # =========================================
         # FOOTER MINIMALISTA

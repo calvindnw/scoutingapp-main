@@ -881,6 +881,13 @@ def sanitizar_texto_pdf(texto):
 # CLASE FPDF CON SANITIZACIÓN AUTOMÁTICA
 # ---------------------------------------------------------
 class FPDF_SEGURO(FPDF):
+        # Asegura fondo en cada página
+        def header(self):
+            # Fondo gris claro en cada página
+            self.set_fill_color(240, 245, 250)
+            self.rect(0, 0, self.w, self.h, 'F')
+            # No header visible
+            pass
     """Extensión de FPDF que sanitiza automáticamente todos los strings."""
     def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
         text = sanitizar_texto_pdf(str(text)) if text else ""
@@ -1185,10 +1192,15 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_text_color(120, 120, 120)
         pdf.cell(radar_width * 1.05, 7, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
         pdf.ln(2)
-        # Ajustar la posición Y para continuar debajo del radar si es necesario
-        y_post = y_seccion + radar_width + 6
-        if pdf.get_y() < y_post:
-            pdf.set_y(y_post)
+
+        # Línea divisoria verde
+        y_linea = max(y_seccion + radar_width + 6, pdf.get_y())
+        pdf.set_draw_color(90, 154, 124)
+        pdf.set_line_width(1.1)
+        pdf.line(pdf.l_margin, y_linea, pdf.w - pdf.r_margin, y_linea)
+        pdf.ln(8)
+        if pdf.get_y() < y_linea + 8:
+            pdf.set_y(y_linea + 8)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
@@ -1208,17 +1220,20 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.line(pdf.l_margin + 3, y_sep, pdf.w - pdf.r_margin - 3, y_sep)
                     pdf.ln(2)
 
-                # Fecha y Partido (YA SANITIZADOS DEL DATAFRAME LIMPIO)
-                pdf.set_font("Arial", "B", 12)
-                pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
 
+                # Fecha y Partido en un solo renglón, subrayados y separados por guion medio
+                pdf.set_font("Arial", "U", 11)
+                pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
                 fecha_str = inf.get("Fecha_Partido", "").strip()
                 equipos_str = inf.get("Equipos_Resultados", "").strip()
-
-                if fecha_str:
-                    pdf.cell(0, 6, f"Fecha: {fecha_str}", ln=True)
-                if equipos_str:
-                    pdf.cell(0, 6, f"Partido: {equipos_str}", ln=True)
+                texto_fecha = f"Fecha: {fecha_str}" if fecha_str else ""
+                texto_partido = f"Partido: {equipos_str}" if equipos_str else ""
+                if texto_fecha and texto_partido:
+                    texto = f"{texto_fecha}  -  {texto_partido}"
+                else:
+                    texto = texto_fecha or texto_partido
+                if texto:
+                    pdf.cell(0, 7, texto, ln=True)
 
                 # Observaciones - AUMENTADO A 11pt (+1 punto) - YA SANITIZADO
                 observaciones = inf.get("Observaciones", "").strip()

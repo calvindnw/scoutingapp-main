@@ -1117,12 +1117,19 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 return label
         radar_labels_multiline = [split_label(lbl) for lbl in radar_labels[:-1]]
 
-        fig, ax = plt.subplots(figsize=(3.05, 3.05), subplot_kw=dict(polar=True))  # Tamaño medio
-        ax.plot(angles, radar_values, color="#5a9a7c", linewidth=1.8)
-        ax.fill(angles, radar_values, color="#5a9a7c", alpha=0.18)
-        ax.set_yticks([2,4,6,8,10])
-        ax.set_yticklabels(["2","4","6","8","10"], color="#bbbbbb", fontsize=8)
-        ax.set_ylim(0, 10)
+        # Canvas más grande, radar más pequeño
+        fig, ax = plt.subplots(figsize=(4.2, 4.2), subplot_kw=dict(polar=True))  # Canvas grande
+        # Dibujar radar más pequeño dentro del canvas
+        radar_radius = 8.2  # Limitar el radio máximo del radar
+        ax.set_ylim(0, radar_radius)
+        # Escalar los valores al nuevo radio
+        scaled_values = [v * (radar_radius / 10) for v in radar_values]
+        ax.plot(angles, scaled_values, color="#5a9a7c", linewidth=1.8)
+        ax.fill(angles, scaled_values, color="#5a9a7c", alpha=0.18)
+        # Y-ticks y labels escalados
+        yticks = [2,4,6,8,10]
+        ax.set_yticks([y * (radar_radius / 10) for y in yticks])
+        ax.set_yticklabels([str(y) for y in yticks], color="#bbbbbb", fontsize=8)
         ax.spines["polar"].set_color("#cccccc")
         ax.spines["polar"].set_linewidth(0.7)
         ax.grid(color="#cccccc", linewidth=0.5, alpha=0.5)
@@ -1131,9 +1138,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # Dibujar etiquetas fuera del círculo externo
         for i, angle in enumerate(angles[:-1]):
             label = radar_labels_multiline[i]
-            # Coordenadas polares: radio un poco mayor que el máximo
-            ax.text(angle, 10.7, label, ha='center', va='center', color="#1e3c72", fontsize=9, linespacing=1.5, fontweight='bold')
-        plt.tight_layout(pad=0.9)
+            # Coordenadas polares: radio mayor que el máximo
+            ax.text(angle, radar_radius + 1.0, label, ha='center', va='center', color="#1e3c72", fontsize=9, linespacing=1.5, fontweight='bold')
+        plt.tight_layout(pad=1.2)
         img_buffer = BytesIO()
         plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=145)
         plt.close(fig)

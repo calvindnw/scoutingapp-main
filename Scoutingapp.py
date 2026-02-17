@@ -1147,22 +1147,31 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         img_buffer.seek(0)
 
         # --- Distribución PDF mejorada ---
+        # Centrar el título "Valoración de aspectos"
         pdf.ln(3)
         pdf.set_font("Arial", "B", 12)
         pdf.set_text_color(90, 154, 124)
-        pdf.cell(0, 8, "Valoración de aspectos", ln=True)
-        y_img = pdf.get_y()
+        titulo = "Valoración de aspectos"
+        pdf.cell(0, 8, titulo, ln=True, align="C")
+
+        y_seccion = pdf.get_y()
         radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.44  # Tamaño medio
-        x_centered = pdf.l_margin + ((pdf.w - pdf.l_margin - pdf.r_margin) - radar_width) / 2
-        pdf.image(img_buffer, x=x_centered, y=y_img, w=radar_width)
-        # Tabla/lista de promedios por grupo, debajo del gráfico
-        pdf.set_y(y_img + radar_width + 6)
+        radar_x = pdf.w - pdf.r_margin - radar_width  # Margen derecho
+        tabla_x = pdf.l_margin  # Margen izquierdo
+        y_max = y_seccion
+
+        # Gráfico radar alineado a la derecha
+        pdf.set_y(y_seccion)
+        pdf.image(img_buffer, x=radar_x, y=y_seccion, w=radar_width)
+
+        # Detalle de puntaje por grupo alineado a la izquierda, alineado verticalmente con el radar
+        pdf.set_xy(tabla_x, y_seccion)
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(30, 60, 114)
-        pdf.cell(0, 7, "Detalle de puntajes por grupo:", ln=True)
+        pdf.cell(radar_width * 0.95, 7, "Detalle de puntajes por grupo:", ln=True)
         pdf.ln(1)
-        col1_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.60
-        col2_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.20
+        col1_w = radar_width * 0.60
+        col2_w = radar_width * 0.35
         for grupo, val in promedios_grupos.items():
             pdf.set_font("Arial", '', 9)
             pdf.set_text_color(50, 50, 50)
@@ -1174,8 +1183,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(2)
         pdf.set_font("Arial", "I", 8)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")
+        pdf.cell(radar_width * 0.95, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
         pdf.ln(2)
+        # Ajustar la posición Y para continuar debajo del radar si es necesario
+        y_post = y_seccion + radar_width + 6
+        if pdf.get_y() < y_post:
+            pdf.set_y(y_post)
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

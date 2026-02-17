@@ -1004,12 +1004,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             except Exception:
                 pass
 
-        # Datos principales (alineados a la derecha de la foto)
+        # Datos principales (alineados a la derecha de la foto, NO superpuestos)
         pdf.set_xy(datos_x, datos_y)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
-        # Font size un punto más chica (antes 11, ahora 10)
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []
@@ -1062,9 +1061,16 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         if pie_habil:
             info.append(f"Pie hábil: {pie_habil}")
 
+        # Imprimir info alineada a la derecha de la foto
         for dato in info:
-            pdf.set_x(pdf.l_margin)
-            pdf.cell(pdf.w - pdf.l_margin - pdf.r_margin, 7, dato, ln=True, align='L')
+            pdf.set_x(datos_x)
+            pdf.cell(datos_w, 7, dato, ln=True, align='L')
+
+        # Asegurarse de que el cursor esté debajo de la foto antes de la línea y descripción
+        y_actual = pdf.get_y()
+        y_bajo_foto = foto_y + foto_h + 2
+        if y_actual < y_bajo_foto:
+            pdf.set_y(y_bajo_foto)
 
         # Línea divisoria verde entre info y descripción (de lado a lado)
         pdf.set_draw_color(90, 154, 124)

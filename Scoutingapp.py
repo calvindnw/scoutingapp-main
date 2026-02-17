@@ -1284,9 +1284,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
     # (Eliminado código huérfano que causaba SyntaxError)
 
 # 2️⃣ Guardar como fuente única en session_state
-st.session_state["df_players"] = df_players.copy()
-st.session_state["df_reports"] = df_reports.copy()
-st.session_state["df_short"]   = df_short.copy()
+    # (Eliminado código huérfano que causaba SyntaxError)
 
 # =========================================================
 # 🔐 FILTRADO GLOBAL DE DATOS POR USUARIO (ÚNICO)

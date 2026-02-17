@@ -881,18 +881,20 @@ def sanitizar_texto_pdf(texto):
 # CLASE FPDF CON SANITIZACIÓN AUTOMÁTICA
 # ---------------------------------------------------------
 class FPDF_SEGURO(FPDF):
-        # Asegura fondo en cada página
-        def header(self):
-            # Fondo gris claro en cada página
-            self.set_fill_color(240, 245, 250)
-            self.rect(0, 0, self.w, self.h, 'F')
-            # No header visible
-            pass
     """Extensión de FPDF que sanitiza automáticamente todos los strings."""
+
+    # Asegura fondo en cada página
+    def header(self):
+        # Fondo gris claro en cada página
+        self.set_fill_color(240, 245, 250)
+        self.rect(0, 0, self.w, self.h, 'F')
+        # No header visible
+        pass
+
     def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
         text = sanitizar_texto_pdf(str(text)) if text else ""
         return super().cell(w, h, text, border, ln, align, fill, link)
-    
+
     def multi_cell(self, w=0, h=0, text="", border=0, align="", fill=False):
         text = sanitizar_texto_pdf(str(text)) if text else ""
         return super().multi_cell(w, h, text, border, align, fill)

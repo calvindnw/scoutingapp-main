@@ -1008,6 +1008,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_xy(datos_x, datos_y)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
+        # Eliminar salto de línea extra antes del título
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*COLOR_TEXTO)

@@ -1071,6 +1071,28 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.line(margen_linea, y_linea, margen_linea + ancho_linea, y_linea)
         pdf.ln(4)
 
+            # =========================================
+            # PROMEDIO DE EVALUACIÓN TÉCNICA
+            # =========================================
+            jugador_id = str(jugador.get("ID_Jugador"))
+            df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
+            informes_jugador = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id]
+            promedio_eval_tecnica = None
+            if not informes_jugador.empty and "Evaluación técnica" in informes_jugador.columns:
+                valores = pd.to_numeric(informes_jugador["Evaluación técnica"], errors="coerce")
+                valores = valores.dropna()
+                if not valores.empty:
+                    promedio_eval_tecnica = round(valores.mean(), 2)
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_text_color(90, 154, 124)
+            pdf.cell(0, 8, "Promedio de Evaluación técnica (1 a 10):", ln=True)
+            pdf.set_font("Arial", "", 12)
+            pdf.set_text_color(50, 50, 50)
+            if promedio_eval_tecnica is not None:
+                pdf.cell(0, 8, f"{promedio_eval_tecnica}", ln=True)
+            else:
+                pdf.cell(0, 8, "Sin datos disponibles", ln=True)
+
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         # Asegurar ID_Jugador es string en dataframe limpio

@@ -1072,35 +1072,29 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(4)
 
         # =========================================
-        # PROMEDIO DE EVALUACIÓN TÉCNICA
+        # PROMEDIO DE EVALUACIÓN TÉCNICA (AL FINAL)
         # =========================================
         jugador_id = str(jugador.get("ID_Jugador"))
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
         informes_jugador = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id]
+        # Buscar columna de puntaje
+        col_puntaje = None
+        for col in informes_jugador.columns:
+            if "tecnica" in col.lower() or "técnica" in col.lower() or "evaluacion" in col.lower() or "puntaje" in col.lower() or "score" in col.lower():
+                col_puntaje = col
+                break
         promedio_eval_tecnica = None
-        if not informes_jugador.empty and "Evaluación técnica" in informes_jugador.columns:
-            valores = pd.to_numeric(informes_jugador["Evaluación técnica"], errors="coerce")
+        if col_puntaje:
+            valores = pd.to_numeric(informes_jugador[col_puntaje], errors="coerce")
             valores = valores.dropna()
             if not valores.empty:
                 promedio_eval_tecnica = round(valores.mean(), 2)
-        pdf.set_font("Arial", "B", 12)
-        pdf.set_text_color(90, 154, 124)
-        pdf.cell(0, 8, "Promedio de Evaluación técnica (1 a 10):", ln=True)
-        pdf.set_font("Arial", "", 12)
-        pdf.set_text_color(50, 50, 50)
-        if promedio_eval_tecnica is not None:
-            pdf.cell(0, 8, f"{promedio_eval_tecnica}", ln=True)
-        else:
-            pdf.cell(0, 8, "Sin datos disponibles", ln=True)
 
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
-        # Asegurar ID_Jugador es string en dataframe limpio
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
-        informes = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id].sort_values(
-            "Fecha_Partido", ascending=False
-        )
-        
+        informes = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id].sort_values("Fecha_Partido", ascending=False)
+
         if informes.empty:
             pdf.set_font("Arial", "", 10)
             pdf.set_text_color(150, 150, 150)
@@ -1114,7 +1108,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     y_sep = pdf.get_y() + 1
                     pdf.line(pdf.l_margin + 3, y_sep, pdf.w - pdf.r_margin - 3, y_sep)
                     pdf.ln(2)
-                
+
                 # Fecha y Partido (YA SANITIZADOS DEL DATAFRAME LIMPIO)
                 pdf.set_font("Arial", "B", 12)
                 pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
@@ -1126,7 +1120,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     pdf.cell(0, 6, f"Fecha: {fecha_str}", ln=True)
                 if equipos_str:
                     pdf.cell(0, 6, f"Partido: {equipos_str}", ln=True)
-                
+
                 # Observaciones - AUMENTADO A 11pt (+1 punto) - YA SANITIZADO
                 observaciones = inf.get("Observaciones", "").strip()
                 if observaciones:
@@ -1135,8 +1129,17 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     obs_truncada = observaciones[:1200]
                     obs_truncada = sanitizar_texto_pdf(obs_truncada)
                     pdf.multi_cell(0, 6, obs_truncada, align="J")
-        
-        pdf.ln(2)
+            # Mostrar el promedio al final
+            pdf.ln(4)
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_text_color(90, 154, 124)
+            pdf.cell(0, 8, "Promedio de Evaluación técnica (1 a 10):", ln=True)
+            pdf.set_font("Arial", "", 12)
+            pdf.set_text_color(50, 50, 50)
+            if promedio_eval_tecnica is not None:
+                pdf.cell(0, 8, f"{promedio_eval_tecnica}", ln=True)
+            else:
+                pdf.cell(0, 8, "Sin datos disponibles", ln=True)
         
         # =========================================
         # FOOTER MINIMALISTA

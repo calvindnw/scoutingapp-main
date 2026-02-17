@@ -1005,10 +1005,10 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pass
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
+        # Asegurarse de que no haya salto de línea extra antes del título
         pdf.set_xy(datos_x, datos_y)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        # Eliminar salto de línea extra antes del título
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*COLOR_TEXTO)
@@ -1080,11 +1080,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.line(pdf.l_margin, y_linea_desc, pdf.w - pdf.r_margin, y_linea_desc)
         pdf.ln(6)
 
-        # Descripción del jugador (debajo de info, justificada, +1pt tamaño, de lado a lado)
+        # Descripción del jugador (debajo de info, justificada, +1pt tamaño, de lado a lado, cursiva)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
         if desc:
             pdf.set_xy(pdf.l_margin, pdf.get_y())
-            pdf.set_font("Arial", '', 12)
+            pdf.set_font("Arial", 'I', 12)
             pdf.set_text_color(50, 50, 50)
             pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin, 8, desc, 0, 'J')
 

@@ -1293,32 +1293,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 # Fuente completa (ALL)
     # (Eliminado código huérfano que causaba SyntaxError)
 
-if CURRENT_ROLE != "admin":
-    # Informes: solo los del scout
-    df_reports_user = df_reports_all[
-        df_reports_all["Scout"] == CURRENT_USER
-    ].copy()
-
-    # Lista corta: solo lo agregado por el scout
-    df_short_user = df_short_all[
-        df_short_all["Agregado_Por"] == CURRENT_USER
-    ].copy()
-
-    # Jugadores relacionados (informes + lista corta)
-    ids = (
-        set(df_reports_user["ID_Jugador"].astype(str)) |
-        set(df_short_user["ID_Jugador"].astype(str))
-    )
-
-    df_players_user = df_players_all[
-        df_players_all["ID_Jugador"].astype(str).isin(ids)
-    ].copy()
-
-else:
-    # Admin ve todo
-    df_reports_user = df_reports_all.copy()
-    df_short_user   = df_short_all.copy()
-    df_players_user = df_players_all.copy()
+    # (Eliminado código huérfano que causaba SyntaxError)
 
 # -----------------------------
 # Menú principal

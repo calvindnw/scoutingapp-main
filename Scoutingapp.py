@@ -1272,8 +1272,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             for grupo, val in promedios_grupo.items():
                 pdf.cell(60, 7, f"{grupo}: {val:.2f}", ln=1, align="L")
             pdf.ln(2)
-                    "Inteligencia_emocional","Posicionamiento",
-                    "Vision_de_juego","Movimientos_sin_pelota"]
+                # Línea fuera de contexto eliminada para corregir IndentationError
 
     columnas_short = ["ID_Jugador","Nombre","Edad","Altura","Club","Posición",
                       "URL_Foto","URL_Perfil","Agregado_Por","Fecha_Agregado"]

@@ -1291,9 +1291,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 # =========================================================
 
 # Fuente completa (ALL)
-df_players_all = st.session_state["df_players"].copy()
-df_reports_all = st.session_state["df_reports"].copy()
-df_short_all   = st.session_state["df_short"].copy()
+    # (Eliminado código huérfano que causaba SyntaxError)
 
 if CURRENT_ROLE != "admin":
     # Informes: solo los del scout

@@ -1005,10 +1005,13 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pass
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
-        # Alinear el título con el marco superior de la foto
-        y_titulo = foto_y - 2  # el marco verde es 2px arriba
+        # Alinear el título con el marco superior de la foto de forma precisa
+        # Ajuste fino: compensar el descender de la fuente y el margen del rectángulo
+        altura_marco = 2
+        ajuste_fino = 1.2  # puedes ajustar este valor para lograr simetría visual exacta
+        y_titulo = foto_y - altura_marco + ajuste_fino
         if y_titulo < pdf.t_margin:
-            y_titulo = pdf.t_margin  # nunca por encima del margen superior
+            y_titulo = pdf.t_margin
         pdf.set_xy(datos_x, y_titulo)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)

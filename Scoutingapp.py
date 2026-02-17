@@ -1077,18 +1077,24 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         jugador_id = str(jugador.get("ID_Jugador"))
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
         informes_jugador = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id]
-        # Buscar columna de puntaje
-        col_puntaje = None
-        for col in informes_jugador.columns:
-            if "tecnica" in col.lower() or "técnica" in col.lower() or "evaluacion" in col.lower() or "puntaje" in col.lower() or "score" in col.lower():
-                col_puntaje = col
-                break
+        # Buscar todas las columnas de puntaje (sliders)
+        columnas_puntaje = [
+            "Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado",
+            "1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos",
+            "Regate", "Velocidad", "Duelos_ofensivos",
+            "Resiliencia", "Liderazgo", "Inteligencia_tactica",
+            "Inteligencia_emocional", "Posicionamiento", "Vision_de_juego",
+            "Movimientos_sin_pelota"
+        ]
+        # Filtrar solo las columnas que existen en el DataFrame
+        columnas_existentes = [col for col in columnas_puntaje if col in informes_jugador.columns]
         promedio_eval_tecnica = None
-        if col_puntaje:
-            valores = pd.to_numeric(informes_jugador[col_puntaje], errors="coerce")
-            valores = valores.dropna()
-            if not valores.empty:
-                promedio_eval_tecnica = round(valores.mean(), 2)
+        if columnas_existentes:
+            valores = informes_jugador[columnas_existentes].apply(pd.to_numeric, errors="coerce")
+            valores = valores.values.flatten()
+            valores = [v for v in valores if pd.notna(v)]
+            if valores:
+                promedio_eval_tecnica = round(np.mean(valores), 2)
 
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación

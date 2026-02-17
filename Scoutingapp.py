@@ -1166,107 +1166,112 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         for grupo, val in promedios_grupos.items():
             pdf.set_font("Arial", '', 9)
             pdf.set_text_color(50, 50, 50)
-            pdf.cell(col1_w, 6, grupo, border=0)
-            pdf.set_font("Arial", 'B', 10)
+            # --- TÍTULO DE SECCIÓN CENTRADO ---
+            pdf.set_font("Arial", "B", 15)
             pdf.set_text_color(90, 154, 124)
-            val_str = f"{val:.2f}" if val is not None else "-"
-            pdf.cell(col2_w, 6, val_str, border=0, ln=True, align="R")
-        pdf.ln(2)
-        pdf.set_font("Arial", "I", 8)
-        pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 6, "*Puntaje otorgado por el equipo de scouting", ln=True, align="C")
-        pdf.ln(2)
-        # ...resto del código...
-        jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
-        df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)
-        informes = df_reports_limpio[df_reports_limpio["ID_Jugador"] == jugador_id].sort_values("Fecha_Partido", ascending=False)
+            # Centrar el título manualmente en la hoja
+            titulo = "VALORACIÓN DE ASPECTOS"
+            page_width = pdf.w - 2 * pdf.l_margin
+            titulo_width = pdf.get_string_width(titulo) + 6
+            pdf.set_x((pdf.w - titulo_width) / 2)
+            pdf.cell(titulo_width, 12, titulo, ln=1, align="C")
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
 
-        if informes.empty:
-            pdf.set_font("Arial", "", 10)
-            pdf.set_text_color(150, 150, 150)
-            pdf.cell(0, 5, "Sin evaluaciones registradas", ln=True)
-        else:
-            for idx, (_, inf) in enumerate(informes.iterrows()):
-                # Separador sutil entre evaluaciones
-                if idx > 0:
-                    pdf.set_draw_color(220, 220, 220)
-                    pdf.set_line_width(0.2)
-                    y_sep = pdf.get_y() + 1
-                    pdf.line(pdf.l_margin + 3, y_sep, pdf.w - pdf.r_margin - 3, y_sep)
-                    pdf.ln(2)
+            # --- RADAR + DETALLE DE PUNTAJES POR GRUPO ---
+            # 1. Calcular promedios por grupo de aspectos
+            grupos = {
+                "Técnico": ["Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado"],
+                "Defensivo": ["1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos"],
+                "Ofensivo": ["Regate", "Velocidad", "Duelos_ofensivos"],
+                "Mental": ["Resiliencia", "Liderazgo", "Inteligencia_emocional"],
+                "Táctico": ["Inteligencia_tactica", "Posicionamiento", "Vision_de_juego", "Movimientos_sin_pelota"],
+            }
+            promedios_grupo = {}
+            for grupo, metricas in grupos.items():
+                valores = [float(jugador.get(m, 0)) for m in metricas if m in jugador]
+                if valores:
+                    promedios_grupo[grupo] = round(sum(valores) / len(valores), 2)
+                else:
+                    promedios_grupo[grupo] = 0.0
 
-                # Fecha y Partido (YA SANITIZADOS DEL DATAFRAME LIMPIO)
-                pdf.set_font("Arial", "B", 12)
-                pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
+            # 2. Crear radar chart (matplotlib)
+            import matplotlib.pyplot as plt
+            import numpy as np
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            from io import BytesIO
 
-                fecha_str = inf.get("Fecha_Partido", "").strip()
-                equipos_str = inf.get("Equipos_Resultados", "").strip()
+            labels = list(promedios_grupo.keys())
+            values = list(promedios_grupo.values())
+            num_vars = len(labels)
+            angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
 
-                if fecha_str:
-                    pdf.cell(0, 6, f"Fecha: {fecha_str}", ln=True)
-                if equipos_str:
-                    pdf.cell(0, 6, f"Partido: {equipos_str}", ln=True)
+            fig, ax = plt.subplots(figsize=(4.2, 4.2), subplot_kw=dict(polar=True))
+            fig.set_size_inches(7.5, 5.5)  # Lienzo grande, radar medio
+            fig.patch.set_facecolor('#f5f7fa')
+            ax.set_facecolor('#f5f7fa')
 
-                # Observaciones - AUMENTADO A 11pt (+1 punto) - YA SANITIZADO
-                observaciones = inf.get("Observaciones", "").strip()
-                if observaciones:
-                    pdf.set_font("Arial", "", 11)  # +1 punto respecto a métricas
-                    pdf.set_text_color(*COLOR_TEXTO)
-                    obs_truncada = observaciones[:1200]
-                    obs_truncada = sanitizar_texto_pdf(obs_truncada)
-                    pdf.multi_cell(0, 6, obs_truncada, align="J")
-        
-        # =========================================
-        # FOOTER MINIMALISTA
-        # =========================================
-        pdf.ln(3)
-        pdf.set_font("Arial", "", 7)
-        pdf.set_text_color(150, 150, 150)
-        
-        # Línea divisoria sutil
-        pdf.set_draw_color(200, 200, 200)
-        pdf.set_line_width(0.3)
-        y_footer_line = pdf.get_y()
-        pdf.line(pdf.l_margin, y_footer_line, pdf.w - pdf.r_margin, y_footer_line)
-        
-        pdf.ln(2)
-        pdf.cell(0, 4, "ScoutingApp Profesional v2.3", ln=True, align="C")
-        
-        # =========================================
-        # RETORNAR PDF EN BUFFER
-        # =========================================
-        buffer = BytesIO()
-        pdf.output(buffer)
-        buffer.seek(0)
-        
-        return buffer
-        
-    except Exception as e:
-        st.error(f"⚠️ Error al generar PDF: {e}")
-        return None
+            ax.plot(angles, values, color="#5a9a7c", linewidth=2)
+            ax.fill(angles, values, color="#5a9a7c", alpha=0.18)
 
+            # Etiquetas en dos líneas, bien afuera
+            for label, angle, value in zip(labels, angles, values):
+                angle_deg = np.degrees(angle)
+                ha = 'center'
+                va = 'center'
+                x = np.cos(angle) * 1.32
+                y = np.sin(angle) * 1.32
+                label_text = f"{label}\n{value:.2f}"
+                ax.text(
+                    angle,
+                    1.22,
+                    label_text,
+                    size=11,
+                    ha=ha,
+                    va=va,
+                    color="#222",
+                    fontweight='bold',
+                    linespacing=1.2,
+                    wrap=True
+                )
 
-# ---------------------------------------------------------
-# CARGA DE DATOS
-# ---------------------------------------------------------
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.spines["polar"].set_color("#5a9a7c")
+            ax.spines["polar"].set_linewidth(1.2)
+            ax.grid(color="#b2d8c6", linewidth=0.7, alpha=0.35)
+            ax.set_ylim(0, 10)
 
-@st.cache_data(ttl=120)
-def cargar_datos():
+            plt.tight_layout(pad=2.5)
 
-    columnas_jug = [
-        "ID_Jugador","Nombre","Fecha_Nac","Nacionalidad","Segunda_Nacionalidad",
-        "Altura","Pie_Hábil","Posición","Caracteristica","Club","Liga",
-        "Descripcion",  # NUEVO CAMPO
-        "Sexo","URL_Foto","URL_Perfil","Instagram","Fecha_Fin_Contrato",
-        "video_url","telefono","representante"
-    ]
+            buf = BytesIO()
+            plt.savefig(buf, format="png", bbox_inches="tight", dpi=180, transparent=False)
+            plt.close(fig)
+            buf.seek(0)
 
-    columnas_inf = ["ID_Informe","ID_Jugador","Scout","Fecha_Partido","Fecha_Informe",
-                    "Equipos_Resultados","Formación","Observaciones","Línea",
-                    "Controles","Perfiles","Pase_corto","Pase_largo","Pase_filtrado",
-                    "1v1_defensivo","Recuperacion","Intercepciones","Duelos_aereos",
-                    "Regate","Velocidad","Duelos_ofensivos",
-                    "Resiliencia","Liderazgo","Inteligencia_tactica",
+            # 3. Insertar en PDF: layout horizontal
+            y_inicio = pdf.get_y()
+            # Ajustar posiciones para alineación vertical y horizontal
+            x_radar = pdf.w - pdf.r_margin - 80  # Radar recostado a la derecha
+            x_detalle = pdf.l_margin  # Detalle recostado a la izquierda
+            y_radar = y_inicio + 8
+            y_detalle = y_inicio + 8
+
+            # --- Radar (derecha) ---
+            pdf.image(buf, x=x_radar, y=y_radar, w=75, h=55)
+
+            # --- Detalle de puntajes (izquierda) ---
+            pdf.set_xy(x_detalle, y_detalle)
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_text_color(90, 154, 124)
+            pdf.cell(60, 8, "Detalle de puntaje por grupo", ln=1, align="L")
+            pdf.set_font("Arial", "", 11)
+            pdf.set_text_color(0, 0, 0)
+            for grupo, val in promedios_grupo.items():
+                pdf.cell(60, 7, f"{grupo}: {val:.2f}", ln=1, align="L")
+            pdf.ln(2)
                     "Inteligencia_emocional","Posicionamiento",
                     "Vision_de_juego","Movimientos_sin_pelota"]
 

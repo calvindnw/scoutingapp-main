@@ -1163,7 +1163,199 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(1)
         col1_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.60
         col2_w = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.20
+        for grupo, val in promedios_grupos.items():
+            pdf.set_font("Arial", '', 9)
+            pdf.set_text_color(50, 50, 50)
+            # --- TÍTULO DE SECCIÓN CENTRADO ---
+            pdf.set_font("Arial", "B", 15)
+            pdf.set_text_color(90, 154, 124)
+            # Centrar el título manualmente en la hoja
+            titulo = "VALORACIÓN DE ASPECTOS"
+            page_width = pdf.w - 2 * pdf.l_margin
+            titulo_width = pdf.get_string_width(titulo) + 6
+            pdf.set_x((pdf.w - titulo_width) / 2)
+            pdf.cell(titulo_width, 12, titulo, ln=1, align="C")
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(2)
 
+            # --- RADAR + DETALLE DE PUNTAJES POR GRUPO ---
+            # 1. Calcular promedios por grupo de aspectos
+            grupos = {
+                "Técnico": ["Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado"],
+                "Defensivo": ["1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos"],
+                "Ofensivo": ["Regate", "Velocidad", "Duelos_ofensivos"],
+                "Mental": ["Resiliencia", "Liderazgo", "Inteligencia_emocional"],
+                "Táctico": ["Inteligencia_tactica", "Posicionamiento", "Vision_de_juego", "Movimientos_sin_pelota"],
+            }
+            promedios_grupo = {}
+            for grupo, metricas in grupos.items():
+                valores = [float(jugador.get(m, 0)) for m in metricas if m in jugador]
+                if valores:
+                    promedios_grupo[grupo] = round(sum(valores) / len(valores), 2)
+                else:
+                    promedios_grupo[grupo] = 0.0
+
+            # 2. Crear radar chart (matplotlib)
+            import matplotlib.pyplot as plt
+            import numpy as np
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            from io import BytesIO
+
+            labels = list(promedios_grupo.keys())
+            values = list(promedios_grupo.values())
+            num_vars = len(labels)
+            angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+
+            fig, ax = plt.subplots(figsize=(4.2, 4.2), subplot_kw=dict(polar=True))
+            fig.set_size_inches(7.5, 5.5)  # Lienzo grande, radar medio
+            fig.patch.set_facecolor('#f5f7fa')
+            ax.set_facecolor('#f5f7fa')
+
+            ax.plot(angles, values, color="#5a9a7c", linewidth=2)
+            ax.fill(angles, values, color="#5a9a7c", alpha=0.18)
+
+            # Etiquetas en dos líneas, bien afuera
+            for label, angle, value in zip(labels, angles, values):
+                angle_deg = np.degrees(angle)
+                ha = 'center'
+                va = 'center'
+                x = np.cos(angle) * 1.32
+                y = np.sin(angle) * 1.32
+                label_text = f"{label}\n{value:.2f}"
+                ax.text(
+                    angle,
+                    1.22,
+                    label_text,
+                    size=11,
+                    ha=ha,
+                    va=va,
+                    color="#222",
+                    fontweight='bold',
+                    linespacing=1.2,
+                    wrap=True
+                )
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.spines["polar"].set_color("#5a9a7c")
+            ax.spines["polar"].set_linewidth(1.2)
+            ax.grid(color="#b2d8c6", linewidth=0.7, alpha=0.35)
+            ax.set_ylim(0, 10)
+
+            plt.tight_layout(pad=2.5)
+
+            buf = BytesIO()
+            plt.savefig(buf, format="png", bbox_inches="tight", dpi=180, transparent=False)
+            plt.close(fig)
+            buf.seek(0)
+
+            # 3. Insertar en PDF: layout horizontal
+            y_inicio = pdf.get_y()
+            # Ajustar posiciones para alineación vertical y horizontal
+            x_radar = pdf.w - pdf.r_margin - 80  # Radar recostado a la derecha
+            x_detalle = pdf.l_margin  # Detalle recostado a la izquierda
+            y_radar = y_inicio + 8
+            y_detalle = y_inicio + 8
+
+            # --- Radar (derecha) ---
+            pdf.image(buf, x=x_radar, y=y_radar, w=75, h=55)
+
+            # --- Detalle de puntajes (izquierda) ---
+            pdf.set_xy(x_detalle, y_detalle)
+            pdf.set_font("Arial", "B", 12)
+            pdf.set_text_color(90, 154, 124)
+            pdf.cell(60, 8, "Detalle de puntaje por grupo", ln=1, align="L")
+            pdf.set_font("Arial", "", 11)
+            pdf.set_text_color(0, 0, 0)
+            for grupo, val in promedios_grupo.items():
+                pdf.cell(60, 7, f"{grupo}: {val:.2f}", ln=1, align="L")
+            pdf.ln(2)
+                # Línea fuera de contexto eliminada para corregir IndentationError
+
+    columnas_short = ["ID_Jugador","Nombre","Edad","Altura","Club","Posición",
+                      "URL_Foto","URL_Perfil","Agregado_Por","Fecha_Agregado"]
+
+    df_players = cargar_datos_sheets("Jugadores", columnas_jug)
+    df_reports = cargar_datos_sheets("Informes", columnas_inf)
+    df_short   = cargar_datos_sheets("Lista corta", columnas_short)
+
+    # Normalización de IDs
+    for df in (df_players, df_reports, df_short):
+        if not df.empty and "ID_Jugador" in df.columns:
+            df["ID_Jugador"] = df["ID_Jugador"].astype(str)
+
+    return df_players, df_reports, df_short
+
+# ---------------------------------------------------------
+# INICIALIZACIÓN
+# ---------------------------------------------------------
+
+# 1️⃣ Carga base desde Sheets (SIN filtros)
+df_players, df_reports, df_short = cargar_datos()
+
+# 2️⃣ Guardar como fuente única en session_state
+st.session_state["df_players"] = df_players.copy()
+st.session_state["df_reports"] = df_reports.copy()
+st.session_state["df_short"]   = df_short.copy()
+
+# =========================================================
+# 🔐 FILTRADO GLOBAL DE DATOS POR USUARIO (ÚNICO)
+# =========================================================
+
+# Fuente completa (ALL)
+df_players_all = st.session_state["df_players"].copy()
+df_reports_all = st.session_state["df_reports"].copy()
+df_short_all   = st.session_state["df_short"].copy()
+
+if CURRENT_ROLE != "admin":
+    # Informes: solo los del scout
+    df_reports_user = df_reports_all[
+        df_reports_all["Scout"] == CURRENT_USER
+    ].copy()
+
+    # Lista corta: solo lo agregado por el scout
+    df_short_user = df_short_all[
+        df_short_all["Agregado_Por"] == CURRENT_USER
+    ].copy()
+
+    # Jugadores relacionados (informes + lista corta)
+    ids = (
+        set(df_reports_user["ID_Jugador"].astype(str)) |
+        set(df_short_user["ID_Jugador"].astype(str))
+    )
+
+    df_players_user = df_players_all[
+        df_players_all["ID_Jugador"].astype(str).isin(ids)
+    ].copy()
+
+else:
+    # Admin ve todo
+    df_reports_user = df_reports_all.copy()
+    df_short_user   = df_short_all.copy()
+    df_players_user = df_players_all.copy()
+
+# -----------------------------
+# Menú principal
+# -----------------------------
+menu = st.sidebar.radio(
+    "📋 Menú principal",
+    [
+        "Panel General",
+        "Agenda",
+        "Jugadores",
+        "Ver informes",
+        "Lista corta",
+        "Panel Scouts",
+    ]
+    , key="menu"
+)
+
+
+# =========================================================
+# BLOQUE 3 / 5 — Sección Jugadores
+# =========================================================
 
 if menu == "Jugadores":
 

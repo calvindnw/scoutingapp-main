@@ -951,13 +951,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_fill_color(*COLOR_GRIS_FONDO)
         pdf.rect(0, 0, pdf.w, pdf.h, 'F')
 
-        # Título: nombre del jugador (centrado, grande)
-        pdf.set_font("Arial", "B", 22)
+        # Título: nombre del jugador (centrado, grande, más arriba y más pequeño)
+        pdf.set_y(pdf.t_margin + 2)  # Más cerca del margen superior
+        pdf.set_font("Arial", "B", 21.5)  # Reducido medio punto
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         nombre_jugador = sanitizar_texto_pdf(jugador.get("Nombre", ""))
-        pdf.ln(3)
-        pdf.cell(0, 14, nombre_jugador, ln=True, align="C")
-        pdf.ln(2)
+        pdf.cell(0, 13, nombre_jugador, ln=True, align="C")
         # Línea decorativa superior
         margen_linea = 20
         ancho_linea = pdf.w - 2 * margen_linea

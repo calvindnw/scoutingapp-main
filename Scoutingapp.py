@@ -1051,7 +1051,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
         # El bloque de info (título + info lines) se alinea arriba, justo a la derecha de la foto
-        pdf.set_xy(datos_x, datos_y)
+        # Mover medio punto hacia arriba
+        datos_y_up = datos_y - 2
+        pdf.set_xy(datos_x, datos_y_up)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
@@ -1094,6 +1096,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         for dato in info:
             pdf.set_x(datos_x)
             pdf.cell(datos_w, 7, dato, ln=True, align='L')
+            # Mover cada línea medio punto hacia arriba
+            pdf.set_y(pdf.get_y() - 2)
 
         # Asegurarse de que el cursor esté debajo de la foto antes de la línea y descripción
         y_actual = pdf.get_y()

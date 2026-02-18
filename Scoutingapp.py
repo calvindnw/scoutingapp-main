@@ -1012,7 +1012,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         altura_grupo = max(altura_foto, altura_info)
         # Ajuste: el grupo comienza más cerca de la línea superior
         # En vez de centrar, dejamos un margen fijo arriba
-        margen_arriba = 6  # px desde la línea superior
+        margen_arriba = 8  # px desde la línea superior (medio punto más abajo)
         foto_x = pdf.l_margin
         foto_y = y_sup + margen_arriba
         foto_w = 38
@@ -1079,10 +1079,14 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             except Exception:
                 edad_val = "-"
         edad = sanitizar_texto_pdf(str(edad_val))
+        altura_val = sanitizar_texto_pdf(str(altura)) if altura and altura != "-" else None
         if edad and edad != "-":
-            info.append(f"Edad: {edad} años")
-        if altura and altura != "-":
-            info.append(f"Altura: {altura} cm")
+            if altura_val:
+                info.append(f"Edad: {edad} años | Altura: {altura_val} cm")
+            else:
+                info.append(f"Edad: {edad} años")
+        elif altura_val:
+            info.append(f"Altura: {altura_val} cm")
         if nacionalidad:
             info.append(f"Nacionalidad: {nacionalidad}")
         if pie_habil:

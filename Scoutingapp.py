@@ -1295,8 +1295,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         y_footer_line = pdf.get_y()
         pdf.line(pdf.l_margin, y_footer_line, pdf.w - pdf.r_margin, y_footer_line)
         
-        pdf.ln(2)
-        pdf.cell(0, 4, "ScoutingApp Profesional v2.3", ln=True, align="C")
+        # ...eliminado grabado de footer...
         
         # =========================================
         # RETORNAR PDF EN BUFFER

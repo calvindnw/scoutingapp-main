@@ -886,10 +886,16 @@ class FPDF_SEGURO(FPDF):
     # Asegura fondo en cada página
     def header(self):
         # Fondo gris claro en cada página
-        self.set_fill_color(240, 245, 250)
-        self.rect(0, 0, self.w, self.h, 'F')
-        # No header visible
-        pass
+        fondo_path = "fondo informe cancha.png"
+        try:
+            if os.path.exists(fondo_path):
+                self.image(fondo_path, x=0, y=0, w=self.w, h=self.h)
+            else:
+                self.set_fill_color(240, 245, 250)
+                self.rect(0, 0, self.w, self.h, 'F')
+        except Exception:
+            self.set_fill_color(240, 245, 250)
+            self.rect(0, 0, self.w, self.h, 'F')
 
     def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
         text = sanitizar_texto_pdf(str(text)) if text else ""

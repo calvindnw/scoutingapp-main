@@ -947,9 +947,19 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         COLOR_GRIS_OSCURO = (30, 60, 114)           # Azul oscuro para títulos
         COLOR_TEXTO = (50, 50, 50)                  # Gris oscuro para texto
 
-        # Fondo
-        pdf.set_fill_color(*COLOR_GRIS_FONDO)
-        pdf.rect(0, 0, pdf.w, pdf.h, 'F')
+        # Fondo: imagen personalizada
+        fondo_path = "fondo informe cancha.png"
+        try:
+            if os.path.exists(fondo_path):
+                # Cubrir toda la hoja
+                pdf.image(fondo_path, x=0, y=0, w=pdf.w, h=pdf.h)
+            else:
+                # Si no existe, usar color de fondo
+                pdf.set_fill_color(*COLOR_GRIS_FONDO)
+                pdf.rect(0, 0, pdf.w, pdf.h, 'F')
+        except Exception:
+            pdf.set_fill_color(*COLOR_GRIS_FONDO)
+            pdf.rect(0, 0, pdf.w, pdf.h, 'F')
 
         # Título: nombre del jugador (centrado, grande, más arriba y más pequeño)
         pdf.set_y(pdf.t_margin + 2)  # Más cerca del margen superior

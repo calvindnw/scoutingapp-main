@@ -1005,24 +1005,21 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         info_altura = 8 + 7 * info_lines  # 8px título, 7px por línea
         # Posición superior e inferior
         y_sup = y_linea_sup
-        # Eliminar el espacio extra igual al tamaño del título
-        # El bloque de info incluye el título (8px) y las líneas (7px cada una)
-        # Para que la foto y el bloque de info estén más juntos, centramos ambos pero reducimos el espacio entre ellos
-        # Definir un margen mínimo entre foto y info
+        # Centramos el grupo (foto + info) como conjunto
         margen_minimo = 2
-        # Calcular la altura total de ambos bloques y el margen
-        altura_total = bloque_altura + margen_minimo + info_altura
-        y_inf = y_sup + 6 + altura_total + 12  # 6px después de línea, 12px margen
-        # Centrar ambos bloques como grupo
-        y_centro = y_sup + ((y_inf - y_sup - altura_total) / 2)
+        altura_foto = bloque_altura
+        altura_info = info_altura
+        altura_grupo = max(altura_foto, altura_info)
+        y_inf = y_sup + 6 + altura_grupo + 12  # 6px después de línea, 12px margen
+        y_centro = y_sup + ((y_inf - y_sup - altura_grupo) / 2)
         foto_x = pdf.l_margin
         foto_y = y_centro
         foto_w = 38
         foto_h = 38
         datos_x = foto_x + foto_w + 10
         datos_w = pdf.w - pdf.r_margin - datos_x
-        datos_y = foto_y + bloque_altura + margen_minimo
-        # Ajustar cursor para que el bloque quede centrado
+        # Alinear el bloque de info arriba, justo a la derecha de la foto
+        datos_y = foto_y
         pdf.set_y(foto_y)
 
         # Foto del jugador (cuadrada y alineada)
@@ -1053,7 +1050,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pass
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
-        # El bloque de info (título + info lines) ahora está más cerca de la foto
+        # El bloque de info (título + info lines) se alinea arriba, justo a la derecha de la foto
         pdf.set_xy(datos_x, datos_y)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)

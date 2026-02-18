@@ -1041,11 +1041,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                     temp = BytesIO()
                     img.save(temp, format="PNG", optimize=True)
                     temp.seek(0)
-                    pdf.image(temp, x=foto_x, y=foto_y, w=foto_w, h=foto_h)
+                    pdf.image(temp, x=foto_x, y=foto_y - 0.25, w=foto_w, h=foto_h)
                     # Marco verde
                     pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
                     pdf.set_line_width(1.2)
-                    pdf.rect(foto_x-2, foto_y-2, foto_w+4, foto_h+4)
+                    pdf.rect(foto_x-2, (foto_y-2) - 0.25, foto_w+4, foto_h+4)
             except Exception:
                 pass
 

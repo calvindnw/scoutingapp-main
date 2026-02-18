@@ -1055,6 +1055,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
+        pdf.ln(0.5)  # Aumentar interlineado solo aquí
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []

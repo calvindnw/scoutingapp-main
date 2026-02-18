@@ -983,23 +983,39 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(6)
 
         # FOTO Y DATOS (en la misma línea)
-        # Centramos verticalmente entre las dos líneas decorativas
+        # Centramos verticalmente entre las dos líneas decorativas, pero cada bloque por separado
         # Línea superior ya definida: y_linea_sup
         # Calculamos posición de la línea inferior (después de info y descripción)
         bloque_altura = 38  # altura de la foto
-        info_altura = 8 + 7 * 6  # aprox. 6 líneas de info
-        bloque_total = max(bloque_altura, info_altura)
+        # Calcular cantidad de info lines
+        info_lines = 0
+        club = sanitizar_texto_pdf(jugador.get('Club', ''))
+        liga = sanitizar_texto_pdf(jugador.get('Liga', ''))
+        posicion = sanitizar_texto_pdf(jugador.get('Posición', ''))
+        edad_val = jugador.get('Edad', '')
+        altura = sanitizar_texto_pdf(str(jugador.get('Altura', '')))
+        nacionalidad = sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))
+        pie_habil = sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))
+        info_lines += int(bool(club or liga))
+        info_lines += int(bool(posicion))
+        info_lines += int(bool(edad_val and edad_val != '-'))
+        info_lines += int(bool(altura and altura != '-'))
+        info_lines += int(bool(nacionalidad))
+        info_lines += int(bool(pie_habil))
+        info_altura = 8 + 7 * info_lines  # 8px título, 7px por línea
         # Posición superior e inferior
         y_sup = y_linea_sup
-        y_inf = y_linea_sup + 6 + bloque_total + 12  # 6px después de línea, 12px margen
-        y_centro = (y_sup + y_inf - bloque_total) / 2
+        y_inf = y_linea_sup + 6 + max(bloque_altura, info_altura) + 12  # 6px después de línea, 12px margen
+        # Centrar foto
         foto_x = pdf.l_margin
-        foto_y = y_centro
+        foto_y = y_sup + ((y_inf - y_sup - bloque_altura) / 2)
         foto_w = 38
         foto_h = 38
+        # Centrar bloque de info (título + info lines)
         datos_x = foto_x + foto_w + 10
-        datos_y = foto_y
         datos_w = pdf.w - pdf.r_margin - datos_x
+        datos_block_h = info_altura
+        datos_y = y_sup + ((y_inf - y_sup - datos_block_h) / 2)
         # Ajustar cursor para que el bloque quede centrado
         pdf.set_y(foto_y)
 
@@ -1031,39 +1047,23 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pass
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
-        # Alinear el título con el marco superior de la foto de forma precisa
-        # Ajuste fino: compensar el descender de la fuente y el margen del rectángulo
-        altura_marco = 2
-        ajuste_fino = 1.2  # puedes ajustar este valor para lograr simetría visual exacta
-        y_titulo = foto_y - altura_marco + ajuste_fino
-        if y_titulo < pdf.t_margin:
-            y_titulo = pdf.t_margin
-        pdf.set_xy(datos_x, y_titulo)
+        # Centrar el bloque de info (título + info lines) entre las dos líneas
+        pdf.set_xy(datos_x, datos_y)
         pdf.set_font("Arial", 'B', 13)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         pdf.cell(datos_w, 8, "Información del jugador", ln=True, align='L')
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []
-        # Club y Liga
-        club = sanitizar_texto_pdf(jugador.get('Club', ''))
-        liga = sanitizar_texto_pdf(jugador.get('Liga', ''))
         if club and liga and liga != "-":
             info.append(f"Club: {club}  |  Liga: {liga}")
         elif club:
             info.append(f"Club: {club}")
         elif liga:
             info.append(f"Liga: {liga}")
-
-        # Posición
-        posicion = sanitizar_texto_pdf(jugador.get('Posición', ''))
         if posicion:
             info.append(f"Posición: {posicion}")
-
-        # Edad: calcular si no está presente o es inválida
-        edad_val = jugador.get('Edad', '')
         if not edad_val or edad_val in ['-', 'None', None, 'nan', 'NaN', '']:
-            # Intentar calcular desde Fecha_Nac
             fecha_nac = jugador.get('Fecha_Nac', '')
             try:
                 from datetime import datetime, date
@@ -1078,23 +1078,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         edad = sanitizar_texto_pdf(str(edad_val))
         if edad and edad != "-":
             info.append(f"Edad: {edad} años")
-
-        # Altura
-        altura = sanitizar_texto_pdf(str(jugador.get('Altura', '')))
         if altura and altura != "-":
             info.append(f"Altura: {altura} cm")
-
-        # Nacionalidad
-        nacionalidad = sanitizar_texto_pdf(jugador.get('Nacionalidad', ''))
         if nacionalidad:
             info.append(f"Nacionalidad: {nacionalidad}")
-
-        # Pie hábil
-        pie_habil = sanitizar_texto_pdf(jugador.get('Pie_Hábil', ''))
         if pie_habil:
             info.append(f"Pie hábil: {pie_habil}")
-
-        # Imprimir info alineada a la derecha de la foto
         for dato in info:
             pdf.set_x(datos_x)
             pdf.cell(datos_w, 7, dato, ln=True, align='L')

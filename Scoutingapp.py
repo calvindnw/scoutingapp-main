@@ -983,14 +983,25 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(6)
 
         # FOTO Y DATOS (en la misma línea)
-
+        # Centramos verticalmente entre las dos líneas decorativas
+        # Línea superior ya definida: y_linea_sup
+        # Calculamos posición de la línea inferior (después de info y descripción)
+        bloque_altura = 38  # altura de la foto
+        info_altura = 8 + 7 * 6  # aprox. 6 líneas de info
+        bloque_total = max(bloque_altura, info_altura)
+        # Posición superior e inferior
+        y_sup = y_linea_sup
+        y_inf = y_linea_sup + 6 + bloque_total + 12  # 6px después de línea, 12px margen
+        y_centro = (y_sup + y_inf - bloque_total) / 2
         foto_x = pdf.l_margin
-        foto_y = pdf.get_y()
+        foto_y = y_centro
         foto_w = 38
         foto_h = 38
         datos_x = foto_x + foto_w + 10
         datos_y = foto_y
         datos_w = pdf.w - pdf.r_margin - datos_x
+        # Ajustar cursor para que el bloque quede centrado
+        pdf.set_y(foto_y)
 
         # Foto del jugador (cuadrada y alineada)
         url_foto = str(jugador.get("URL_Foto", "")).strip()

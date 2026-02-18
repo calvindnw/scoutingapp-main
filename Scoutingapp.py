@@ -1005,20 +1005,20 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         info_altura = 8 + 7 * info_lines  # 8px título, 7px por línea
         # Posición superior e inferior
         y_sup = y_linea_sup
-        # Centramos el grupo (foto + info) como conjunto
+        # Reduce el espacio entre la línea superior y el título
         margen_minimo = 2
         altura_foto = bloque_altura
         altura_info = info_altura
         altura_grupo = max(altura_foto, altura_info)
-        y_inf = y_sup + 6 + altura_grupo + 12  # 6px después de línea, 12px margen
-        y_centro = y_sup + ((y_inf - y_sup - altura_grupo) / 2)
+        # Ajuste: el grupo comienza más cerca de la línea superior
+        # En vez de centrar, dejamos un margen fijo arriba
+        margen_arriba = 6  # px desde la línea superior
         foto_x = pdf.l_margin
-        foto_y = y_centro
+        foto_y = y_sup + margen_arriba
         foto_w = 38
         foto_h = 38
         datos_x = foto_x + foto_w + 10
         datos_w = pdf.w - pdf.r_margin - datos_x
-        # Alinear el bloque de info arriba, justo a la derecha de la foto
         datos_y = foto_y
         pdf.set_y(foto_y)
 

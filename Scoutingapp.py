@@ -1828,7 +1828,7 @@ if menu == "Jugadores":
                 equipos_resultados = st.text_input("Equipos y resultado")
                 formacion = st.selectbox(
                     "Formación",
-                    ["4-2-3-1", "4-3-1-2", "4-1-3-2", "4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2"]
+                    ["4-2-3-1","4-1-4-1", "4-3-1-2", "4-1-3-2", "4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2"]
                 )
 
                 observaciones = st.text_area("Observaciones generales", height=100)

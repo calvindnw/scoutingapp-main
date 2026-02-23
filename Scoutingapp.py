@@ -142,9 +142,24 @@ def col_letter(n: int) -> str:
 # CARGAR DATOS (con control de tiempo)
 # =========================================================
 @st.cache_data(ttl=30)
-def _leer_datos(nombre_hoja: str):
-    ws = obtener_hoja(nombre_hoja)
-    return ws.get_all_records()
+@st.cache_data(ttl=120)
+def cargar_datos():
+    # Cargar datos desde Google Sheets
+    df_players = cargar_datos_sheets("Jugadores")
+    df_reports = cargar_datos_sheets("Informes")
+    df_short   = cargar_datos_sheets("Lista corta")
+    # Asegurar columna 'nombre_wyscout' existe
+    if 'nombre_wyscout' not in df_players.columns:
+        df_players['nombre_wyscout'] = ""
+    return df_players, df_reports, df_short
+
+# 1️⃣ Carga base desde Sheets (SIN filtros)
+df_players, df_reports, df_short = cargar_datos()
+
+# 2️⃣ Guardar como fuente única en session_state
+st.session_state["df_players"] = df_players.copy()
+st.session_state["df_reports"] = df_reports.copy()
+st.session_state["df_short"]   = df_short.copy()
 
 
 def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:

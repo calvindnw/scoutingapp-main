@@ -556,6 +556,7 @@ div[data-testid="stDataFrame"] tbody tr:hover td {
 
 input, textarea {
     caret-color:#5a9a7c !important;
+    color: #fff !important;
 }
 
 div[data-baseweb="input"] > div,
@@ -564,6 +565,7 @@ div[data-baseweb="textarea"] > div {
     border:1px solid rgba(90,154,124,0.45) !important;
     background-color:rgba(10,26,20,0.85) !important;
     box-shadow:none !important;
+    color: #fff !important;
 }
 
 div[data-baseweb="input"] > div:focus-within,

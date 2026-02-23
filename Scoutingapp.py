@@ -1612,6 +1612,9 @@ if menu == "Jugadores":
                             nuevo_representante or "",                # 19 Representante
                             nombre_wyscout or ""                      # 20 nombre_wyscout
                         ]
+                        # Convertir todos los valores numpy.int64 a int antes de guardar
+                        import numpy as np
+                        fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
                         st.cache_data.clear()
                         st.session_state["toast_guardado_jugador"] = True

@@ -1361,8 +1361,11 @@ def cargar_datos():
 # INICIALIZACIÓN
 # ---------------------------------------------------------
 
-# 1️⃣ Carga base desde Sheets (SIN filtros)
-df_players, df_reports, df_short = cargar_datos()
+    # 1️⃣ Carga base desde Sheets (SIN filtros)
+    df_players, df_reports, df_short = cargar_datos()
+    # Asegurar columna 'nombre_wyscout' existe
+    if 'nombre_wyscout' not in df_players.columns:
+        df_players['nombre_wyscout'] = ""
 
 # 2️⃣ Guardar como fuente única en session_state
 st.session_state["df_players"] = df_players.copy()
@@ -1506,6 +1509,7 @@ if menu == "Jugadores":
             st.toast("✅ Jugador guardado correctamente.", icon="✅")
             st.session_state["toast_guardado_jugador"] = False
 
+
         with st.expander("➕ Agregar nuevo jugador", expanded=False):
             with st.form("nuevo_jugador_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
@@ -1517,6 +1521,7 @@ if menu == "Jugadores":
                     nuevo_pie = st.selectbox("Pie hábil", opciones_pies, index=0)
                     nueva_posicion = st.selectbox("Posición principal", opciones_posiciones, index=0)
                     nueva_fecha_fin_contrato = st.text_input("Fin de contrato (dd/mm/aaaa)", value="")
+                    nombre_wyscout = st.text_input("Nombre wyscout", value="")
 
                 with col2:
                     nuevo_club = st.text_input("Club actual", value="")
@@ -1556,9 +1561,9 @@ if menu == "Jugadores":
                             nuevo_nombre or "",                       # 1 Nombre
                             nueva_fecha or "",                        # 2 Fecha_Nac
                             nueva_nacionalidad or "",                # 3 Nacionalidad
-                            nueva_seg_nac or "",                      # 4 Segunda_Nacionalidad
+                            nueva_seg_nac or "",                      # 4 Segunda nacionalidad
                             nueva_altura if nueva_altura else 175,     # 5 Altura
-                            nuevo_pie or opciones_pies[0],             # 6 Pie_Hábil
+                            nuevo_pie or opciones_pies[0],             # 6 Pie hábil
                             nueva_posicion or opciones_posiciones[0],  # 7 Posición
                             car_str,                                   # 8 Caracteristica
                             nuevo_club or "",                         # 9 Club
@@ -1571,7 +1576,8 @@ if menu == "Jugadores":
                             nueva_fecha_fin_contrato or "",           # 16 Fin de contrato
                             nueva_video or "",                        # 17 URL Video
                             nuevo_telefono or "",                     # 18 Teléfono
-                            nuevo_representante or ""                 # 19 Representante
+                            nuevo_representante or "",                # 19 Representante
+                            nombre_wyscout or ""                      # 20 nombre_wyscout
                         ]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
                         st.cache_data.clear()
@@ -1694,6 +1700,7 @@ if menu == "Jugadores":
             with st.form(f"editar_jugador_form_{jugador['ID_Jugador']}"):
 
 
+
                 col1, col2 = st.columns(2)
 
                 with col1:
@@ -1720,6 +1727,7 @@ if menu == "Jugadores":
                         "Fin de contrato (dd/mm/aaaa)",
                         value=str(jugador.get("Fecha_Fin_Contrato", "") or "")
                     )
+                    e_nombre_wyscout = st.text_input("Nombre wyscout", value=str(jugador.get("nombre_wyscout", "") or ""))
 
                 with col2:
                     e_club = st.text_input("Club actual", value=str(jugador.get("Club", "") or ""))
@@ -1774,6 +1782,7 @@ if menu == "Jugadores":
                             df_actual["ID_Jugador"].astype(str) == str(id_jugador)
                         ]
 
+
                         if not index_row.empty:
                             row_number = index_row[0] + 2
                             e_car_str = ", ".join(e_car) if e_car else ""
@@ -1797,7 +1806,8 @@ if menu == "Jugadores":
                                 e_fin_contrato,       # 16
                                 e_video,              # 17
                                 e_telefono,           # 18
-                                e_representante       # 19
+                                e_representante,      # 19
+                                e_nombre_wyscout      # 20
                             ]
 
                             last_col = col_letter(len(valores))

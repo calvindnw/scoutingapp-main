@@ -1286,7 +1286,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 if observaciones:
                     pdf.set_font("Arial", "", 11)  # +1 punto respecto a métricas
                     pdf.set_text_color(*COLOR_TEXTO)
-                    obs_truncada = observaciones[:1200]
+                    obs_truncada = observaciones[:1500]
                     obs_truncada = sanitizar_texto_pdf(obs_truncada)
                     pdf.multi_cell(0, 6, obs_truncada, align="J")
         

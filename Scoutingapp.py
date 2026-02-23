@@ -1993,6 +1993,8 @@ if menu == "Jugadores":
                         ]
 
                         ws_inf = obtener_hoja("Informes")
+                        import numpy as np
+                        nuevo = [int(x) if isinstance(x, np.integer) else x for x in nuevo]
                         ws_inf.append_row(nuevo, value_input_option="USER_ENTERED")
 
                         st.cache_data.clear()

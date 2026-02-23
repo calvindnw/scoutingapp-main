@@ -142,6 +142,17 @@ def col_letter(n: int) -> str:
 # CARGAR DATOS (con control de tiempo)
 # =========================================================
 @st.cache_data(ttl=30)
+
+def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
+    try:
+        ws = obtener_hoja(nombre_hoja, columnas_base)
+        data = ws.get_all_records()
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
+        return pd.DataFrame()
+
 @st.cache_data(ttl=120)
 def cargar_datos():
     # Cargar datos desde Google Sheets

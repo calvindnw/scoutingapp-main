@@ -225,6 +225,9 @@ def actualizar_hoja(nombre_hoja: str, df: pd.DataFrame):
         else:
             df_fusion = pd.concat([df_actual, df]).drop_duplicates(keep="last")
 
+        # Convertir todos los valores numpy.int64 a int antes de subir
+        df_fusion = df_fusion.applymap(lambda x: int(x) if isinstance(x, np.integer) else x)
+
         # Subir a Sheets
         ws.update([df_fusion.columns.values.tolist()] + df_fusion.values.tolist())
         st.toast(f"💾 '{nombre_hoja}' actualizada correctamente (sin borrar datos).", icon="✅")
@@ -261,6 +264,8 @@ def agregar_fila(nombre_hoja: str, fila: list):
     """Agrega una nueva fila sin tocar el resto."""
     try:
         ws = obtener_hoja(nombre_hoja)
+        # Convertir todos los valores numpy.int64 a int antes de agregar
+        fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
         ws.append_row(fila, value_input_option="USER_ENTERED")
         st.toast(f"🟢 Nueva fila agregada en '{nombre_hoja}'.", icon="🟢")
         st.cache_data.clear()

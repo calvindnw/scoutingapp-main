@@ -1626,11 +1626,22 @@ if menu == "Estadísticas":
     columnas = [nombre for _, nombre in claves]
     filas = []
     index = []
+
+    def parse_num(val):
+        if isinstance(val, str):
+            val = val.replace(",", ".")
+            try:
+                return float(val)
+            except:
+                return val
+        return val
+
     # Fila del jugador
     if not jugador_stats.empty:
         fila_jugador = []
         for col, _ in claves:
             val = jugador_stats.iloc[0].get(col, "-")
+            val = parse_num(val)
             fila_jugador.append(val)
         filas.append(fila_jugador)
         index.append("Jugador")
@@ -1643,12 +1654,22 @@ if menu == "Estadísticas":
     if not prom_filtrado.empty:
         prom_filtrado = prom_filtrado.sort_values("Año")
         for _, row in prom_filtrado.iterrows():
-            fila = [row.get(col, "-") for col, _ in claves]
+            fila = []
+            for col, _ in claves:
+                val = row.get(col, "-")
+                val = parse_num(val)
+                fila.append(val)
             filas.append(fila)
             index.append(str(row["Año"]))
 
     df_comp = pd.DataFrame(filas, columns=columnas, index=index)
-    st.dataframe(df_comp)
+    # Formatear solo los valores numéricos a dos decimales
+    def format_cell(val):
+        if isinstance(val, float):
+            return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return val
+    df_comp_fmt = df_comp.applymap(format_cell)
+    st.dataframe(df_comp_fmt)
 
 
 # =========================================================

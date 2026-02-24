@@ -1655,15 +1655,19 @@ if menu == "Estadísticas":
     book = client.open_by_key(SHEET_ID)
 
     # --- Obtener estadísticas del jugador ---
-    try:
-        hoja_nombre = "Data jugadores"
-        ws_data = book.worksheet(hoja_nombre)
-        data_jugadores = pd.DataFrame(ws_data.get_all_records())
-        # Matchear por nombre_wyscout
-        jugador_stats = data_jugadores[data_jugadores["nombre_wyscout"] == nombre_wyscout]
-    except Exception as e:
-        st.error(f"No se pudo acceder a la hoja '{hoja_nombre}' en el archivo de base de datos.\nVerifica el nombre exacto en Google Sheets.\nSHEET_ID usado: {SHEET_ID}\nError: {e}")
-        jugador_stats = pd.DataFrame()
+    jugador_stats = pd.DataFrame()
+    hoja_nombres = ["Data jugadores", "data jugadores"]
+    for hoja_nombre in hoja_nombres:
+        try:
+            ws_data = book.worksheet(hoja_nombre)
+            data_jugadores = pd.DataFrame(ws_data.get_all_records())
+            jugador_stats = data_jugadores[data_jugadores["nombre_wyscout"] == nombre_wyscout]
+            if not jugador_stats.empty:
+                break
+        except Exception:
+            continue
+    if jugador_stats.empty:
+        st.error(f"No se pudo acceder a la hoja 'Data jugadores' ni 'data jugadores' en el archivo de base de datos.\nVerifica el nombre exacto en Google Sheets.\nSHEET_ID usado: {SHEET_ID}")
     # ...existing code...
     import gspread
     from google.oauth2.service_account import Credentials

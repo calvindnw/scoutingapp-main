@@ -1609,9 +1609,21 @@ if menu == "Estadísticas":
     ]
     SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
     CREDS_PATH = os.path.join("credentials", "credentials.json")
+    import json
     if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
         required_keys = {"client_email", "token_uri"}
-        secret_json = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+        secret_raw = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+        if isinstance(secret_raw, str):
+            try:
+                secret_json = json.loads(secret_raw)
+            except Exception:
+                st.error("Las credenciales de Google en st.secrets no son un JSON válido.")
+                st.stop()
+        else:
+            secret_json = secret_raw
+        if not isinstance(secret_json, dict):
+            st.error("Las credenciales de Google en st.secrets no tienen formato de diccionario.")
+            st.stop()
         if not required_keys.issubset(secret_json.keys()):
             st.error("Las credenciales de Google en st.secrets están incompletas. Faltan las claves: client_email y/o token_uri.")
             st.stop()

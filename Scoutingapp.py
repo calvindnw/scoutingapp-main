@@ -1657,17 +1657,36 @@ if menu == "Estadísticas":
     # --- Obtener estadísticas del jugador ---
     jugador_stats = pd.DataFrame()
     hoja_nombres = ["Data jugadores", "data jugadores"]
+    hoja_encontrada = False
     for hoja_nombre in hoja_nombres:
         try:
             ws_data = book.worksheet(hoja_nombre)
             data_jugadores = pd.DataFrame(ws_data.get_all_records())
+            hoja_encontrada = True
             jugador_stats = data_jugadores[data_jugadores["nombre_wyscout"] == nombre_wyscout]
-            if not jugador_stats.empty:
-                break
+            break
         except Exception:
             continue
-    if jugador_stats.empty:
+    if not hoja_encontrada:
         st.error(f"No se pudo acceder a la hoja 'Data jugadores' ni 'data jugadores' en el archivo de base de datos.\nVerifica el nombre exacto en Google Sheets.\nSHEET_ID usado: {SHEET_ID}")
+    st.markdown("### Comparativa de estadísticas clave")
+    columnas = [nombre for _, nombre in claves]
+    filas = []
+    index = []
+    if jugador_stats.empty:
+        filas.append(["Sin datos"] * len(columnas))
+        index.append("Jugador sin estadísticas disponibles")
+    else:
+        def parse_and_format(val):
+            try:
+                return round(float(val), 2)
+            except Exception:
+                return val
+        fila_jugador = [parse_and_format(jugador_stats.iloc[0].get(col, "")) for col, _ in claves]
+        filas.append(fila_jugador)
+        index.append("Jugador")
+    df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
+    st.dataframe(df_comp_fmt)
     # ...existing code...
     import gspread
     from google.oauth2.service_account import Credentials

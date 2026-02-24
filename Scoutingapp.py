@@ -1493,7 +1493,15 @@ if menu == "Estadísticas":
     jugador_info = jugador_row.iloc[0]
     posicion = jugador_info.get("Posición", "")
     liga = jugador_info.get("Liga", "")
+    # Si no está el dato en el DataFrame, buscarlo directamente en la hoja de Google Sheets
     nombre_wyscout = jugador_info.get("nombre_wyscout", "")
+    if not nombre_wyscout:
+        try:
+            ws_jugadores = book.worksheet("jugadores")
+            data_jugadores_base = pd.DataFrame(ws_jugadores.get_all_records())
+            nombre_wyscout = data_jugadores_base[data_jugadores_base["ID_Jugador"] == str(id_jugador)]["nombre_wyscout"].values[0]
+        except Exception:
+            nombre_wyscout = ""
 
     # Mostrar info básica
     st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")

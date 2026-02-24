@@ -1498,6 +1498,25 @@ if menu == "Estadísticas":
     # Mostrar info básica
     st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
 
+    # --- Comparativa de métricas clave ---
+    df_reports = st.session_state["df_reports"].copy()
+    # Calcular promedios del jugador
+    promedios_jugador = calcular_promedios_jugador(df_reports, id_jugador)
+    # Calcular promedios de la posición
+    promedios_posicion = calcular_promedios_posicion(df_reports, df_players, posicion)
+
+    # Mostrar tabla comparativa
+    st.markdown("### Comparativa de métricas clave")
+    if promedios_jugador and promedios_posicion:
+        import pandas as pd
+        df_comp = pd.DataFrame({
+            "Jugador": promedios_jugador,
+            "Promedio posición": promedios_posicion
+        })
+        st.dataframe(df_comp)
+    else:
+        st.warning("No hay suficientes informes para mostrar la comparativa.")
+
 
 # =========================================================
 # BLOQUE 3 / 5 — Sección Jugadores

@@ -1,3 +1,185 @@
+            # Construir tabla comparativa
+            import pandas as pd
+            columnas_tabla = [nombre for _, nombre in claves]
+            data_tabla = []
+
+            # Fila del jugador
+            fila_jugador = [val if val != "" else "-" for val in valores_jugador]
+            data_tabla.append(["Jugador"] + fila_jugador)
+
+            # Filas de promedios de liga por año (orden cronológico)
+            if "Año" in df_prom_liga.columns:
+                df_prom_liga_sorted = df_prom_liga.sort_values("Año")
+                for _, row in df_prom_liga_sorted.iterrows():
+                    fila = [row.get(col, "-") for col, _ in claves]
+                    data_tabla.append([str(row["Año"])] + fila)
+            else:
+                # Si no hay columna Año, mostrar solo un promedio general
+                fila = [df_prom_liga.iloc[0].get(col, "-") for col, _ in claves]
+                data_tabla.append(["Promedio Liga"] + fila)
+
+            # Mostrar tabla
+            df_tabla = pd.DataFrame(data_tabla, columns=[" "] + columnas_tabla)
+            st.markdown("#### Comparativa de estadísticas clave")
+            st.dataframe(df_tabla, use_container_width=True)
+        # --- Estadísticas clave por posición ---
+        estadisticas_por_posicion = {
+            "Arquero": [
+                ("Goles_recibidos/90", "Goles recibidos/90"),
+                ("Remates_en_contra/90", "Remates en contra/90"),
+                ("Paradas", "% Paradas"),
+                ("Porterías_imbatidas_en_los_90", "Porterías imbatidas/90"),
+            ],
+            "Defensa central derecho": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+            ],
+            "Defensa central izquierdo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+            ],
+            "Lateral derecho": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+            ],
+            "Lateral izquierdo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+            ],
+            "Mediocampista defensivo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+            ],
+            "Mediocampista mixto": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+            ],
+            "Mediocampista ofensivo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+            ],
+            "Extremo derecho": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Regates_realizados", "Regates exitosos"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+                ("Precisión_centros", "Precisión de centros"),
+            ],
+            "Extremo izquierdo": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Regates_realizados", "Regates exitosos"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Precisión_pases_largos", "Precisión de pases largos"),
+                ("Precisión_centros", "Precisión de centros"),
+            ],
+            "Delantero centro": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Precisión_pases", "Precisión de pases"),
+                ("Tiros_a_la_portería", "Precisión de remates"),
+            ],
+        }
+
+        claves = estadisticas_por_posicion.get(posicion, [])
+        if not claves:
+            st.warning("No hay estadísticas clave definidas para esta posición.")
+            st.stop()
+
+        # Obtener valores del jugador
+        valores_jugador = []
+        for col, nombre in claves:
+            valor = stats_jugador.get(col, "-")
+            valores_jugador.append(valor)
+
+        # Obtener promedios de liga para la posición y liga
+        df_prom_liga = df_promedios_liga[
+            (df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)
+        ]
+        if df_prom_liga.empty:
+            st.warning("No hay promedios de liga disponibles para esta posición y liga.")
+            st.stop()
+    # --- Cargar datos de Google Sheets ---
+    # Hoja 6: Data jugadores
+    try:
+        df_data_jugadores = cargar_datos_sheets("Data jugadores")
+    except Exception:
+        st.error("No se pudo cargar la hoja 'Data jugadores' de Google Sheets.")
+        st.stop()
+
+    # Hoja 5: Promedios de Liga
+    try:
+        df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
+    except Exception:
+        st.error("No se pudo cargar la hoja 'Promedios de Liga' de Google Sheets.")
+        st.stop()
+
+    # Buscar estadísticas del jugador por nombre_wyscout
+    df_stats_jugador = df_data_jugadores[df_data_jugadores.iloc[:,0] == nombre_wyscout]
+    if df_stats_jugador.empty:
+        st.warning("Jugador sin estadísticas disponibles.")
+        st.stop()
+
+    stats_jugador = df_stats_jugador.iloc[0]
+# =========================================================
+# BLOQUE ESTADÍSTICAS — NUEVO MÓDULO
+# =========================================================
+if menu == "Estadísticas":
+    st.subheader("Estadísticas individuales y comparativas")
+
+    # Obtener base de jugadores (igual que en Jugadores)
+    df_players = st.session_state["df_players"].copy()
+
+    # Buscador de jugadores (igual que en Jugadores)
+    opciones = {
+        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+        for _, row in df_players.iterrows()
+    }
+
+    seleccion_jug = st.selectbox(
+        "🔍 Buscar jugador",
+        [""] + list(opciones.keys()),
+        key="estadisticas_select_jugador"
+    )
+
+    if not seleccion_jug:
+        st.info("Selecciona un jugador para ver sus estadísticas.")
+        st.stop()
+
+    # Obtener ID del jugador seleccionado
+    id_jugador = opciones[seleccion_jug]
+    jugador_row = df_players[df_players["ID_Jugador"] == id_jugador]
+    if jugador_row.empty:
+        st.warning("Jugador no encontrado en la base de datos.")
+        st.stop()
+
+    jugador_info = jugador_row.iloc[0]
+    posicion = jugador_info.get("Posición", "")
+    liga = jugador_info.get("Liga", "")
+    nombre_wyscout = jugador_info.get("nombre_wyscout", "")
+
+    # Mostrar info básica
+    st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
 # =========================================================
 # BLOQUE 1 / 5 — Conexión + Configuración inicial + Login
 # =========================================================
@@ -1453,6 +1635,7 @@ menu = st.sidebar.radio(
         "Ver informes",
         "Lista corta",
         "Panel Scouts",
+        "Estadísticas",  # Nueva opción
     ]
     , key="menu"
 )

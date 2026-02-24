@@ -1628,18 +1628,16 @@ if menu == "Estadísticas":
     index = []
 
     def parse_and_format(val):
-        # Si es string, mostrar tal cual (no tocar)
-        if isinstance(val, str):
-            return val
-        elif isinstance(val, (int, float)):
-            return f"{val:.2f}".replace(".", ",")
-        return val
+        # Mostrar SIEMPRE el valor tal cual está en la base, como string, sin convertir ni formatear
+        if pd.isna(val):
+            return ""
+        return str(val)
 
     # Fila del jugador
     if not jugador_stats.empty:
         fila_jugador = []
         for col, _ in claves:
-            val = jugador_stats.iloc[0].get(col, "-")
+            val = jugador_stats.iloc[0].get(col, "")
             val = parse_and_format(val)
             fila_jugador.append(val)
         filas.append(fila_jugador)
@@ -1655,15 +1653,15 @@ if menu == "Estadísticas":
         for _, row in prom_filtrado.iterrows():
             fila = []
             for col, _ in claves:
-                val = row.get(col, "-")
+                val = row.get(col, "")
                 val = parse_and_format(val)
                 fila.append(val)
             filas.append(fila)
             index.append(str(row["Año"]))
 
     df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
-    # Mostrar SIEMPRE como texto, sin interpretación numérica
-    st.dataframe(df_comp_fmt.astype(str))
+    # Mostrar SIEMPRE como texto, sin interpretación numérica ni formateo
+    st.dataframe(df_comp_fmt)
 
 
 # =========================================================

@@ -1628,24 +1628,36 @@ if menu == "Estadísticas":
     index = []
 
     def parse_and_format(val):
-        try:
-            if isinstance(val, str):
-                v = val.strip()
-                # Si tiene ambos: punto y coma (ej: '1.234,56')
-                if "," in v and "." in v:
-                    v = v.replace(".", "")
-                    v = v.replace(",", ".")
-                # Solo coma (ej: '61,96')
-                elif "," in v:
-                    v = v.replace(",", ".")
-                # Solo punto o ninguno: dejar igual
-                num = float(v)
+        # Si es string y tiene coma, mostrar tal cual (opcional: asegurar dos decimales)
+        if isinstance(val, str):
+            v = val.strip()
+            if "," in v:
+                # Si no tiene decimales, agrega ",00"; si tiene uno, agrega un 0
+                partes = v.split(",")
+                if len(partes) == 2:
+                    decimales = partes[1]
+                    if len(decimales) == 0:
+                        return partes[0] + ",00"
+                    elif len(decimales) == 1:
+                        return partes[0] + "," + decimales + "0"
+                    elif len(decimales) > 2:
+                        return partes[0] + "," + decimales[:2]
+                    else:
+                        return v
+                elif len(partes) == 1:
+                    return partes[0] + ",00"
+                else:
+                    return v
             else:
-                num = float(val)
-            # Mostrar SIEMPRE con coma decimal y SIN separador de miles
-            return f"{num:.2f}".replace(".", ",")
-        except Exception:
-            return val
+                # Si es string pero no tiene coma, intentar convertir a float
+                try:
+                    num = float(v)
+                    return f"{num:.2f}".replace(".", ",")
+                except Exception:
+                    return v
+        elif isinstance(val, (int, float)):
+            return f"{val:.2f}".replace(".", ",")
+        return val
 
     # Fila del jugador
     if not jugador_stats.empty:

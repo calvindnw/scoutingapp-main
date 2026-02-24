@@ -1610,7 +1610,12 @@ if menu == "Estadísticas":
     SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
     CREDS_PATH = os.path.join("credentials", "credentials.json")
     if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
-        creds = Credentials.from_service_account_info(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"], scopes=SCOPE)
+        required_keys = {"client_email", "token_uri"}
+        secret_json = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+        if not required_keys.issubset(secret_json.keys()):
+            st.error("Las credenciales de Google en st.secrets están incompletas. Faltan las claves: client_email y/o token_uri.")
+            st.stop()
+        creds = Credentials.from_service_account_info(secret_json, scopes=SCOPE)
     else:
         creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
     client = gspread.authorize(creds)

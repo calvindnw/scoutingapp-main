@@ -1628,17 +1628,21 @@ if menu == "Estadísticas":
     index = []
 
     def parse_and_format(val):
-        if isinstance(val, str):
-            val2 = val.replace(",", ".")
-            try:
-                num = float(val2)
-                # Formato con coma decimal
-                return f"{num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            except:
-                return val
-        elif isinstance(val, (int, float)):
-            return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        return val
+        try:
+            # Si es string con coma decimal y sin punto, es formato latino
+            if isinstance(val, str):
+                v = val.strip()
+                if "," in v and "." not in v:
+                    v = v.replace(".", "")  # Elimina puntos de miles si los hubiera
+                    v = v.replace(",", ".")
+                # Si tiene ambos, asume formato correcto (no tocar)
+                num = float(v)
+            else:
+                num = float(val)
+            # Mostrar SIEMPRE con coma decimal y SIN separador de miles
+            return f"{num:.2f}".replace(".", ",")
+        except Exception:
+            return val
 
     # Fila del jugador
     if not jugador_stats.empty:

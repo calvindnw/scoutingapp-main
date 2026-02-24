@@ -1527,30 +1527,27 @@ if menu == "Estadísticas":
 
     # Obtener ID del jugador seleccionado
     id_jugador = opciones[seleccion_jug]
+    st.subheader("Estadísticas individuales y comparativas")
+    df_players = st.session_state["df_players"].copy()
+    opciones = {f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"] for _, row in df_players.iterrows()}
+    seleccion_jug = st.selectbox(
+        "🔍 Buscar jugador",
+        [""] + list(opciones.keys()),
+        key="estadisticas_select_jugador_box"
+    )
+    if not seleccion_jug:
+        st.info("Selecciona un jugador para ver estadísticas.")
+        st.stop()
+    id_jugador = opciones[seleccion_jug]
     jugador_row = df_players[df_players["ID_Jugador"] == id_jugador]
     if jugador_row.empty:
-        st.warning("Jugador no encontrado en la base de datos.")
+        st.warning("No se encontró el jugador seleccionado.")
         st.stop()
-
     jugador_info = jugador_row.iloc[0]
     posicion = jugador_info.get("Posición", "")
     liga = jugador_info.get("Liga", "")
-    # Si no está el dato en el DataFrame, buscarlo directamente en la hoja de Google Sheets
     nombre_wyscout = jugador_info.get("nombre_wyscout", "")
-    if not nombre_wyscout:
-        try:
-            book = conectar_sheets()
-            ws_jugadores = book.worksheet("jugadores")
-            data_jugadores_base = pd.DataFrame(ws_jugadores.get_all_records())
-            nombre_wyscout = data_jugadores_base[data_jugadores_base["ID_Jugador"] == str(id_jugador)]["nombre_wyscout"].values[0]
-        except Exception:
-            nombre_wyscout = ""
-
-    # Mostrar info básica
     st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
-
-    # --- Estadísticas clave por posición ---
-    # Definir el mapeo de estadísticas clave por posición
     estadisticas_por_posicion = {
         "Arquero": [
             ("Goles_recibidos/90", "Goles recibidos/90"),
@@ -1628,16 +1625,12 @@ if menu == "Estadísticas":
             ("Tiros_a_la_portería", "Precisión de remates")
         ]
     }
-
-    # Obtener estadísticas clave para la posición
     claves = estadisticas_por_posicion.get(posicion, [])
     if not claves:
         st.warning("No hay estadísticas clave definidas para esta posición.")
         st.stop()
-
-    # Leer datos de Google Sheets (jugador y promedios de liga)
+    # Leer datos de Google Sheets (jugador)
     import gspread
-    from google.oauth2.service_account import Credentials
     import pandas as pd
     SCOPE = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -1645,63 +1638,44 @@ if menu == "Estadísticas":
     ]
     SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
     CREDS_PATH = os.path.join("credentials", "credentials.json")
-    # Cargar credenciales
     if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
-        creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
-        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
+        creds = Credentials.from_service_account_info(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"], scopes=SCOPE)
     else:
         creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
     client = gspread.authorize(creds)
     book = client.open_by_key(SHEET_ID)
-
-    # --- Obtener estadísticas del jugador ---
-    jugador_stats = pd.DataFrame()
-    hoja_nombres = ["Data jugadores", "data jugadores"]
-    hoja_encontrada = False
-    for hoja_nombre in hoja_nombres:
-        try:
-            ws_data = book.worksheet(hoja_nombre)
-            data_jugadores = pd.DataFrame(ws_data.get_all_records())
-            hoja_encontrada = True
-            jugador_stats = data_jugadores[data_jugadores["nombre_wyscout"] == nombre_wyscout]
-            break
-        except Exception:
-            continue
-    if not hoja_encontrada:
-        st.error(f"No se pudo acceder a la hoja 'Data jugadores' ni 'data jugadores' en el archivo de base de datos.\nVerifica el nombre exacto en Google Sheets.\nSHEET_ID usado: {SHEET_ID}")
+    try:
+        ws = book.worksheet("data jugadores")
+        data = ws.get_all_values()
+        df_stats = pd.DataFrame(data[1:], columns=data[0])
+    except Exception:
+        st.warning("No se pudo acceder a la hoja 'data jugadores'. Verifica el nombre exacto en Google Sheets.")
+        st.markdown("### Comparativa de estadísticas clave")
+        columnas = [nombre for _, nombre in claves]
+        df_comp_fmt = pd.DataFrame([["-"]*len(columnas)], columns=columnas, index=["Jugador"])
+        st.dataframe(df_comp_fmt)
+        st.stop()
+    if df_stats.empty or "nombre_wyscout" not in df_stats.columns:
+        st.warning("No se encontró la columna 'nombre_wyscout' en la hoja de estadísticas.")
+        st.markdown("### Comparativa de estadísticas clave")
+        columnas = [nombre for _, nombre in claves]
+        df_comp_fmt = pd.DataFrame([["-"]*len(columnas)], columns=columnas, index=["Jugador"])
+        st.dataframe(df_comp_fmt)
+        st.stop()
+    jugador_stats = df_stats[df_stats["nombre_wyscout"] == nombre_wyscout]
     st.markdown("### Comparativa de estadísticas clave")
     columnas = [nombre for _, nombre in claves]
-    filas = []
-    index = []
     if jugador_stats.empty:
-        filas.append(["Sin datos"] * len(columnas))
-        index.append("Jugador sin estadísticas disponibles")
-    else:
-        def parse_and_format(val):
-            try:
-                return round(float(val), 2)
-            except Exception:
-                return val
-        fila_jugador = [parse_and_format(jugador_stats.iloc[0].get(col, "")) for col, _ in claves]
-        filas.append(fila_jugador)
-        index.append("Jugador")
-    df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
+        st.warning("Jugador sin estadísticas disponibles")
+        df_comp_fmt = pd.DataFrame([["-"]*len(columnas)], columns=columnas, index=["Jugador"])
+        st.dataframe(df_comp_fmt)
+        st.stop()
+    fila_jugador = []
+    for col, _ in claves:
+        val = jugador_stats.iloc[0].get(col, "-")
+        fila_jugador.append(val)
+    df_comp_fmt = pd.DataFrame([fila_jugador], columns=columnas, index=["Jugador"])
     st.dataframe(df_comp_fmt)
-    # ...existing code...
-    import gspread
-    from google.oauth2.service_account import Credentials
-    import pandas as pd
-    import os
-    SCOPE = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
-    CREDS_PATH = os.path.join("credentials", "credentials.json")
-    if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
-        import json
-        creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
-        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
     else:
         creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
     client = gspread.authorize(creds)
@@ -1759,88 +1733,8 @@ if menu == "Estadísticas":
             nombre_fila = f"Promedio {row['Año']}" if 'Año' in row else "Promedio liga"
             filas.append(fila)
             index.append(nombre_fila)
-    df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
+    df_comp_fmt = pd.DataFrame([fila_jugador], columns=columnas, index=["Jugador"])
     st.dataframe(df_comp_fmt)
-
-    estadisticas_por_posicion = {
-        "Arquero": [
-            ("Goles_recibidos/90", "Goles recibidos/90"),
-            ("Remates_en_contra/90", "Remates en contra/90"),
-            ("Paradas", "% Paradas"),
-            ("Porterías_imbatidas_en_los_90", "Porterías imbatidas/90")
-        ],
-        "Defensa central derecho": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos")
-        ],
-        "Defensa central izquierdo": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos")
-        ],
-        "Lateral derecho": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos")
-        ],
-        "Lateral izquierdo": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos")
-        ],
-        "Mediocampista defensivo": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos"),
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
-        ],
-        "Mediocampista mixto": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos"),
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
-        ],
-        "Mediocampista ofensivo": [
-            ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-            ("Interceptaciones/90", "Interceptaciones/90"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos"),
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
-        ],
-        "Extremo derecho": [
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ("Regates_realizados", "Regates exitosos"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos"),
-            ("Precisión_centros", "Precisión centros")
-        ],
-        "Extremo izquierdo": [
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ("Regates_realizados", "Regates exitosos"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Precisión_pases_largos", "Precisión pases largos"),
-            ("Precisión_centros", "Precisión centros")
-        ],
-        "Delantero centro": [
-            ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-            ("Precisión_pases", "Precisión pases"),
-            ("Tiros_a_la_portería", "Precisión de remates")
-        ]
-    }
-
-    claves = estadisticas_por_posicion.get(posicion, [])
     if not claves:
         st.warning("No hay estadísticas clave definidas para esta posición.")
         st.stop()

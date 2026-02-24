@@ -1642,12 +1642,6 @@ if menu == "Estadísticas":
         fila_jugador.append(val)
     df_comp_fmt = pd.DataFrame([fila_jugador], columns=columnas, index=["Jugador"])
     st.dataframe(df_comp_fmt)
-    else:
-        creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
-    client = gspread.authorize(creds)
-    book = client.open_by_key(SHEET_ID)
-    try:
-        ws_data = book.worksheet("data jugadores")
         data_jugadores = ws_data.get_all_records()
         df_data_jug = pd.DataFrame(data_jugadores)
     except Exception as e:

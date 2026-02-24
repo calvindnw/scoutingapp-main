@@ -1,43 +1,7 @@
 
 
 
-# =========================================================
-# BLOQUE ESTADÍSTICAS — NUEVA SECCIÓN
-# =========================================================
-if menu == "Estadísticas":
-    st.subheader("Estadísticas individuales y comparativas")
-
-    # Usar el mismo dataset de jugadores que en Jugadores
-    df_players = df_players_all.copy()
-
-    # Opciones para el selectbox (igual que en Jugadores)
-    opciones = {
-        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-        for _, row in df_players.iterrows()
-    }
-
-    seleccion_jug = st.selectbox(
-        "🔍 Buscar jugador",
-        [""] + list(opciones.keys()),
-        key="estadisticas_select_jugador"
-    )
-
-    if seleccion_jug:
-        id_jugador = opciones[seleccion_jug]
-        jugador_row = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0]
-
-        # Obtener posición y liga del jugador seleccionado
-        posicion = jugador_row.get("Posición", "")
-        liga = jugador_row.get("Liga", "")
-
-        # Mapeo de estadísticas clave por posición
-        estadisticas_por_posicion = {
-            "Arquero": [
-                ("Goles_recibidos/90", "Goles recibidos/90min"),
-                ("Remates_en_contra/90", "Remates en contra/90min"),
-                ("Paradas", "Porcentaje de paradas"),
-                ("Porterías_imbatidas_en_los_90", "Porterías imbatidas/90min"),
-            ],
+    # ...existing code...
             "Defensa central derecho": [
                 ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
                 ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),

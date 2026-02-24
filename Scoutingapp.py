@@ -1650,12 +1650,31 @@ if menu == "Estadísticas":
     # Filas de promedios de liga por año (orden cronológico)
     if not prom_filtrado.empty:
         prom_filtrado = prom_filtrado.sort_values("Año")
+        # Forzar que todas las columnas relevantes sean string y respeten la coma decimal
+        for col, _ in claves:
+            if col in prom_filtrado.columns:
+                prom_filtrado[col] = prom_filtrado[col].apply(lambda x: str(x) if pd.notna(x) else "")
         for _, row in prom_filtrado.iterrows():
             fila = []
             for col, _ in claves:
                 val = row.get(col, "")
-                val = parse_and_format(val)
-                fila.append(val)
+                # Si el valor original tenía coma, mostrarlo tal cual
+                if "," in val:
+                    fila.append(val)
+                else:
+                    # Si es número entero o float, intentar reconstruir la coma decimal si corresponde
+                    try:
+                        f = float(val)
+                        # Si el valor es mayor a 100 y no tiene decimales, probablemente perdió la coma
+                        if f > 100 and len(val) > 2:
+                            # Insertar coma dos posiciones antes del final
+                            val_str = str(int(f))
+                            val_fmt = val_str[:-2] + "," + val_str[-2:]
+                            fila.append(val_fmt)
+                        else:
+                            fila.append(val)
+                    except:
+                        fila.append(val)
             filas.append(fila)
             index.append(str(row["Año"]))
 

@@ -1627,13 +1627,17 @@ if menu == "Estadísticas":
     filas = []
     index = []
 
-    def parse_num(val):
+    def parse_and_format(val):
         if isinstance(val, str):
-            val = val.replace(",", ".")
+            val2 = val.replace(",", ".")
             try:
-                return float(val)
+                num = float(val2)
+                # Formato con coma decimal
+                return f"{num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             except:
                 return val
+        elif isinstance(val, (int, float)):
+            return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         return val
 
     # Fila del jugador
@@ -1641,7 +1645,7 @@ if menu == "Estadísticas":
         fila_jugador = []
         for col, _ in claves:
             val = jugador_stats.iloc[0].get(col, "-")
-            val = parse_num(val)
+            val = parse_and_format(val)
             fila_jugador.append(val)
         filas.append(fila_jugador)
         index.append("Jugador")
@@ -1657,18 +1661,12 @@ if menu == "Estadísticas":
             fila = []
             for col, _ in claves:
                 val = row.get(col, "-")
-                val = parse_num(val)
+                val = parse_and_format(val)
                 fila.append(val)
             filas.append(fila)
             index.append(str(row["Año"]))
 
-    df_comp = pd.DataFrame(filas, columns=columnas, index=index)
-    # Formatear solo los valores numéricos a dos decimales
-    def format_cell(val):
-        if isinstance(val, float):
-            return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        return val
-    df_comp_fmt = df_comp.applymap(format_cell)
+    df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
     st.dataframe(df_comp_fmt)
 
 

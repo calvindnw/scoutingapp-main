@@ -1518,7 +1518,7 @@ if menu == "Estadísticas":
     seleccion_jug = st.selectbox(
         "🔍 Buscar jugador",
         [""] + list(opciones.keys()),
-        key="estadisticas_select_jugador"
+        key="estadisticas_select_jugador_box"
     )
 
     if not seleccion_jug:

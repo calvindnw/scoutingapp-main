@@ -1629,13 +1629,16 @@ if menu == "Estadísticas":
 
     def parse_and_format(val):
         try:
-            # Si es string con coma decimal y sin punto, es formato latino
             if isinstance(val, str):
                 v = val.strip()
-                if "," in v and "." not in v:
-                    v = v.replace(".", "")  # Elimina puntos de miles si los hubiera
+                # Si tiene ambos: punto y coma (ej: '1.234,56')
+                if "," in v and "." in v:
+                    v = v.replace(".", "")
                     v = v.replace(",", ".")
-                # Si tiene ambos, asume formato correcto (no tocar)
+                # Solo coma (ej: '61,96')
+                elif "," in v:
+                    v = v.replace(",", ".")
+                # Solo punto o ninguno: dejar igual
                 num = float(v)
             else:
                 num = float(val)

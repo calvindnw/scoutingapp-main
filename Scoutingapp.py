@@ -1662,7 +1662,8 @@ if menu == "Estadísticas":
             index.append(str(row["Año"]))
 
     df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
-    st.dataframe(df_comp_fmt)
+    # Mostrar SIEMPRE como texto, sin interpretación numérica
+    st.dataframe(df_comp_fmt.astype(str))
 
 
 # =========================================================

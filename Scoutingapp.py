@@ -1628,21 +1628,9 @@ if menu == "Estadísticas":
     index = []
 
     def parse_and_format(val):
-        # Si es string y tiene coma, mostrar tal cual
+        # Mostrar siempre el valor exactamente como string, sin ninguna conversión ni formateo
         if pd.isna(val):
             return ""
-        if isinstance(val, str):
-            if "," in val:
-                return val
-            # Si es string numérico sin coma, intentar formatear
-            try:
-                f = float(val)
-                return f"{f:.2f}".replace(".", ",")
-            except:
-                return val
-        # Si es número, formatear con coma decimal
-        if isinstance(val, (int, float)):
-            return f"{val:.2f}".replace(".", ",")
         return str(val)
 
     # Fila del jugador

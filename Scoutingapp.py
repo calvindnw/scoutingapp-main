@@ -1,266 +1,3 @@
-
-
-
-    # ...existing code...
-            "Defensa central derecho": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Defensa central izquierdo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Lateral derecho": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Lateral izquierdo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Mediocampista defensivo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Mediocampista mixto": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Mediocampista ofensivo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Extremo derecho": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Regates_realizados", "Regates exitosos"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Precisión_centros", "Precisión de centros"),
-            ],
-            "Extremo izquierdo": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Regates_realizados", "Regates exitosos"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Precisión_centros", "Precisión de centros"),
-            ],
-            "Delantero centro": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Tiros_a_la_portería", "Precisión de remates"),
-            ],
-        }
-
-        estadisticas_clave = estadisticas_por_posicion.get(posicion, [])
-
-        # --- Obtener nombre_wyscout del jugador seleccionado ---
-        nombre_wyscout = jugador_row.get("nombre_wyscout", None)
-        if not nombre_wyscout and "nombre_wyscout" in jugador_row.index:
-            nombre_wyscout = jugador_row["nombre_wyscout"]
-
-        # --- Cargar hoja Data jugadores y Promedios de Liga desde Google Sheets ---
-        df_data_jugadores = cargar_datos_sheets("Data jugadores")
-        df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
-
-        # --- Buscar fila de Data jugadores para el jugador seleccionado ---
-        fila_jugador_stats = None
-        if nombre_wyscout and "nombre_wyscout" in df_data_jugadores.columns:
-            fila_jugador_stats = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout]
-            if not fila_jugador_stats.empty:
-                fila_jugador_stats = fila_jugador_stats.iloc[0]
-
-        # --- Buscar promedios de liga para la posición y liga del jugador ---
-        promedios_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
-
-        # --- Mostrar advertencia si falta información ---
-        if fila_jugador_stats is None or promedios_liga.empty:
-            st.warning("No se encontraron estadísticas individuales o promedios de liga para este jugador/posición/liga.")
-        else:
-            # --- Construir tabla comparativa ---
-            columnas = [nombre for _, nombre in estadisticas_clave]
-            data = []
-            index = ["Jugador"]
-            fila_jugador = []
-            for col, _nombre in estadisticas_clave:
-                val = fila_jugador_stats.get(col, "-")
-                fila_jugador.append(val)
-            data.append(fila_jugador)
-
-            # Agregar filas por año (orden cronológico ascendente)
-            if "Año" in promedios_liga.columns:
-                promedios_liga_sorted = promedios_liga.sort_values("Año")
-                for _, row in promedios_liga_sorted.iterrows():
-                    fila = []
-                    for col, _nombre in estadisticas_clave:
-                        fila.append(row.get(col, "-"))
-                    data.append(fila)
-                    index.append(str(row["Año"]))
-
-            # Crear DataFrame para mostrar
-            import pandas as pd
-            df_tabla = pd.DataFrame(data, columns=columnas, index=index)
-            st.markdown("#### Comparativa de estadísticas clave")
-            st.dataframe(df_tabla, use_container_width=True)
-        id_jugador = opciones[seleccion_jug]
-        jugador_row = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0]
-
-        # Obtener posición y liga del jugador seleccionado
-        posicion = jugador_row.get("Posición", "")
-        liga = jugador_row.get("Liga", "")
-
-        # Mapeo de estadísticas clave por posición
-        estadisticas_por_posicion = {
-            "Arquero": [
-                ("Goles_recibidos/90", "Goles recibidos/90min"),
-                ("Remates_en_contra/90", "Remates en contra/90min"),
-                ("Paradas", "Porcentaje de paradas"),
-                ("Porterías_imbatidas_en_los_90", "Porterías imbatidas/90min"),
-            ],
-            "Defensa central derecho": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Defensa central izquierdo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Lateral derecho": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Lateral izquierdo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-            ],
-            "Mediocampista defensivo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Mediocampista mixto": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Mediocampista ofensivo": [
-                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
-                ("Interceptaciones/90", "Interceptaciones/90min"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-            ],
-            "Extremo derecho": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Regates_realizados", "Regates exitosos"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Precisión_centros", "Precisión de centros"),
-            ],
-            "Extremo izquierdo": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Regates_realizados", "Regates exitosos"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Precisión_pases_largos", "Precisión de pases largos"),
-                ("Precisión_centros", "Precisión de centros"),
-            ],
-            "Delantero centro": [
-                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
-                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
-                ("Precisión_pases", "Precisión de pases"),
-                ("Tiros_a_la_portería", "Precisión de remates"),
-            ],
-        }
-
-        estadisticas_clave = estadisticas_por_posicion.get(posicion, [])
-
-        # --- Obtener nombre_wyscout del jugador seleccionado ---
-        nombre_wyscout = jugador_row.get("nombre_wyscout", None)
-        if not nombre_wyscout and "nombre_wyscout" in jugador_row.index:
-            nombre_wyscout = jugador_row["nombre_wyscout"]
-
-        # --- Cargar hoja Data jugadores y Promedios de Liga desde Google Sheets ---
-        df_data_jugadores = cargar_datos_sheets("Data jugadores")
-        df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
-
-        # --- Buscar fila de Data jugadores para el jugador seleccionado ---
-        fila_jugador_stats = None
-        if nombre_wyscout and "nombre_wyscout" in df_data_jugadores.columns:
-            fila_jugador_stats = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout]
-            if not fila_jugador_stats.empty:
-                fila_jugador_stats = fila_jugador_stats.iloc[0]
-
-        # --- Buscar promedios de liga para la posición y liga del jugador ---
-        promedios_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
-
-        # --- Mostrar advertencia si falta información ---
-        if fila_jugador_stats is None or promedios_liga.empty:
-            st.warning("No se encontraron estadísticas individuales o promedios de liga para este jugador/posición/liga.")
-        else:
-            # --- Construir tabla comparativa ---
-            columnas = [nombre for _, nombre in estadisticas_clave]
-            data = []
-            index = ["Jugador"]
-            fila_jugador = []
-            for col, _nombre in estadisticas_clave:
-                val = fila_jugador_stats.get(col, "-")
-                fila_jugador.append(val)
-            data.append(fila_jugador)
-
-            # Agregar filas por año (orden cronológico ascendente)
-            if "Año" in promedios_liga.columns:
-                promedios_liga_sorted = promedios_liga.sort_values("Año")
-                for _, row in promedios_liga_sorted.iterrows():
-                    fila = []
-                    for col, _nombre in estadisticas_clave:
-                        fila.append(row.get(col, "-"))
-                    data.append(fila)
-                    index.append(str(row["Año"]))
-
-            # Crear DataFrame para mostrar
-            import pandas as pd
-            df_tabla = pd.DataFrame(data, columns=columnas, index=index)
-            st.markdown("#### Comparativa de estadísticas clave")
-            st.dataframe(df_tabla, use_container_width=True)
-
-
 # =========================================================
 # BLOQUE 1 / 5 — Conexión + Configuración inicial + Login
 # =========================================================
@@ -406,7 +143,15 @@ def col_letter(n: int) -> str:
 # =========================================================
 @st.cache_data(ttl=30)
 
-
+def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
+    try:
+        ws = obtener_hoja(nombre_hoja, columnas_base)
+        data = ws.get_all_records()
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
+        return pd.DataFrame()
 
 @st.cache_data(ttl=120)
 def cargar_datos():
@@ -430,13 +175,19 @@ st.session_state["df_short"]   = df_short.copy()
 
 def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
     try:
-        ws = obtener_hoja(nombre_hoja, columnas_base)
-        data = ws.get_all_records()
+        ahora = datetime.now()
+        if ahora - st.session_state["ultima_lectura"] < timedelta(seconds=2):
+            time.sleep(1)
+        st.session_state["ultima_lectura"] = ahora
+
+        data = _leer_datos(nombre_hoja)
         df = pd.DataFrame(data)
+        if df.empty and columnas_base:
+            df = pd.DataFrame(columns=columnas_base)
         return df
     except Exception as e:
-        st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
-        return pd.DataFrame()
+        st.error(f"⚠️ Error al cargar '{nombre_hoja}': {e}")
+        return pd.DataFrame(columns=columnas_base or [])
 
 
 # =========================================================
@@ -1702,7 +1453,6 @@ menu = st.sidebar.radio(
         "Ver informes",
         "Lista corta",
         "Panel Scouts",
-        "Estadísticas",  # Nueva opción
     ]
     , key="menu"
 )

@@ -1,6 +1,5 @@
 
 
-# Insertar el bloque de Estadísticas después de la definición de menu y los datasets filtrados
 
 # =========================================================
 # BLOQUE ESTADÍSTICAS — NUEVA SECCIÓN

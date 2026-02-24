@@ -10,6 +10,47 @@
 
 # ----------------------
 # 📦 IMPORTS GENERALES
+###############################################################
+# OPCIONES GLOBALES PARA FORMULARIOS Y SELECTS
+###############################################################
+opciones_pies = ["Derecho", "Izquierdo", "Ambidiestro"]
+opciones_posiciones = [
+    "Arquero", "Lateral derecho", "Defensa central derecho",
+    "Defensa central izquierdo", "Lateral izquierdo",
+    "Mediocampista defensivo", "Mediocampista mixto",
+    "Mediocampista ofensivo", "Extremo derecho",
+    "Extremo izquierdo", "Delantero centro"
+]
+opciones_ligas = [
+    "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A", "Argentina - Primera C",
+    "Argentina - Proyección", "Argentina - Reserva ascenso", "Argentina - Regional Amateur", "Argentina - Promocional Amateur", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
+    "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
+    "Uruguay - Segunda División", "Paraguay - División Profesional",
+    "Colombia - Primera A", "Ecuador - LigaPro Serie A", "Ecuador - Serie B",
+    "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
+    "España - LaLiga", "España - LaLiga 2", "España - 1 RFEF", "España - 2 RFEF", "Italia - Serie A", "Italia - Serie B", "Italia - Serie C",
+    "Inglaterra - Premier League", "Inglaterra - Championship",
+    "Francia - Ligue 1", "Alemania - Bundesliga", "Portugal - Primeira Liga",
+    "Países Bajos - Eredivisie", "Suiza - Super League",
+    "Polonia - Liga Polaca", "Bélgica - Pro League",
+    "Grecia - Super League", "Turquía - Süper Lig",
+    "Arabia Saudita - Saudi Pro League", "Estados Unidos - MLS",
+    "Otro / Sin especificar"
+]
+opciones_paises = [
+    "Argentina", "Brasil", "Chile", "Uruguay", "Paraguay", "Colombia", "México",
+    "Ecuador", "Perú", "Venezuela", "España", "Italia", "Francia", "Inglaterra",
+    "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
+    "Honduras", "Costa Rica", "El Salvador", "Panamá",
+    "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro"
+]
+opciones_caracteristicas = [
+    "agresivo", "completo", "tiempista", "dinámico", "velocista", "goleador",
+    "juego de espalda", "líder defensivo", "versátil", "posicional",
+    "habilidoso", "táctico", "aguerrido", "resolutivo", "creativo",
+    "preciso", "criterioso", "aplomado", "potente", "temperamental",
+    "técnico", "conductor", "proyección"
+]
 # ----------------------
 import os
 import base64
@@ -1662,198 +1703,220 @@ if menu == "Estadísticas":
         for col, _ in claves:
             if col in prom_filtrado.columns:
                 prom_filtrado[col] = prom_filtrado[col].apply(lambda x: str(x) if pd.notna(x) else "")
-        for _, row in prom_filtrado.iterrows():
-            fila = []
-            for col, _ in claves:
-                val = row.get(col, "")
-                # Si el valor original tenía coma, mostrarlo tal cual
-                if "," in val:
-                    fila.append(val)
-                else:
-                    # Si es número entero o float, intentar reconstruir la coma decimal si corresponde
-                    try:
-                        f = float(val)
-                        # Si el valor es mayor a 100 y no tiene decimales, probablemente perdió la coma
-                        if f > 100 and len(val) > 2:
-                            # Insertar coma dos posiciones antes del final
-                            val_str = str(int(f))
-                            val_fmt = val_str[:-2] + "," + val_str[-2:]
-                            fila.append(val_fmt)
-                        else:
-                            fila.append(val)
-                    except:
-                        fila.append(val)
-            filas.append(fila)
-            index.append(str(row["Año"]))
 
-    df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
-    # Mostrar SIEMPRE como texto, sin interpretación numérica ni formateo
-    st.dataframe(df_comp_fmt)
+        st.subheader("Estadísticas individuales y comparativas")
 
+        # Obtener base de jugadores (igual que en Jugadores)
+        df_players = st.session_state["df_players"].copy()
 
-# =========================================================
-# BLOQUE 3 / 5 — Sección Jugadores
-# =========================================================
+        # Buscador de jugadores (igual que en Jugadores)
+        opciones = {
+            f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+            for _, row in df_players.iterrows()
+        }
 
-if menu == "Jugadores":
+        seleccion_jug = st.selectbox(
+            "🔍 Buscar jugador",
+            [""] + list(opciones.keys()),
+            key="estadisticas_select_jugador"
+        )
 
-    st.subheader("Gestión de jugadores e informes individuales")
+        if not seleccion_jug:
+            st.info("Seleccione un jugador para ver sus estadísticas.")
+            st.stop()
 
-    # ---------------------------------------------------------
-    # DATASETS
-    # ---------------------------------------------------------
-    df_players = df_players_all.copy()      # 🔓 todos los jugadores
-    df_reports = df_reports_user.copy()     # 🔐 solo informes del scout
+        # Obtener ID del jugador seleccionado
+        id_jugador = opciones[seleccion_jug]
+        jugador_row = df_players[df_players["ID_Jugador"] == id_jugador]
+        if jugador_row.empty:
+            st.warning("No se encontró información del jugador seleccionado.")
+            st.stop()
 
-    # ---------------------------------------------------------
-    # OPCIONES PREDEFINIDAS
-    # ---------------------------------------------------------
-    opciones_pies = ["Derecho", "Izquierdo", "Ambidiestro"]
+        jugador_info = jugador_row.iloc[0]
+        posicion = jugador_info.get("Posición", "")
+        liga = jugador_info.get("Liga", "")
+        nombre_wyscout = jugador_info.get("nombre_wyscout", "")
 
-    opciones_posiciones = [
-        "Arquero", "Lateral derecho", "Defensa central derecho",
-        "Defensa central izquierdo", "Lateral izquierdo",
-        "Mediocampista defensivo", "Mediocampista mixto",
-        "Mediocampista ofensivo", "Extremo derecho",
-        "Extremo izquierdo", "Delantero centro"
-    ]
+        st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
 
-    opciones_ligas = [
-        "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A", "Argentina - Primera C",
-        "Argentina - Proyección", "Argentina - Reserva ascenso", "Argentina - Regional Amateur", "Argentina - Promocional Amateur", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
-        "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
-        "Uruguay - Segunda División", "Paraguay - División Profesional",
-        "Colombia - Primera A", "Ecuador - LigaPro Serie A", "Ecuador - Serie B",
-        "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
-        "España - LaLiga", "España - LaLiga 2", "España - 1 RFEF", "España - 2 RFEF", "Italia - Serie A", "Italia - Serie B", "Italia - Serie C",
-        "Inglaterra - Premier League", "Inglaterra - Championship",
-        "Francia - Ligue 1", "Alemania - Bundesliga", "Portugal - Primeira Liga",
-        "Países Bajos - Eredivisie", "Suiza - Super League",
-        "Polonia - Liga Polaca", "Bélgica - Pro League",
-        "Grecia - Super League", "Turquía - Süper Lig",
-        "Arabia Saudita - Saudi Pro League", "Estados Unidos - MLS",
-        "Otro / Sin especificar"
-    ]
+        # --- Estadísticas clave por posición ---
+        estadisticas_por_posicion = {
+            "Arquero": [
+                ("Goles_recibidos/90", "Goles recibidos/90"),
+                ("Remates_en_contra/90", "Remates en contra/90"),
+                ("Paradas", "% Paradas"),
+                ("Porterías_imbatidas_en_los_90", "Porterías imbatidas/90")
+            ],
+            "Defensa central derecho": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos")
+            ],
+            "Defensa central izquierdo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos")
+            ],
+            "Lateral derecho": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos")
+            ],
+            "Lateral izquierdo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos")
+            ],
+            "Mediocampista defensivo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
+            ],
+            "Mediocampista mixto": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
+            ],
+            "Mediocampista ofensivo": [
+                ("Duelos_defensivos_ganados", "Duelos defensivos ganados"),
+                ("Interceptaciones/90", "Interceptaciones/90"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos"),
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados")
+            ],
+            "Extremo derecho": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Regates_realizados", "Regates exitosos"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos"),
+                ("Precisión_centros", "Precisión centros")
+            ],
+            "Extremo izquierdo": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Regates_realizados", "Regates exitosos"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Precisión_pases_largos", "Precisión pases largos"),
+                ("Precisión_centros", "Precisión centros")
+            ],
+            "Delantero centro": [
+                ("Duelos_atacantes_ganados", "Duelos ofensivos ganados"),
+                ("Duelos_aéreos_ganados", "Duelos aéreos ganados"),
+                ("Precisión_pases", "Precisión pases"),
+                ("Tiros_a_la_portería", "Precisión de remates")
+            ]
+        }
 
-    opciones_paises = [
-        "Argentina", "Brasil", "Chile", "Uruguay", "Paraguay", "Colombia", "México",
-        "Ecuador", "Perú", "Venezuela", "España", "Italia", "Francia", "Inglaterra",
-        "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
-        "Honduras", "Costa Rica", "El Salvador", "Panamá",
-        "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro"
-    ]
+        claves = estadisticas_por_posicion.get(posicion, [])
+        if not claves:
+            st.warning("No hay estadísticas clave definidas para esta posición.")
+            st.stop()
 
-    opciones_caracteristicas = [
-        "agresivo", "completo", "tiempista", "dinámico", "velocista", "goleador",
-        "juego de espalda", "líder defensivo", "versátil", "posicional",
-        "habilidoso", "táctico", "aguerrido", "resolutivo", "creativo",
-        "preciso", "criterioso", "aplomado", "potente", "temperamental",
-        "técnico", "conductor", "proyección"
-    ]
+        # --- Leer datos de Google Sheets (jugador y promedios de liga) ---
+        import gspread
+        from google.oauth2.service_account import Credentials
+        import pandas as pd
+        import os
 
-    # ---------------------------------------------------------
-    # BUSCADOR DE JUGADORES
-    # ---------------------------------------------------------
-    opciones = {
-        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-        for _, row in df_players.iterrows()
-    }
+        SCOPE = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
+        CREDS_PATH = os.path.join("credentials", "credentials.json")
 
-    seleccion_jug = st.selectbox(
-        "🔍 Buscar jugador",
-        [""] + list(opciones.keys())
-    )
+        # Cargar credenciales
+        if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
+            import json
+            creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
+        else:
+            creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
 
-        # ---------------------------------------------------------
-    # CREAR NUEVO JUGADOR
-    # ---------------------------------------------------------
-    if not seleccion_jug:
+        client = gspread.authorize(creds)
+        book = client.open_by_key(SHEET_ID)
 
+        # --- Obtener estadísticas del jugador ---
+        try:
+            ws_data = book.worksheet("data jugadores")
+            data_jugadores = ws_data.get_all_records()
+            df_data_jug = pd.DataFrame(data_jugadores)
+        except Exception as e:
+            st.error(f"Error al leer hoja 'data jugadores': {e}")
+            st.stop()
 
-        # Mostrar toast persistente si corresponde
-        if st.session_state.get("toast_guardado_jugador"):
-            st.toast("✅ Jugador guardado correctamente.", icon="✅")
-            st.session_state["toast_guardado_jugador"] = False
+        # --- Matchear por nombre_wyscout ---
+        jugador_stats = pd.DataFrame()
+        if nombre_wyscout:
+            jugador_stats = df_data_jug[df_data_jug.iloc[:, 0].astype(str).str.strip().str.lower() == str(nombre_wyscout).strip().lower()]
+        if jugador_stats.empty:
+            st.warning("Jugador sin estadísticas disponibles")
+            st.stop()
 
+        # --- Obtener promedios de liga ---
+        try:
+            ws_prom = book.worksheet("promedios liga")
+            data_prom = ws_prom.get_all_records()
+            df_prom = pd.DataFrame(data_prom)
+        except Exception as e:
+            st.error(f"Error al leer hoja 'promedios liga': {e}")
+            df_prom = pd.DataFrame()
 
-        with st.expander("➕ Agregar nuevo jugador", expanded=False):
-            with st.form("nuevo_jugador_form", clear_on_submit=True):
-                col1, col2 = st.columns(2)
+        # --- Filtrar promedios de liga por liga del jugador ---
+        prom_filtrado = pd.DataFrame()
+        if not df_prom.empty and liga:
+            prom_filtrado = df_prom[df_prom["Liga"].astype(str).str.strip().str.lower() == str(liga).strip().lower()]
 
-                with col1:
-                    nuevo_nombre = st.text_input("Nombre completo", value="")
-                    nueva_fecha = st.text_input("Fecha de nacimiento (dd/mm/aaaa)", value="")
-                    nueva_altura = st.number_input("Altura (cm)", 140, 210, 175)
-                    nuevo_pie = st.selectbox("Pie hábil", opciones_pies, index=0)
-                    nueva_posicion = st.selectbox("Posición principal", opciones_posiciones, index=0)
-                    nueva_fecha_fin_contrato = st.text_input("Fin de contrato (dd/mm/aaaa)", value="")
-                    nombre_wyscout = st.text_input("Nombre wyscout", value="")
+        # --- Construir tabla comparativa ---
+        st.markdown("### Comparativa de estadísticas clave")
+        columnas = [nombre for _, nombre in claves]
+        filas = []
+        index = []
 
-                with col2:
-                    nuevo_club = st.text_input("Club actual", value="")
-                    nueva_liga = st.selectbox("Liga", opciones_ligas, index=0)
-                    nueva_nacionalidad = st.selectbox("Nacionalidad", opciones_paises, index=0)
-                    nueva_seg_nac = st.selectbox("Segunda nacionalidad", [""] + opciones_paises, index=0)
-                    nueva_descripcion = st.text_area("Descripción del jugador", value="", height=80)
-                    nueva_caracteristica = st.multiselect("Características", opciones_caracteristicas, default=[])
-                    nueva_url_foto = st.text_input("URL Foto", value="")
-                    nueva_url_perfil = st.text_input("URL Perfil", value="")
-                    nueva_instagram = st.text_input("Instagram", value="")
-                    nueva_video = st.text_input("URL Video", value="")
-                    nuevo_telefono = st.text_input("Teléfono", value="")
-                    nuevo_representante = st.text_input("Representante", value="")
+        def parse_and_format(val):
+            try:
+                if val is None or val == "":
+                    return "-"
+                if isinstance(val, float):
+                    return f"{val:.2f}"
+                return str(val)
+            except Exception:
+                return "-"
 
-                guardar = st.form_submit_button("💾 Guardar jugador")
+        # Fila del jugador
+        fila_jugador = []
+        for col, _ in claves:
+            valor = jugador_stats.iloc[0].get(col, "-")
+            fila_jugador.append(parse_and_format(valor))
+        filas.append(fila_jugador)
+        index.append("Jugador")
 
-                if guardar and nuevo_nombre:
-                    try:
-                        ws = obtener_hoja("Jugadores")
-                        data_sheet = ws.get_all_records()
-                        df_sheet = pd.DataFrame(data_sheet)
+        # Filas de promedios de liga por año (orden cronológico si hay columna 'Año')
+        if not prom_filtrado.empty:
+            if "Año" in prom_filtrado.columns:
+                prom_filtrado = prom_filtrado.sort_values("Año")
+            for _, row in prom_filtrado.iterrows():
+                fila = []
+                for col, _ in claves:
+                    valor = row.get(col, "-")
+                    fila.append(parse_and_format(valor))
+                nombre_fila = f"Promedio {row['Año']}" if 'Año' in row else "Promedio liga"
+                filas.append(fila)
+                index.append(nombre_fila)
 
-                        if not df_sheet.empty and "ID_Jugador" in df_sheet.columns:
-                            max_id = pd.to_numeric(
-                                df_sheet["ID_Jugador"],
-                                errors="coerce"
-                            ).max()
-                            nuevo_id = int(max_id) + 1 if pd.notna(max_id) else 1
-                        else:
-                            nuevo_id = 1
-
-                        car_str = ", ".join(nueva_caracteristica) if nueva_caracteristica else ""
-
-                        fila = [
-                            nuevo_id,                                 # 0 ID_Jugador
-                            nuevo_nombre or "",                       # 1 Nombre
-                            nueva_fecha or "",                        # 2 Fecha_Nac
-                            nueva_nacionalidad or "",                # 3 Nacionalidad
-                            nueva_seg_nac or "",                      # 4 Segunda nacionalidad
-                            nueva_altura if nueva_altura else 175,     # 5 Altura
-                            nuevo_pie or opciones_pies[0],             # 6 Pie hábil
-                            nueva_posicion or opciones_posiciones[0],  # 7 Posición
-                            car_str,                                   # 8 Caracteristica
-                            nuevo_club or "",                         # 9 Club
-                            nueva_liga or opciones_ligas[0],           # 10 Liga
-                            nueva_descripcion or "",                  # 11 Descripcion
-                            "",                                       # 12 Sexo
-                            nueva_url_foto or "",                     # 13 URL_Foto
-                            nueva_url_perfil or "",                   # 14 URL_Perfil
-                            nueva_instagram or "",                    # 15 Instagram
-                            nueva_fecha_fin_contrato or "",           # 16 Fin de contrato
-                            nueva_video or "",                        # 17 URL Video
-                            nuevo_telefono or "",                     # 18 Teléfono
-                            nuevo_representante or "",                # 19 Representante
-                            nombre_wyscout or ""                      # 20 nombre_wyscout
-                        ]
-                        # Convertir todos los valores numpy.int64 a int antes de guardar
-                        import numpy as np
-                        fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
-                        ws.append_row(fila, value_input_option="USER_ENTERED")
-                        st.cache_data.clear()
-                        st.session_state["toast_guardado_jugador"] = True
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error al guardar jugador: {e}")
+        df_comp_fmt = pd.DataFrame(filas, columns=columnas, index=index)
+        st.dataframe(df_comp_fmt)
 
     # ---------------------------------------------------------
     # MOSTRAR JUGADOR SELECCIONADO

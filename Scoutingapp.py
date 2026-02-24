@@ -1642,8 +1642,6 @@ if menu == "Estadísticas":
         fila_jugador.append(val)
     df_comp_fmt = pd.DataFrame([fila_jugador], columns=columnas, index=["Jugador"])
     st.dataframe(df_comp_fmt)
-        data_jugadores = ws_data.get_all_records()
-        df_data_jug = pd.DataFrame(data_jugadores)
     except Exception as e:
         st.error("No se pudo acceder a la hoja 'data jugadores'. Verifica el nombre exacto en Google Sheets.")
         st.stop()

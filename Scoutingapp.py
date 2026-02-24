@@ -1511,8 +1511,13 @@ if menu == "Estadísticas":
 
     # Buscador de jugadores (igual que en Jugadores)
     # ...existing code...
-    liga = jugador_info.get("Liga", "")
-    nombre_wyscout = jugador_info.get("nombre_wyscout", "")
+    # Selección de jugador
+    jugadores_lista = df_players["Nombre"].tolist()
+    seleccion_jug = st.selectbox("Selecciona jugador", jugadores_lista, key="estadisticas_jugador")
+    jugador_info = df_players[df_players["Nombre"] == seleccion_jug].iloc[0] if seleccion_jug else None
+    posicion = jugador_info.get("Posición", "") if jugador_info is not None else ""
+    liga = jugador_info.get("Liga", "") if jugador_info is not None else ""
+    nombre_wyscout = jugador_info.get("nombre_wyscout", "") if jugador_info is not None else ""
     st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
     estadisticas_por_posicion = {
         "Arquero": [
@@ -1642,15 +1647,7 @@ if menu == "Estadísticas":
         fila_jugador.append(val)
     df_comp_fmt = pd.DataFrame([fila_jugador], columns=columnas, index=["Jugador"])
     st.dataframe(df_comp_fmt)
-    except Exception as e:
-        st.error("No se pudo acceder a la hoja 'data jugadores'. Verifica el nombre exacto en Google Sheets.")
-        st.stop()
-    jugador_stats = pd.DataFrame()
-    if nombre_wyscout:
-        jugador_stats = df_data_jug[df_data_jug.iloc[:, 0].astype(str).str.strip().str.lower() == str(nombre_wyscout).strip().lower()]
-    if jugador_stats.empty:
-        st.warning("Jugador sin estadísticas disponibles")
-        st.stop()
+    # Remove duplicate and undefined df_data_jug block. Use only df_stats for statistics lookup.
     try:
         ws_prom = book.worksheet("promedios liga")
         data_prom = ws_prom.get_all_records()
@@ -1733,7 +1730,7 @@ if menu == "Estadísticas":
         # --- Matchear por nombre_wyscout ---
         jugador_stats = pd.DataFrame()
         if nombre_wyscout:
-            jugador_stats = df_data_jug[df_data_jug.iloc[:, 0].astype(str).str.strip().str.lower() == str(nombre_wyscout).strip().lower()]
+            jugador_stats = df_stats[df_stats["nombre_wyscout"].astype(str).str.strip().str.lower() == str(nombre_wyscout).strip().lower()]
         if jugador_stats.empty:
             st.warning("Jugador sin estadísticas disponibles")
             st.stop()
@@ -1796,20 +1793,13 @@ if menu == "Estadísticas":
     # MOSTRAR JUGADOR SELECCIONADO
     # ---------------------------------------------------------
     if seleccion_jug:
-
-        id_jugador = opciones[seleccion_jug]
-        jugador = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0]
-
+        jugador = jugador_info
         col1, col2, col3 = st.columns([1.2, 1.2, 1.6])
-
         with col1:
             st.markdown(f"### {jugador['Nombre']}")
-
             if str(jugador.get("URL_Foto", "")).startswith("http"):
                 st.image(jugador["URL_Foto"], width=160)
-
             edad = calcular_edad(jugador.get("Fecha_Nac"))
-
             nac1 = jugador.get("Nacionalidad", "-")
             nac2 = jugador.get("Segunda_Nacionalidad", "")
             st.write(f"📅 Nacimiento: {jugador.get('Fecha_Nac', '')} ({edad} años)")

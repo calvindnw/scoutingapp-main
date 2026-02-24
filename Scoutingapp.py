@@ -1628,33 +1628,9 @@ if menu == "Estadísticas":
     index = []
 
     def parse_and_format(val):
-        # Si es string y tiene coma, mostrar tal cual (opcional: asegurar dos decimales)
+        # Si es string, mostrar tal cual (no tocar)
         if isinstance(val, str):
-            v = val.strip()
-            if "," in v:
-                # Si no tiene decimales, agrega ",00"; si tiene uno, agrega un 0
-                partes = v.split(",")
-                if len(partes) == 2:
-                    decimales = partes[1]
-                    if len(decimales) == 0:
-                        return partes[0] + ",00"
-                    elif len(decimales) == 1:
-                        return partes[0] + "," + decimales + "0"
-                    elif len(decimales) > 2:
-                        return partes[0] + "," + decimales[:2]
-                    else:
-                        return v
-                elif len(partes) == 1:
-                    return partes[0] + ",00"
-                else:
-                    return v
-            else:
-                # Si es string pero no tiene coma, intentar convertir a float
-                try:
-                    num = float(v)
-                    return f"{num:.2f}".replace(".", ",")
-                except Exception:
-                    return v
+            return val
         elif isinstance(val, (int, float)):
             return f"{val:.2f}".replace(".", ",")
         return val

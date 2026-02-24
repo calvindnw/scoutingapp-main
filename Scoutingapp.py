@@ -1656,11 +1656,13 @@ if menu == "Estadísticas":
 
     # --- Obtener estadísticas del jugador ---
     try:
-        ws_data = book.worksheet("Data jugadores")
+        hoja_nombre = "Data jugadores"
+        ws_data = book.worksheet(hoja_nombre)
         data_jugadores = pd.DataFrame(ws_data.get_all_records())
         # Matchear por nombre_wyscout
         jugador_stats = data_jugadores[data_jugadores["nombre_wyscout"] == nombre_wyscout]
     except Exception as e:
+        st.error(f"No se pudo acceder a la hoja '{hoja_nombre}' en el archivo de base de datos.\nVerifica el nombre exacto en Google Sheets.\nSHEET_ID usado: {SHEET_ID}\nError: {e}")
         jugador_stats = pd.DataFrame()
     # ...existing code...
     import gspread

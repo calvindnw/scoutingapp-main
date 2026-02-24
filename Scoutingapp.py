@@ -1,43 +1,4 @@
 # =========================================================
-# BLOQUE ESTADÍSTICAS — NUEVO MÓDULO
-# =========================================================
-if menu == "Estadísticas":
-    st.subheader("Estadísticas individuales y comparativas")
-
-    # Obtener base de jugadores (igual que en Jugadores)
-    df_players = st.session_state["df_players"].copy()
-
-    # Buscador de jugadores (igual que en Jugadores)
-    opciones = {
-        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-        for _, row in df_players.iterrows()
-    }
-
-    seleccion_jug = st.selectbox(
-        "🔍 Buscar jugador",
-        [""] + list(opciones.keys()),
-        key="estadisticas_select_jugador"
-    )
-
-    if not seleccion_jug:
-        st.info("Selecciona un jugador para ver sus estadísticas.")
-        st.stop()
-
-    # Obtener ID del jugador seleccionado
-    id_jugador = opciones[seleccion_jug]
-    jugador_row = df_players[df_players["ID_Jugador"] == id_jugador]
-    if jugador_row.empty:
-        st.warning("Jugador no encontrado en la base de datos.")
-        st.stop()
-
-    jugador_info = jugador_row.iloc[0]
-    posicion = jugador_info.get("Posición", "")
-    liga = jugador_info.get("Liga", "")
-    nombre_wyscout = jugador_info.get("nombre_wyscout", "")
-
-    # Mostrar info básica
-    st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
-# =========================================================
 # BLOQUE 1 / 5 — Conexión + Configuración inicial + Login
 # =========================================================
 # ⚽ ScoutingApp Profesional v2 — Conectada a Google Sheets
@@ -1496,6 +1457,46 @@ menu = st.sidebar.radio(
     ]
     , key="menu"
 )
+
+# =========================================================
+# BLOQUE ESTADÍSTICAS — NUEVO MÓDULO
+# =========================================================
+if menu == "Estadísticas":
+    st.subheader("Estadísticas individuales y comparativas")
+
+    # Obtener base de jugadores (igual que en Jugadores)
+    df_players = st.session_state["df_players"].copy()
+
+    # Buscador de jugadores (igual que en Jugadores)
+    opciones = {
+        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+        for _, row in df_players.iterrows()
+    }
+
+    seleccion_jug = st.selectbox(
+        "🔍 Buscar jugador",
+        [""] + list(opciones.keys()),
+        key="estadisticas_select_jugador"
+    )
+
+    if not seleccion_jug:
+        st.info("Selecciona un jugador para ver sus estadísticas.")
+        st.stop()
+
+    # Obtener ID del jugador seleccionado
+    id_jugador = opciones[seleccion_jug]
+    jugador_row = df_players[df_players["ID_Jugador"] == id_jugador]
+    if jugador_row.empty:
+        st.warning("Jugador no encontrado en la base de datos.")
+        st.stop()
+
+    jugador_info = jugador_row.iloc[0]
+    posicion = jugador_info.get("Posición", "")
+    liga = jugador_info.get("Liga", "")
+    nombre_wyscout = jugador_info.get("nombre_wyscout", "")
+
+    # Mostrar info básica
+    st.markdown(f"**Posición:** {posicion}  |  **Liga:** {liga}")
 
 
 # =========================================================

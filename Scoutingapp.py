@@ -221,7 +221,8 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
             time.sleep(1)
         st.session_state["ultima_lectura"] = ahora
 
-        data = _leer_datos(nombre_hoja)
+        ws = obtener_hoja(nombre_hoja, columnas_base)
+        data = ws.get_all_records()
         df = pd.DataFrame(data)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
@@ -1538,6 +1539,7 @@ if menu == "Estadísticas":
     nombre_wyscout = jugador_info.get("nombre_wyscout", "")
     if not nombre_wyscout:
         try:
+            book = conectar_sheets()
             ws_jugadores = book.worksheet("jugadores")
             data_jugadores_base = pd.DataFrame(ws_jugadores.get_all_records())
             nombre_wyscout = data_jugadores_base[data_jugadores_base["ID_Jugador"] == str(id_jugador)]["nombre_wyscout"].values[0]

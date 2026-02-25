@@ -1535,13 +1535,13 @@ if menu == "Estadísticas":
             df_promedios_liga = pd.DataFrame()
 
         # Validar columnas esperadas
-        if df_data_jugadores.empty or "Jugador" not in df_data_jugadores.columns:
-            st.warning("No se encontraron datos de jugadores o columna 'Jugador' en la hoja 'Data Jugadores'.")
+        if df_data_jugadores.empty or "nombre_wyscout" not in df_data_jugadores.columns:
+            st.warning("No se encontraron datos de jugadores o columna 'nombre_wyscout' en la hoja 'Data Jugadores'.")
         elif df_promedios_liga.empty or "Posición" not in df_promedios_liga.columns or "Liga" not in df_promedios_liga.columns or "Año" not in df_promedios_liga.columns:
             st.warning("No se encontraron datos o columnas esperadas en la hoja 'Promedios de Liga'.")
         else:
-            # Buscar fila del jugador
-            fila_jugador = df_data_jugadores[df_data_jugadores["Jugador"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
+            # Buscar fila del jugador por nombre_wyscout
+            fila_jugador = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
 
             if fila_jugador.empty or not estadisticas_clave:
                 st.warning("Jugador sin estadísticas disponibles")

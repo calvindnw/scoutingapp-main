@@ -144,29 +144,14 @@ def col_letter(n: int) -> str:
 @st.cache_data(ttl=30)
 
 def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
-    st.write(f"Intentando cargar hoja: '{nombre_hoja}'")
     try:
         ws = obtener_hoja(nombre_hoja, columnas_base)
-        # Mostrar hojas disponibles
-        try:
-            book = conectar_sheets()
-            hojas = [ws.title for ws in book.worksheets()]
-            st.write(f"Hojas disponibles: {hojas}")
-        except Exception as e2:
-            st.warning(f"No se pudieron listar hojas: {e2}")
-        # Obtener datos crudos
-        data_raw = ws.get_all_values()
-        st.write(f"Datos crudos recibidos ({len(data_raw)} filas):", data_raw[:5])
-        if not data_raw or len(data_raw) < 1:
-            st.warning(f"La hoja '{nombre_hoja}' está vacía o no se pudo leer.")
-            return pd.DataFrame(columns=columnas_base or [])
-        # Convertir a DataFrame
-        df = pd.DataFrame(data_raw[1:], columns=data_raw[0])
-        st.write(f"Columnas detectadas: {list(df.columns)}")
+        data = ws.get_all_records()
+        df = pd.DataFrame(data)
         return df
     except Exception as e:
         st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
-        return pd.DataFrame(columns=columnas_base or [])
+        return pd.DataFrame()
 
 @st.cache_data(ttl=120)
 def cargar_datos():
@@ -310,8 +295,11 @@ st.set_page_config(
 )
 
 
+st.markdown("""
+<style>
 
-FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
+/* =====================================================
+🌌 FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
 ===================================================== */
 .stApp {
     background:
@@ -329,14 +317,14 @@ FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
 }
 
 /* =====================================================
-TEXTO GLOBAL
+✍️ TEXTO GLOBAL
 ===================================================== */
 h1, h2, h3, h4, h5, h6, .stMarkdown, label {
     color: #ffffff !important;
 }
 
 /* =====================================================
-CONTENEDORES GENERALES — GLASS
+🧊 CONTENEDORES GENERALES — GLASS
 ===================================================== */
 div[data-testid="stContainer"] {
     background: linear-gradient(
@@ -359,7 +347,7 @@ div[data-testid="stContainer"] {
 }
 
 /* =====================================================
-KPI — TARJETAS (COMO ANTES + MEJOR)
+📊 KPI — TARJETAS (COMO ANTES + MEJOR)
 ===================================================== */
 .kpi-container {
     display:flex;
@@ -401,7 +389,7 @@ KPI — TARJETAS (COMO ANTES + MEJOR)
 }
 
 /* =====================================================
-RANKINGS — TARJETAS (FIX DEFINITIVO)
+🏆 RANKINGS — TARJETAS (FIX DEFINITIVO)
 ===================================================== */
 .panel-title {
     color:#5a9a7c;
@@ -455,7 +443,7 @@ RANKINGS — TARJETAS (FIX DEFINITIVO)
 }
 
 /* =====================================================
-SLIDERS — FIX TOTAL DEFINITIVO (ROJO ELIMINADO)
+🎚️ SLIDERS — FIX TOTAL DEFINITIVO (ROJO ELIMINADO)
 ===================================================== */
 
 /* -----------------------------------------------------
@@ -515,7 +503,7 @@ section[data-testid="stSidebar"] {
 
 
 /* =====================================================
-SIDEBAR — MENU + RADIO (SIN ROJO)
+📂 SIDEBAR — MENU + RADIO (SIN ROJO)
 ===================================================== */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0a1a14, #1a3a2a);
@@ -540,7 +528,7 @@ div[role="radiogroup"] label span[aria-hidden="true"] {
 }
 
 /* =====================================================
-TABLAS — GLASS + HOVER
+📊 TABLAS — GLASS + HOVER
 ===================================================== */
 div[data-testid="stDataFrame"] {
     background: linear-gradient(145deg, rgba(58,102,81,0.45), rgba(10,26,20,0.70));
@@ -567,7 +555,7 @@ div[data-testid="stDataFrame"] tbody tr:hover td {
 }
 
 /* =====================================================
-FIX DEFINITIVO — ROJOS / FOCUS / INVALID
+🛠️ FIX DEFINITIVO — ROJOS / FOCUS / INVALID
 ===================================================== */
 *:focus,
 *:focus-visible {
@@ -602,7 +590,7 @@ div[aria-invalid="true"] * {
 }
 
 /* =====================================================
-ALERTAS
+🚨 ALERTAS
 ===================================================== */
 .stAlert.success {
     background-color:rgba(0,51,102,0.97) !important;
@@ -3078,32 +3066,21 @@ if menu == "Agenda":
 
                     with col:
                         st.markdown(f"""
-                    st.subheader("Comparativa de estadísticas clave por posición y liga")
-    
-                    # Copiar formato del buscador de jugadores
-                    df_players = st.session_state["df_players"].copy()
-                    opciones = {
-                        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-                        for _, row in df_players.iterrows()
-                    }
-                    seleccion_jug = st.selectbox(
-                        "🔍 Buscar jugador",
-                        [""] + list(opciones.keys())
-                    )
-    
-                    # Cargar y mostrar debug de 'Data Jugadores'
-                    st.markdown("---")
-                    st.markdown("#### Debug: Carga de 'Data Jugadores'")
-                    df_data_jugadores = cargar_datos_sheets("Data Jugadores")
-                    st.write(f"Columnas cargadas en 'Data Jugadores': {list(df_data_jugadores.columns)}")
-                    st.write("Primeras filas:")
-                    st.write(df_data_jugadores.head())
-    
-                    if df_data_jugadores.empty or 'nombre_wyscout' not in df_data_jugadores.columns:
-                        st.warning("No se encontraron datos de jugadores o columna 'nombre_wyscout' en la hoja 'Data Jugadores'.")
-                    else:
-                        st.success("La hoja 'Data Jugadores' se cargó correctamente.")
-                    # Aquí puedes continuar con la lógica de comparación si la hoja se carga bien
+                        <div class='card'>
+                            {label}
+                            <h5>{nombre}</h5>
+                            <p>Scout: {scout}</p>
+                            <p>📅 {fecha.strftime('%d/%m/%Y')}</p>
+                            <p><i>{motivo}</i></p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.button("👁 Marcar visto", key=f"mark_{nombre}_{i}", on_click=marcar_visto, args=(nombre,))
+
+    # =========================================================
+    # BLOQUE YA VISTOS (máx 5 columnas por fila)
+    # =========================================================
+    with st.expander("👁 Seguimientos ya vistos", expanded=False):
+        if vistos.empty:
             st.info("No hay jugadores vistos aún.")
         else:
             jugadores_lista = list(vistos.sort_values("Fecha_Revisar").iterrows())
@@ -3119,7 +3096,7 @@ if menu == "Agenda":
                             <span class='label futuro'>Visto</span>
                             <h5>{nombre}</h5>
                             <p>Scout: {scout}</p>
-                              <p>Fecha: {fecha.strftime('%d/%m/%Y')}</p>
+                            <p>📅 {fecha.strftime('%d/%m/%Y')}</p>
                             <p><i>{motivo}</i></p>
                         </div>
                         """, unsafe_allow_html=True)

@@ -144,14 +144,29 @@ def col_letter(n: int) -> str:
 @st.cache_data(ttl=30)
 
 def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
+    st.write(f"Intentando cargar hoja: '{nombre_hoja}'")
     try:
         ws = obtener_hoja(nombre_hoja, columnas_base)
-        data = ws.get_all_records()
-        df = pd.DataFrame(data)
+        # Mostrar hojas disponibles
+        try:
+            book = conectar_sheets()
+            hojas = [ws.title for ws in book.worksheets()]
+            st.write(f"Hojas disponibles: {hojas}")
+        except Exception as e2:
+            st.warning(f"No se pudieron listar hojas: {e2}")
+        # Obtener datos crudos
+        data_raw = ws.get_all_values()
+        st.write(f"Datos crudos recibidos ({len(data_raw)} filas):", data_raw[:5])
+        if not data_raw or len(data_raw) < 1:
+            st.warning(f"La hoja '{nombre_hoja}' está vacía o no se pudo leer.")
+            return pd.DataFrame(columns=columnas_base or [])
+        # Convertir a DataFrame
+        df = pd.DataFrame(data_raw[1:], columns=data_raw[0])
+        st.write(f"Columnas detectadas: {list(df.columns)}")
         return df
     except Exception as e:
         st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=columnas_base or [])
 
 @st.cache_data(ttl=120)
 def cargar_datos():

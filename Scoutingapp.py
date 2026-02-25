@@ -180,8 +180,7 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
             time.sleep(1)
         st.session_state["ultima_lectura"] = ahora
 
-        data = _leer_datos(nombre_hoja)
-        df = pd.DataFrame(data)
+        df = cargar_datos_sheets(nombre_hoja)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
         return df

@@ -3081,21 +3081,32 @@ if menu == "Agenda":
 
                     with col:
                         st.markdown(f"""
-                        <div class='card'>
-                            {label}
-                            <h5>{nombre}</h5>
-                            <p>Scout: {scout}</p>
-                            <p>📅 {fecha.strftime('%d/%m/%Y')}</p>
-                            <p><i>{motivo}</i></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        st.button("👁 Marcar visto", key=f"mark_{nombre}_{i}", on_click=marcar_visto, args=(nombre,))
-
-    # =========================================================
-    # BLOQUE YA VISTOS (máx 5 columnas por fila)
-    # =========================================================
-    with st.expander("👁 Seguimientos ya vistos", expanded=False):
-        if vistos.empty:
+                    st.subheader("Comparativa de estadísticas clave por posición y liga")
+    
+                    # Copiar formato del buscador de jugadores
+                    df_players = st.session_state["df_players"].copy()
+                    opciones = {
+                        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+                        for _, row in df_players.iterrows()
+                    }
+                    seleccion_jug = st.selectbox(
+                        "🔍 Buscar jugador",
+                        [""] + list(opciones.keys())
+                    )
+    
+                    # Cargar y mostrar debug de 'Data Jugadores'
+                    st.markdown("---")
+                    st.markdown("#### Debug: Carga de 'Data Jugadores'")
+                    df_data_jugadores = cargar_datos_sheets("Data Jugadores")
+                    st.write(f"Columnas cargadas en 'Data Jugadores': {list(df_data_jugadores.columns)}")
+                    st.write("Primeras filas:")
+                    st.write(df_data_jugadores.head())
+    
+                    if df_data_jugadores.empty or 'nombre_wyscout' not in df_data_jugadores.columns:
+                        st.warning("No se encontraron datos de jugadores o columna 'nombre_wyscout' en la hoja 'Data Jugadores'.")
+                    else:
+                        st.success("La hoja 'Data Jugadores' se cargó correctamente.")
+                    # Aquí puedes continuar con la lógica de comparación si la hoja se carga bien
             st.info("No hay jugadores vistos aún.")
         else:
             jugadores_lista = list(vistos.sort_values("Fecha_Revisar").iterrows())

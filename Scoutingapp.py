@@ -1522,9 +1522,25 @@ if menu == "Estadísticas":
 
         estadisticas_clave = estadisticas_por_posicion.get(posicion, [])
 
-        # Cargar hoja Data Jugadores
-        df_data_jugadores = cargar_datos_sheets("Data Jugadores")
-        df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
+        import pandas as pd
+        try:
+            df_data_jugadores = cargar_datos_sheets("Data Jugadores")
+        except Exception as e:
+            st.warning(f"⚠️ Error al cargar 'Data Jugadores': {e}")
+            df_data_jugadores = pd.DataFrame()
+        try:
+            df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
+        except Exception as e:
+            st.warning(f"⚠️ Error al cargar 'Promedios de Liga': {e}")
+            df_promedios_liga = pd.DataFrame()
+
+        # Validar columnas esperadas
+        if df_data_jugadores.empty or "Jugador" not in df_data_jugadores.columns:
+            st.warning("No se encontraron datos de jugadores o columna 'Jugador' en la hoja 'Data Jugadores'.")
+            return
+        if df_promedios_liga.empty or "Posición" not in df_promedios_liga.columns or "Liga" not in df_promedios_liga.columns or "Año" not in df_promedios_liga.columns:
+            st.warning("No se encontraron datos o columnas esperadas en la hoja 'Promedios de Liga'.")
+            return
 
         # Buscar fila del jugador
         fila_jugador = df_data_jugadores[df_data_jugadores["Jugador"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
@@ -1540,7 +1556,6 @@ if menu == "Estadísticas":
             df_liga = df_liga.sort_values("Año", ascending=False)
 
             # Construir tabla
-            import pandas as pd
             data = []
             # Primera fila: jugador
             data.append([nombre_jugador] + stats_jugador)

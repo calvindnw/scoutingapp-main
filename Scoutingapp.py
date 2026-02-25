@@ -3122,7 +3122,7 @@ if menu == "Agenda":
                             <span class='label futuro'>Visto</span>
                             <h5>{nombre}</h5>
                             <p>Scout: {scout}</p>
-                            <p>📅 {fecha.strftime('%d/%m/%Y')}</p>
+                              <p>Fecha: {fecha.strftime('%d/%m/%Y')}</p>
                             <p><i>{motivo}</i></p>
                         </div>
                         """, unsafe_allow_html=True)

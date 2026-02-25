@@ -311,7 +311,7 @@ st.set_page_config(
 
 
 
-🌌 FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
+FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
 ===================================================== */
 .stApp {
     background:
@@ -329,14 +329,14 @@ st.set_page_config(
 }
 
 /* =====================================================
-✍️ TEXTO GLOBAL
+TEXTO GLOBAL
 ===================================================== */
 h1, h2, h3, h4, h5, h6, .stMarkdown, label {
     color: #ffffff !important;
 }
 
 /* =====================================================
-🧊 CONTENEDORES GENERALES — GLASS
+CONTENEDORES GENERALES — GLASS
 ===================================================== */
 div[data-testid="stContainer"] {
     background: linear-gradient(
@@ -359,7 +359,7 @@ div[data-testid="stContainer"] {
 }
 
 /* =====================================================
-📊 KPI — TARJETAS (COMO ANTES + MEJOR)
+KPI — TARJETAS (COMO ANTES + MEJOR)
 ===================================================== */
 .kpi-container {
     display:flex;
@@ -401,7 +401,7 @@ div[data-testid="stContainer"] {
 }
 
 /* =====================================================
-🏆 RANKINGS — TARJETAS (FIX DEFINITIVO)
+RANKINGS — TARJETAS (FIX DEFINITIVO)
 ===================================================== */
 .panel-title {
     color:#5a9a7c;
@@ -455,7 +455,7 @@ div[data-testid="stContainer"] {
 }
 
 /* =====================================================
-🎚️ SLIDERS — FIX TOTAL DEFINITIVO (ROJO ELIMINADO)
+SLIDERS — FIX TOTAL DEFINITIVO (ROJO ELIMINADO)
 ===================================================== */
 
 /* -----------------------------------------------------
@@ -515,7 +515,7 @@ section[data-testid="stSidebar"] {
 
 
 /* =====================================================
-📂 SIDEBAR — MENU + RADIO (SIN ROJO)
+SIDEBAR — MENU + RADIO (SIN ROJO)
 ===================================================== */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0a1a14, #1a3a2a);
@@ -540,7 +540,7 @@ div[role="radiogroup"] label span[aria-hidden="true"] {
 }
 
 /* =====================================================
-📊 TABLAS — GLASS + HOVER
+TABLAS — GLASS + HOVER
 ===================================================== */
 div[data-testid="stDataFrame"] {
     background: linear-gradient(145deg, rgba(58,102,81,0.45), rgba(10,26,20,0.70));
@@ -567,7 +567,7 @@ div[data-testid="stDataFrame"] tbody tr:hover td {
 }
 
 /* =====================================================
-🛠️ FIX DEFINITIVO — ROJOS / FOCUS / INVALID
+FIX DEFINITIVO — ROJOS / FOCUS / INVALID
 ===================================================== */
 *:focus,
 *:focus-visible {
@@ -602,7 +602,7 @@ div[aria-invalid="true"] * {
 }
 
 /* =====================================================
-🚨 ALERTAS
+ALERTAS
 ===================================================== */
 .stAlert.success {
     background-color:rgba(0,51,102,0.97) !important;

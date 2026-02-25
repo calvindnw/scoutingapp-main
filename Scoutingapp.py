@@ -310,10 +310,7 @@ st.set_page_config(
 )
 
 
-st.markdown("""
-<style>
 
-/* =====================================================
 🌌 FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
 ===================================================== */
 .stApp {

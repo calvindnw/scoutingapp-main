@@ -1535,37 +1535,41 @@ if menu == "Estadísticas":
             df_promedios_liga = pd.DataFrame()
 
         # Validar columnas esperadas
+
         if df_data_jugadores.empty or "nombre_wyscout" not in df_data_jugadores.columns:
             st.warning("No se encontraron datos de jugadores o columna 'nombre_wyscout' en la hoja 'Data Jugadores'.")
-        elif df_promedios_liga.empty or "Posición" not in df_promedios_liga.columns or "Liga" not in df_promedios_liga.columns or "Año" not in df_promedios_liga.columns:
+            return
+        if df_promedios_liga.empty or "Posición" not in df_promedios_liga.columns or "Liga" not in df_promedios_liga.columns or "Año" not in df_promedios_liga.columns:
             st.warning("No se encontraron datos o columnas esperadas en la hoja 'Promedios de Liga'.")
-        else:
-            # Buscar fila del jugador por nombre_wyscout
-            fila_jugador = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
+            return
 
-            if fila_jugador.empty or not estadisticas_clave:
-                st.warning("Jugador sin estadísticas disponibles")
-            else:
-                # Extraer estadísticas del jugador
-                stats_jugador = [fila_jugador.iloc[0].get(est, None) for est in estadisticas_clave]
+        # Buscar fila del jugador por nombre_wyscout
+        fila_jugador = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
 
-                # Extraer promedios de liga por año
-                df_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
-                df_liga = df_liga.sort_values("Año", ascending=False)
+        if fila_jugador.empty or not estadisticas_clave:
+            st.warning("Jugador sin estadísticas disponibles")
+            return
 
-                # Construir tabla
-                data = []
-                # Primera fila: jugador
-                data.append([nombre_jugador] + stats_jugador)
-                # Filas siguientes: años
-                for _, row in df_liga.iterrows():
-                    stats_ano = [row.get(est, None) for est in estadisticas_clave]
-                    data.append([row["Año"]] + stats_ano)
+        # Extraer estadísticas del jugador
+        stats_jugador = [fila_jugador.iloc[0].get(est, None) for est in estadisticas_clave]
 
-                columns = ["Nombre/Año"] + estadisticas_clave
-                df_tabla = pd.DataFrame(data, columns=columns)
-                st.markdown(f"<h4 style='color:#5a9a7c;'>Tabla comparativa de estadísticas clave</h4>", unsafe_allow_html=True)
-                st.dataframe(df_tabla, use_container_width=True)
+        # Extraer promedios de liga por año
+        df_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
+        df_liga = df_liga.sort_values("Año", ascending=False)
+
+        # Construir tabla
+        data = []
+        # Primera fila: jugador
+        data.append([seleccion_jug] + stats_jugador)
+        # Filas siguientes: años
+        for _, row in df_liga.iterrows():
+            stats_ano = [row.get(est, None) for est in estadisticas_clave]
+            data.append([row["Año"]] + stats_ano)
+
+        columns = ["Nombre/Año"] + estadisticas_clave
+        df_tabla = pd.DataFrame(data, columns=columns)
+        st.markdown(f"<h4 style='color:#5a9a7c;'>Tabla comparativa de estadísticas clave</h4>", unsafe_allow_html=True)
+        st.dataframe(df_tabla, use_container_width=True)
 
         # Buscar fila del jugador
         fila_jugador = df_data_jugadores[df_data_jugadores["Jugador"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()

@@ -180,7 +180,11 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
             time.sleep(1)
         st.session_state["ultima_lectura"] = ahora
 
-        df = cargar_datos_sheets(nombre_hoja)
+        # TODO: Reemplazar por el método real de lectura desde Google Sheets
+        # Ejemplo: data = sheet.values() o gspread, etc.
+        # data = ...
+        # df = pd.DataFrame(data)
+        df = pd.DataFrame()  # Placeholder vacío
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
         return df

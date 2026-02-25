@@ -1479,6 +1479,17 @@ if menu == "Estadísticas":
     )
 
     if seleccion_jug:
+        # Debug visual: mostrar columnas y primeros datos de Data Jugadores
+        try:
+            df_data_jugadores = cargar_datos_sheets("Data Jugadores")
+            st.markdown("<b>Columnas cargadas en 'Data Jugadores':</b>", unsafe_allow_html=True)
+            st.write(list(df_data_jugadores.columns))
+            st.markdown("<b>Primeras filas:</b>", unsafe_allow_html=True)
+            st.write(df_data_jugadores.head())
+        except Exception as e:
+            st.warning(f"⚠️ Error al cargar 'Data Jugadores': {e}")
+            df_data_jugadores = pd.DataFrame()
+        # ...existing code...
         id_jugador = opciones[seleccion_jug]
         jugador_row = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0]
         posicion = jugador_row["Posición"] if "Posición" in jugador_row else None

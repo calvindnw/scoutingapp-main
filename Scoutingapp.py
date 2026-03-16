@@ -1499,7 +1499,7 @@ if menu == "Jugadores":
         "Polonia - Liga Polaca", "Bélgica - Pro League",
         "Grecia - Super League", "Turquía - Süper Lig",
         "Arabia Saudita - Saudi Pro League", "Estados Unidos - MLS",
-        "Otro / Sin especificar"
+        "Otro"
     ]
 
     opciones_paises = [

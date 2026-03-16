@@ -180,11 +180,8 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
             time.sleep(1)
         st.session_state["ultima_lectura"] = ahora
 
-        # TODO: Reemplazar por el método real de lectura desde Google Sheets
-        # Ejemplo: data = sheet.values() o gspread, etc.
-        # data = ...
-        # df = pd.DataFrame(data)
-        df = pd.DataFrame()  # Placeholder vacío
+        data = _leer_datos(nombre_hoja)
+        df = pd.DataFrame(data)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
         return df
@@ -1456,161 +1453,9 @@ menu = st.sidebar.radio(
         "Ver informes",
         "Lista corta",
         "Panel Scouts",
-        "Estadísticas",
     ]
     , key="menu"
 )
-
-# =========================================================
-# BLOQUE ESTADÍSTICAS — Comparativa de jugador vs promedios de liga
-# =========================================================
-if menu == "Estadísticas":
-    st.subheader("Comparativa de estadísticas clave por posición y liga")
-
-    # Copiar formato del buscador de jugadores
-    df_players = st.session_state["df_players"].copy()
-    opciones = {
-        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-        for _, row in df_players.iterrows()
-    }
-    seleccion_jug = st.selectbox(
-        "🔍 Buscar jugador",
-        [""] + list(opciones.keys())
-    )
-
-    if seleccion_jug:
-        # Debug visual: mostrar columnas y primeros datos de Data Jugadores
-        try:
-            df_data_jugadores = cargar_datos_sheets("Data Jugadores")
-            st.markdown("<b>Columnas cargadas en 'Data Jugadores':</b>", unsafe_allow_html=True)
-            st.write(list(df_data_jugadores.columns))
-            st.markdown("<b>Primeras filas:</b>", unsafe_allow_html=True)
-            st.write(df_data_jugadores.head())
-        except Exception as e:
-            st.warning(f"⚠️ Error al cargar 'Data Jugadores': {e}")
-            df_data_jugadores = pd.DataFrame()
-        # ...existing code...
-        id_jugador = opciones[seleccion_jug]
-        jugador_row = df_players[df_players["ID_Jugador"] == id_jugador].iloc[0]
-        posicion = jugador_row["Posición"] if "Posición" in jugador_row else None
-        liga = jugador_row["Liga"] if "Liga" in jugador_row else None
-        nombre_wyscout = jugador_row["nombre_wyscout"] if "nombre_wyscout" in jugador_row else None
-        nombre_jugador = jugador_row["Nombre"]
-
-        # Definir estadísticas claves por posición
-        estadisticas_por_posicion = {
-            "Arquero": [
-                "Goles_recibidos/90", "Remates_en_contra/90", "Paradas", "Porterías_imbatidas_en_los_90"
-            ],
-            "Defensa central derecho": [
-                "Duelos_defensivos_ganados", "Duelos_aéreos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos"
-            ],
-            "Defensa central izquierdo": [
-                "Duelos_defensivos_ganados", "Duelos_aéreos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos"
-            ],
-            "Lateral derecho": [
-                "Duelos_defensivos_ganados", "Duelos_aéreos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos"
-            ],
-            "Lateral izquierdo": [
-                "Duelos_defensivos_ganados", "Duelos_aéreos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos"
-            ],
-            "Mediocampista defensivo": [
-                "Duelos_defensivos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos", "Duelos_atacantes_ganados"
-            ],
-            "Mediocampista mixto": [
-                "Duelos_defensivos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos", "Duelos_atacantes_ganados"
-            ],
-            "Mediocampista ofensivo": [
-                "Duelos_defensivos_ganados", "Interceptaciones/90", "Precisión_pases", "Precisión_pases_largos", "Duelos_atacantes_ganados"
-            ],
-            "Extremo derecho": [
-                "Duelos_atacantes_ganados", "Regates_realizados", "Precisión_pases", "Precisión_pases_largos", "Precisión_centros"
-            ],
-            "Extremo izquierdo": [
-                "Duelos_atacantes_ganados", "Regates_realizados", "Precisión_pases", "Precisión_pases_largos", "Precisión_centros"
-            ],
-            "Delantero centro": [
-                "Duelos_atacantes_ganados", "Duelos_aéreos_ganados", "Precisión_pases", "Tiros_a_la_portería"
-            ],
-        }
-
-        estadisticas_clave = estadisticas_por_posicion.get(posicion, [])
-
-        import pandas as pd
-        try:
-            df_data_jugadores = cargar_datos_sheets("Data Jugadores")
-        except Exception as e:
-            st.warning(f"⚠️ Error al cargar 'Data Jugadores': {e}")
-            df_data_jugadores = pd.DataFrame()
-        try:
-            df_promedios_liga = cargar_datos_sheets("Promedios de Liga")
-        except Exception as e:
-            st.warning(f"⚠️ Error al cargar 'Promedios de Liga': {e}")
-            df_promedios_liga = pd.DataFrame()
-
-        # Validar columnas esperadas
-
-        if df_data_jugadores.empty or "nombre_wyscout" not in df_data_jugadores.columns:
-            st.warning("No se encontraron datos de jugadores o columna 'nombre_wyscout' en la hoja 'Data Jugadores'.")
-            st.stop()
-        if df_promedios_liga.empty or "Posición" not in df_promedios_liga.columns or "Liga" not in df_promedios_liga.columns or "Año" not in df_promedios_liga.columns:
-            st.warning("No se encontraron datos o columnas esperadas en la hoja 'Promedios de Liga'.")
-            st.stop()
-
-        # Buscar fila del jugador por nombre_wyscout
-        fila_jugador = df_data_jugadores[df_data_jugadores["nombre_wyscout"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
-
-        if fila_jugador.empty or not estadisticas_clave:
-            st.warning("Jugador sin estadísticas disponibles")
-            st.stop()
-
-        # Extraer estadísticas del jugador
-        stats_jugador = [fila_jugador.iloc[0].get(est, None) for est in estadisticas_clave]
-
-        # Extraer promedios de liga por año
-        df_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
-        df_liga = df_liga.sort_values("Año", ascending=False)
-
-        # Construir tabla
-        data = []
-        # Primera fila: jugador
-        data.append([seleccion_jug] + stats_jugador)
-        # Filas siguientes: años
-        for _, row in df_liga.iterrows():
-            stats_ano = [row.get(est, None) for est in estadisticas_clave]
-            data.append([row["Año"]] + stats_ano)
-
-        columns = ["Nombre/Año"] + estadisticas_clave
-        df_tabla = pd.DataFrame(data, columns=columns)
-        st.markdown(f"<h4 style='color:#5a9a7c;'>Tabla comparativa de estadísticas clave</h4>", unsafe_allow_html=True)
-        st.dataframe(df_tabla, use_container_width=True)
-
-        # Buscar fila del jugador
-        fila_jugador = df_data_jugadores[df_data_jugadores["Jugador"] == nombre_wyscout] if nombre_wyscout else pd.DataFrame()
-
-        if fila_jugador.empty or not estadisticas_clave:
-            st.warning("Jugador sin estadísticas disponibles")
-        else:
-            # Extraer estadísticas del jugador
-            stats_jugador = [fila_jugador.iloc[0].get(est, None) for est in estadisticas_clave]
-
-            # Extraer promedios de liga por año
-            df_liga = df_promedios_liga[(df_promedios_liga["Posición"] == posicion) & (df_promedios_liga["Liga"] == liga)]
-            df_liga = df_liga.sort_values("Año", ascending=False)
-
-            # Construir tabla
-            data = []
-            # Primera fila: jugador
-            data.append([nombre_jugador] + stats_jugador)
-            # Filas siguientes: años
-            for _, row in df_liga.iterrows():
-                stats_ano = [row.get(est, None) for est in estadisticas_clave]
-                data.append([row["Año"]] + stats_ano)
-
-            columns = ["Nombre/Año"] + estadisticas_clave
-            df_tabla = pd.DataFrame(data, columns=columns)
-            st.markdown(f"<h4 style='color:#5a9a7c;'>Tabla comparativa de estadísticas clave</h4>", unsafe_allow_html=True)
-            st.dataframe(df_tabla, use_container_width=True)
 
 
 # =========================================================

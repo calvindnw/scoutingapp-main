@@ -1506,7 +1506,7 @@ if menu == "Jugadores":
         "Argentina", "Brasil", "Chile", "Uruguay", "Paraguay", "Colombia", "México",
         "Ecuador", "Perú", "Venezuela", "España", "Italia", "Francia", "Inglaterra",
         "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
-        "Honduras", "Costa Rica", "El Salvador", "Panamá",
+        "Honduras", "Costa Rica", "El Salvador", "Panamá","Cuba",
         "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro"
     ]
 

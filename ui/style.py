@@ -96,6 +96,116 @@ def load_custom_css():
             color: var(--alab-text-2);
         }
 
+        .stApp hr,
+        .stApp [data-testid="stDivider"] {
+            border-color: rgba(255, 255, 255, 0.14);
+        }
+
+        .stApp [data-testid="stForm"] {
+            padding: 1rem 1rem 0.4rem;
+            border-radius: var(--alab-radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(145deg, rgba(21, 40, 33, 0.55), rgba(10, 26, 20, 0.42));
+        }
+
+        .stApp [data-testid="stExpander"] {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--alab-radius-md);
+            background: rgba(9, 21, 17, 0.38);
+            box-shadow: var(--alab-shadow-sm);
+            overflow: hidden;
+        }
+
+        .stApp [data-testid="stExpander"] summary {
+            background: linear-gradient(135deg, rgba(28, 52, 42, 0.92), rgba(12, 26, 20, 0.97));
+            color: var(--alab-text-1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .stApp [data-testid="stExpander"] summary:hover {
+            background: linear-gradient(135deg, rgba(36, 66, 54, 0.96), rgba(15, 31, 24, 0.98));
+        }
+
+        .stApp [data-testid="stExpander"] summary p,
+        .stApp [data-testid="stExpander"] summary span,
+        .stApp [data-testid="stExpanderToggleIcon"] {
+            color: var(--alab-text-1) !important;
+            fill: var(--alab-text-1) !important;
+        }
+
+        .stApp label[data-testid="stWidgetLabel"] p,
+        .stApp .stSelectbox label p,
+        .stApp .stTextInput label p,
+        .stApp .stTextArea label p,
+        .stApp .stDateInput label p,
+        .stApp .stNumberInput label p,
+        .stApp .stMultiSelect label p {
+            color: var(--alab-text-1);
+            font-weight: 600;
+        }
+
+        .stApp input,
+        .stApp textarea,
+        .stApp [data-baseweb="input"] input,
+        .stApp [data-baseweb="base-input"] input,
+        .stApp [data-baseweb="base-input"] textarea {
+            color: #f4fbf7 !important;
+            -webkit-text-fill-color: #f4fbf7 !important;
+            caret-color: #f4fbf7 !important;
+        }
+
+        .stApp input::placeholder,
+        .stApp textarea::placeholder,
+        .stApp [data-baseweb="input"] input::placeholder,
+        .stApp [data-baseweb="base-input"] textarea::placeholder {
+            color: rgba(226, 236, 231, 0.5) !important;
+            -webkit-text-fill-color: rgba(226, 236, 231, 0.5) !important;
+        }
+
+        .stApp [data-baseweb="input"],
+        .stApp [data-baseweb="base-input"],
+        .stApp [data-baseweb="select"] > div,
+        .stApp .stDateInput > div,
+        .stApp .stNumberInput > div {
+            background: rgba(13, 29, 23, 0.88) !important;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .stApp [data-baseweb="select"] * {
+            color: #f4fbf7 !important;
+        }
+
+        .stApp [data-baseweb="select"] svg,
+        .stApp .stDateInput svg {
+            fill: rgba(244, 251, 247, 0.88);
+        }
+
+        .stApp [data-baseweb="tag"] {
+            background: rgba(90, 154, 124, 0.18) !important;
+            border: 1px solid rgba(90, 154, 124, 0.34) !important;
+        }
+
+        .stApp [data-baseweb="tag"] span,
+        .stApp [data-baseweb="tag"] div {
+            color: var(--alab-text-1) !important;
+        }
+
+        .stApp [data-baseweb="input"]:focus-within,
+        .stApp [data-baseweb="base-input"]:focus-within,
+        .stApp [data-baseweb="select"] > div:focus-within,
+        .stApp .stDateInput > div:focus-within,
+        .stApp .stNumberInput > div:focus-within {
+            border-color: rgba(143, 211, 180, 0.7) !important;
+            box-shadow: 0 0 0 1px rgba(143, 211, 180, 0.34), 0 0 0 4px rgba(143, 211, 180, 0.08);
+        }
+
+        .stApp small,
+        .stApp .stForm small {
+            color: rgba(226, 236, 231, 0.62) !important;
+        }
+
         [data-testid="stSidebar"] .stButton > button {
             width: 100%;
             min-height: 42px;
@@ -137,7 +247,7 @@ def load_custom_css():
         .alab-block-header {
             margin: 0.2rem 0 0.9rem;
             padding: 0.2rem 0 0.55rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
         }
 
         .alab-block-header-center {

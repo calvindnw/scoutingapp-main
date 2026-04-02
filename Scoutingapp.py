@@ -30,6 +30,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import requests
 from PIL import Image
+from ui.style import load_custom_css
 
 # =========================================================
 # 🎨 HELPER VISUAL — PLOTLY GLASS (ANTI FONDO NEGRO)
@@ -44,25 +45,46 @@ def apply_glass_plotly(fig):
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(
-            color="white",
-            size=12
+            color="rgba(255,255,255,0.92)",
+            size=12,
+            family="Manrope, sans-serif"
+        ),
+        title=dict(
+            font=dict(size=18, color="#ffffff", family="Sora, sans-serif"),
+            x=0,
+            xanchor="left"
         ),
         legend=dict(
             bgcolor="rgba(0,0,0,0)",
             borderwidth=0,
-            font=dict(color="white")
+            font=dict(color="rgba(226,236,231,0.86)", size=11),
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hoverlabel=dict(
+            bgcolor="rgba(10,26,20,0.96)",
+            bordercolor="rgba(90,154,124,0.38)",
+            font=dict(color="#ffffff", family="Manrope, sans-serif")
         ),
         xaxis=dict(
             showgrid=True,
             gridcolor="rgba(255,255,255,0.08)",
-            zeroline=False
+            zeroline=False,
+            showline=True,
+            linecolor="rgba(255,255,255,0.08)",
+            tickfont=dict(color="rgba(226,236,231,0.74)")
         ),
         yaxis=dict(
             showgrid=True,
             gridcolor="rgba(255,255,255,0.08)",
-            zeroline=False
+            zeroline=False,
+            showline=False,
+            tickfont=dict(color="rgba(226,236,231,0.74)")
         ),
-        margin=dict(l=20, r=20, t=40, b=20)
+        margin=dict(l=20, r=20, t=56, b=20)
     )
     return fig
 
@@ -322,322 +344,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-
-st.markdown("""
-<style>
-
-/* =====================================================
-🌌 FONDO GLOBAL — FUTURISTA / TECH CON MOVIMIENTO
-===================================================== */
-.stApp {
-    background:
-        radial-gradient(circle at 20% 15%, rgba(90,154,124,0.22), transparent 38%),
-        radial-gradient(circle at 80% 35%, rgba(58,102,81,0.40), transparent 42%),
-        linear-gradient(120deg, #3a6651, #1a3a2a, #0a1a14);
-    background-size: 220% 220%;
-    animation: fondoVivo 15s ease-in-out infinite;
-}
-
-@keyframes fondoVivo {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* =====================================================
-✍️ TEXTO GLOBAL
-===================================================== */
-h1, h2, h3, h4, h5, h6, .stMarkdown, label {
-    color: #ffffff !important;
-}
-
-/* =====================================================
-🧊 CONTENEDORES GENERALES — GLASS
-===================================================== */
-div[data-testid="stContainer"] {
-    background: linear-gradient(
-        145deg,
-        rgba(30,60,114,0.78),
-        rgba(14,17,23,0.92)
-    );
-    border-radius: 18px;
-    padding: 18px;
-    margin-bottom: 18px;
-    box-shadow:
-        0 14px 36px rgba(0,0,0,0.55),
-        inset 0 0 24px rgba(90,154,124,0.06);
-    animation: fadeUp 0.35s ease;
-}
-
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* =====================================================
-📊 KPI — TARJETAS (COMO ANTES + MEJOR)
-===================================================== */
-.kpi-container {
-    display:flex;
-    justify-content:center;
-    gap:22px;
-    margin:25px 0 35px 0;
-    flex-wrap:wrap;
-}
-
-.kpi-card {
-    background: linear-gradient(135deg, #0a1a14, #3a6651);
-    border-radius:16px;
-    padding:18px 22px;
-    min-width:220px;
-    text-align:center;
-    box-shadow:
-        0 10px 26px rgba(0,0,0,0.55),
-        inset 0 0 18px rgba(90,154,124,0.06);
-    transition: all 0.25s ease;
-}
-
-.kpi-card:hover {
-    transform: translateY(-4px);
-    box-shadow:
-        0 16px 40px rgba(0,0,0,0.65),
-        0 0 24px rgba(90,154,124,0.45);
-}
-
-.kpi-title {
-    color:#5a9a7c;
-    font-size:14px;
-    font-weight:700;
-}
-
-.kpi-value {
-    font-size:30px;
-    font-weight:800;
-    color:white;
-}
-
-/* =====================================================
-🏆 RANKINGS — TARJETAS (FIX DEFINITIVO)
-===================================================== */
-.panel-title {
-    color:#5a9a7c;
-    font-weight:700;
-    font-size:16px;
-    margin:14px 0 8px 0;
-    text-align:center;
-}
-
-.rank-card {
-    background: linear-gradient(90deg, #0a1a14, #3a6651);
-    border-radius:12px;
-    padding:10px 14px;
-    margin-bottom:8px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    box-shadow:0 0 10px rgba(0,0,0,0.45);
-    transition: all 0.25s ease;
-}
-
-.rank-card:hover {
-    transform: translateX(4px);
-    box-shadow:
-        0 0 18px rgba(90,154,124,0.45),
-        0 0 30px rgba(0,0,0,0.6);
-}
-
-.rank-left {
-    display:flex;
-    gap:12px;
-    align-items:center;
-}
-
-.rank-num {
-    color:#ffd700;
-    font-weight:800;
-    width:26px;
-    text-align:center;
-}
-
-.rank-name {
-    font-size:13px;
-    font-weight:700;
-    color:white;
-}
-
-.rank-score {
-    color:#5a9a7c;
-    font-weight:800;
-}
-
-/* =====================================================
-🎚️ SLIDERS — FIX TOTAL DEFINITIVO (ROJO ELIMINADO)
-===================================================== */
-
-/* -----------------------------------------------------
-   TRACK INACTIVO (lado derecho / fondo)
------------------------------------------------------ */
-.stSlider div[data-baseweb="slider"] > div {
-    background-color: rgba(10, 26, 20, 0.85) !important;  /* verde oscuro / negro */
-    border-radius: 8px;
-}
-
-/* -----------------------------------------------------
-   TRACK ACTIVO (lado izquierdo — ERA ROJO)
------------------------------------------------------ */
-.stSlider div[data-baseweb="slider"] > div > div {
-    background: linear-gradient(
-        90deg,
-        #5a9a7c,
-        #3a6651
-    ) !important;
-    border-radius: 8px;
-}
-
-/* -----------------------------------------------------
-   THUMB / HANDLE (bolita)
------------------------------------------------------ */
-.stSlider [role="slider"] {
-    background-color: #5a9a7c !important;
-    border: 2px solid #ffffff !important;
-    box-shadow:
-        0 0 10px rgba(90,154,124,0.9),
-        0 0 18px rgba(90,154,124,0.45) !important;
-}
-
-/* -----------------------------------------------------
-   VALORES NUMÉRICOS (min / max / valor actual)
------------------------------------------------------ */
-.stSlider span,
-.stSlider [data-testid="stSliderThumbValue"] {
-    color: #5a9a7c !important;
-    font-weight: 700;
-}
-
-/* -----------------------------------------------------
-   FIX EXTRA — COLOR PRIMARIO STREAMLIT (ANTI ROJO GLOBAL)
------------------------------------------------------ */
-:root {
-    --primary-color: #5a9a7c !important;
-    --primary-color-hover: #5a9a7c !important;
-}
-
-.stApp,
-[data-testid="stAppViewContainer"],
-section[data-testid="stSidebar"] {
-    --primary-color: #5a9a7c !important;
-    --primary-color-hover: #5a9a7c !important;
-}
-
-
-/* =====================================================
-📂 SIDEBAR — MENU + RADIO (SIN ROJO)
-===================================================== */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a1a14, #1a3a2a);
-    border-right:1px solid rgba(255,255,255,0.06);
-}
-
-section[data-testid="stSidebar"]
-div[role="radiogroup"] > label[data-selected="true"] {
-    background: linear-gradient(90deg, rgba(90,154,124,0.30), rgba(90,154,124,0.05));
-    border-left:4px solid #5a9a7c;
-    border-radius:6px;
-}
-
-/* Radio button interno (punto) */
-div[role="radiogroup"] label span div {
-    background-color:#5a9a7c !important;
-}
-
-/* Borde radio */
-div[role="radiogroup"] label span[aria-hidden="true"] {
-    border-color:#5a9a7c !important;
-}
-
-/* =====================================================
-📊 TABLAS — GLASS + HOVER
-===================================================== */
-div[data-testid="stDataFrame"] {
-    background: linear-gradient(145deg, rgba(58,102,81,0.45), rgba(10,26,20,0.70));
-    border-radius:16px;
-    padding:8px;
-    box-shadow:
-        0 12px 30px rgba(0,0,0,0.40),
-        inset 0 0 18px rgba(90,154,124,0.05);
-}
-
-div[data-testid="stDataFrame"] table {
-    background-color:transparent !important;
-    color:white !important;
-}
-
-div[data-testid="stDataFrame"] thead th {
-    background:rgba(0,0,0,0.20) !important;
-    color:#5a9a7c !important;
-    font-weight:700;
-}
-
-div[data-testid="stDataFrame"] tbody tr:hover td {
-    background:rgba(90,154,124,0.15) !important;
-}
-
-/* =====================================================
-🛠️ FIX DEFINITIVO — ROJOS / FOCUS / INVALID
-===================================================== */
-*:focus,
-*:focus-visible {
-    outline:none !important;
-}
-
-input, textarea {
-    caret-color:#5a9a7c !important;
-    color: #fff !important;
-}
-
-div[data-baseweb="input"] > div,
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"] > div {
-    border:1px solid rgba(90,154,124,0.45) !important;
-    background-color:rgba(10,26,20,0.85) !important;
-    box-shadow:none !important;
-    color: #fff !important;
-}
-
-div[data-baseweb="input"] > div:focus-within,
-div[data-baseweb="select"] > div:focus-within,
-div[data-baseweb="textarea"] > div:focus-within {
-    border-color:#5a9a7c !important;
-    box-shadow:0 0 10px rgba(90,154,124,0.45) !important;
-}
-
-div[aria-invalid="true"],
-div[aria-invalid="true"] * {
-    border-color:#5a9a7c !important;
-    box-shadow:0 0 10px rgba(90,154,124,0.45) !important;
-}
-
-/* =====================================================
-🚨 ALERTAS
-===================================================== */
-.stAlert.success {
-    background-color:rgba(0,51,102,0.97) !important;
-    color:#5a9a7c !important;
-    border-left:4px solid #5a9a7c !important;
-}
-.stAlert.warning {
-    background-color:rgba(51,43,0,0.97) !important;
-    color:#ffd700 !important;
-    border-left:4px solid #ffd700 !important;
-}
-.stAlert.error {
-    background-color:rgba(51,0,0,0.97) !important;
-    color:#ff6f61 !important;
-    border-left:4px solid #ff6f61 !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
+load_custom_css()
 
 
 # =========================================================
@@ -3109,34 +2816,6 @@ if menu == "Lista corta":
     # =========================================================
     # CSS TARJETAS
     # =========================================================
-    st.markdown(
-        """
-        <style>
-        .player-card {
-            display:flex;align-items:center;justify-content:flex-start;
-            background:linear-gradient(90deg,#0a1a14,#3a6651);
-            padding:0.6em 0.8em;border-radius:12px;color:white;
-            font-family:Arial, sans-serif;box-shadow:0 0 6px rgba(0,0,0,0.4);
-            width:230px;min-height:75px;margin:6px auto;transition:0.2s;
-        }
-        .player-card:hover {transform:scale(1.05);box-shadow:0 0 12px #5a9a7c;}
-        .player-photo {
-            width:55px;height:55px;border-radius:50%;object-fit:cover;
-            border:2px solid #5a9a7c;margin-right:10px;
-        }
-        .player-info h5 {font-size:13px;margin:0;color:#5a9a7c;font-weight:bold;}
-        .player-info p {font-size:11.5px;margin:1px 0;color:#ccc;}
-        .player-link a {color:#5a9a7c;font-size:10.5px;text-decoration:none;}}
-        .player-link a:hover{text-decoration:underline;}
-        .line-title {
-            color:#5a9a7c;font-weight:bold;font-size:16px;
-            margin:10px 0 5px;text-align:center;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
     # =========================================================
     # SISTEMA 4-2-3-1
     # =========================================================
@@ -3352,32 +3031,6 @@ if menu == "Agenda":
     # =========================================================
     # CSS PERSONALIZADO
     # =========================================================
-    st.markdown("""
-    <style>
-    body, .stApp { background-color:#0a1a14 !important; color:white !important; font-family:'Segoe UI',sans-serif; }
-    h1,h2,h3,h4,h5,h6 { color:white !important; }
-    .card-container { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; margin-bottom:1em; }
-    .card {
-        background:linear-gradient(90deg,#0a1a14,#3a6651);
-        border-radius:10px; padding:0.7em 1em; color:white;
-        box-shadow:0 0 8px rgba(0,0,0,0.5); transition:0.2s ease-in-out;
-        width:220px; min-height:135px;
-    }
-    .card:hover { transform:scale(1.04); box-shadow:0 0 10px #5a9a7c; }
-    .card h5 { color:#5a9a7c; font-size:14px; margin:0 0 3px 0; text-align:left; }
-    .card p { font-size:12px; color:#b0b0b0; margin:2px 0; }
-    .card.visto { opacity:0.7; background:linear-gradient(90deg,#1a1f2e,#2a3a5a); }
-    .label {
-        display:inline-block; font-size:11px; padding:2px 6px; border-radius:5px;
-        font-weight:bold; margin-bottom:5px;
-    }
-    .vencido { background-color:#8b0000; color:white; }
-    .hoy { background-color:#ffd700; color:black; }
-    .proximo { background-color:#006400; color:white; }
-    .futuro { background-color:#004488; color:white; }
-    </style>
-    """, unsafe_allow_html=True)
-
     # =========================================================
     # CARGA / CREACIÓN DE HOJA "Agenda"
     # =========================================================

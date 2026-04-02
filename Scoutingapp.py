@@ -937,6 +937,44 @@ def obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout):
     return coincidencias.iloc[0]
 
 
+def obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores):
+    fila_jugador = obtener_fila_estadisticas_jugador(
+        df_data_jugadores,
+        jugador.get("nombre_wyscout", ""),
+    )
+    if fila_jugador is None:
+        return {"partidos_jugados": "-", "minutos_jugados": "-"}
+
+    columna_partidos = obtener_columna_por_aliases(
+        df_data_jugadores,
+        ["Partidos jugados", "Partidos_jugados"],
+    )
+    columna_minutos = obtener_columna_por_aliases(
+        df_data_jugadores,
+        ["Minutos jugados", "Minutos_jugados"],
+    )
+
+    partidos = formatear_valor_estadistica(fila_jugador.get(columna_partidos) if columna_partidos else None)
+    minutos = formatear_valor_estadistica(fila_jugador.get(columna_minutos) if columna_minutos else None)
+
+    if partidos != "-":
+        try:
+            partidos = str(int(round(float(partidos))))
+        except ValueError:
+            pass
+
+    if minutos != "-":
+        try:
+            minutos = str(int(round(float(minutos))))
+        except ValueError:
+            pass
+
+    return {
+        "partidos_jugados": partidos,
+        "minutos_jugados": minutos,
+    }
+
+
 def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
     posicion = str(jugador.get("Posición", "")).strip()
     liga = str(jugador.get("Liga", "")).strip()
@@ -2484,13 +2522,19 @@ if menu == "Estadísticas":
         id_jugador = str(opciones[seleccion_jug])
         jugador = df_players[df_players["ID_Jugador"].astype(str) == id_jugador].iloc[0]
 
+        df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+        resumen_estadistico = obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores)
+
         st.markdown(
             f"**Jugador:** {jugador.get('Nombre', '-')}  |  "
             f"**Posición:** {jugador.get('Posición', '-')}  |  "
             f"**Liga:** {jugador.get('Liga', '-')}"
         )
+        st.markdown(
+            f"**Partidos jugados:** {resumen_estadistico['partidos_jugados']}  |  "
+            f"**Minutos jugados:** {resumen_estadistico['minutos_jugados']}"
+        )
 
-        df_promedios, df_data_jugadores = cargar_datos_estadisticas()
         tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
             jugador,
             df_promedios,

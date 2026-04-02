@@ -115,14 +115,10 @@ SCOPE = [
 SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
 CREDS_PATH = os.path.join("credentials", "credentials.json")
 
-# Control de lectura para evitar exceso de requests
-if "ultima_lectura" not in st.session_state:
-    st.session_state["ultima_lectura"] = datetime.now() - timedelta(seconds=5)
-
-
 # =========================================================
 # CONEXIÓN
 # =========================================================
+@st.cache_resource(show_spinner=False)
 def conectar_sheets():
     try:
         if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
@@ -150,23 +146,32 @@ def normalizar_nombre_hoja(nombre):
     return texto.casefold()
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def listar_hojas_disponibles():
+    return [ws.title for ws in conectar_sheets().worksheets()]
+
+
 # =========================================================
 # OBTENER O CREAR HOJA
 # =========================================================
 def obtener_hoja(nombre_hoja: str, columnas_base: list = None):
     try:
         book = conectar_sheets()
-        hojas = book.worksheets()
+        hojas = listar_hojas_disponibles()
         nombre_normalizado = normalizar_nombre_hoja(nombre_hoja)
+        hojas_normalizadas = {
+            normalizar_nombre_hoja(titulo): titulo for titulo in hojas
+        }
 
-        for hoja in hojas:
-            if normalizar_nombre_hoja(hoja.title) == nombre_normalizado:
-                return hoja
+        titulo_real = hojas_normalizadas.get(nombre_normalizado)
+        if titulo_real:
+            return book.worksheet(titulo_real)
 
-        if nombre_hoja not in [ws.title for ws in hojas]:
+        if nombre_hoja not in hojas:
             ws = book.add_worksheet(title=nombre_hoja, rows=500, cols=20)
             if columnas_base:
                 ws.append_row(columnas_base)
+            listar_hojas_disponibles.clear()
             st.warning(f"⚠️ Hoja '{nombre_hoja}' creada automáticamente.")
             return ws
         return book.worksheet(nombre_hoja)
@@ -185,31 +190,15 @@ def col_letter(n: int) -> str:
 
 
 # =========================================================
-# CARGAR DATOS (con control de tiempo)
+# CARGAR DATOS (con caché para evitar relogin + lecturas repetidas)
 # =========================================================
-@st.cache_data(ttl=30)
-
-def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
-    try:
-        ws = obtener_hoja(nombre_hoja, columnas_base)
-        data = ws.get_all_records()
-        df = pd.DataFrame(data)
-        return df
-    except Exception as e:
-        st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
-        return pd.DataFrame()
-
+@st.cache_data(ttl=120, show_spinner=False)
 def cargar_datos_sheets(
     nombre_hoja: str,
     columnas_base: list = None,
     conservar_texto: bool = False,
 ) -> pd.DataFrame:
     try:
-        ahora = datetime.now()
-        if ahora - st.session_state["ultima_lectura"] < timedelta(seconds=2):
-            time.sleep(1)
-        st.session_state["ultima_lectura"] = ahora
-
         ws = obtener_hoja(nombre_hoja, columnas_base)
         if conservar_texto:
             valores = ws.get_all_values()

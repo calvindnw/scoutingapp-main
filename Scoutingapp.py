@@ -32,6 +32,12 @@ import requests
 from PIL import Image
 from ui.style import load_custom_css
 
+st.set_page_config(
+    page_title="ScoutingApp Profesional",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # =========================================================
 # 🎨 HELPER VISUAL — PLOTLY GLASS (ANTI FONDO NEGRO)
 # =========================================================
@@ -192,26 +198,6 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
         st.error(f"Error al cargar datos de {nombre_hoja}: {e}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=120)
-def cargar_datos():
-    # Cargar datos desde Google Sheets
-    df_players = cargar_datos_sheets("Jugadores")
-    df_reports = cargar_datos_sheets("Informes")
-    df_short   = cargar_datos_sheets("Lista corta")
-    # Asegurar columna 'nombre_wyscout' existe
-    if 'nombre_wyscout' not in df_players.columns:
-        df_players['nombre_wyscout'] = ""
-    return df_players, df_reports, df_short
-
-# 1️⃣ Carga base desde Sheets (SIN filtros)
-df_players, df_reports, df_short = cargar_datos()
-
-# 2️⃣ Guardar como fuente única en session_state
-st.session_state["df_players"] = df_players.copy()
-st.session_state["df_reports"] = df_reports.copy()
-st.session_state["df_short"]   = df_short.copy()
-
-
 def cargar_datos_sheets(
     nombre_hoja: str,
     columnas_base: list = None,
@@ -338,12 +324,6 @@ def boton_refrescar_datos():
 # =========================================================
 # CONFIGURACIÓN INICIAL DE LA APP
 # =========================================================
-st.set_page_config(
-    page_title="ScoutingApp Profesional",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 load_custom_css()
 
 
@@ -432,6 +412,22 @@ if not login_success:
 
 CURRENT_USER = st.session_state["user"]
 CURRENT_ROLE = st.session_state["role"]
+
+
+def inicializar_datasets_sesion():
+    if all(
+        clave in st.session_state
+        for clave in ["df_players", "df_reports", "df_short"]
+    ):
+        return
+
+    df_players, df_reports, df_short = cargar_datos()
+    if "nombre_wyscout" not in df_players.columns:
+        df_players["nombre_wyscout"] = ""
+
+    st.session_state["df_players"] = df_players.copy()
+    st.session_state["df_reports"] = df_reports.copy()
+    st.session_state["df_short"] = df_short.copy()
 
 def calcular_edad(fecha_nac):
     try:
@@ -1633,16 +1629,7 @@ def cargar_datos():
 # INICIALIZACIÓN
 # ---------------------------------------------------------
 
-    # 1️⃣ Carga base desde Sheets (SIN filtros)
-    df_players, df_reports, df_short = cargar_datos()
-    # Asegurar columna 'nombre_wyscout' existe
-    if 'nombre_wyscout' not in df_players.columns:
-        df_players['nombre_wyscout'] = ""
-
-# 2️⃣ Guardar como fuente única en session_state
-st.session_state["df_players"] = df_players.copy()
-st.session_state["df_reports"] = df_reports.copy()
-st.session_state["df_short"]   = df_short.copy()
+inicializar_datasets_sesion()
 
 # =========================================================
 # 🔐 FILTRADO GLOBAL DE DATOS POR USUARIO (ÚNICO)
@@ -1766,12 +1753,13 @@ if menu == "Jugadores":
         for _, row in df_players.iterrows()
     }
 
+    seleccion_jug = ""
     seleccion_jug = st.selectbox(
         "🔍 Buscar jugador",
         [""] + list(opciones.keys())
     )
 
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
     # CREAR NUEVO JUGADOR
     # ---------------------------------------------------------
     if not seleccion_jug:

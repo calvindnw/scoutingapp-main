@@ -8,31 +8,31 @@ def load_custom_css():
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
 
         :root {
-            --alab-bg-0: #0a1a14;
-            --alab-bg-1: #1a3a2a;
-            --alab-bg-2: #3a6651;
-            --alab-brand: #5a9a7c;
-            --alab-brand-soft: rgba(90, 154, 124, 0.14);
-            --alab-brand-line: rgba(90, 154, 124, 0.26);
-            --alab-panel-top: rgba(27, 51, 42, 0.9);
-            --alab-panel-bottom: rgba(10, 26, 20, 0.96);
+            --alab-bg-0: #081310;
+            --alab-bg-1: #0f1d1a;
+            --alab-bg-2: #163029;
+            --alab-brand: #19e28f;
+            --alab-brand-soft: rgba(25, 226, 143, 0.12);
+            --alab-brand-line: rgba(25, 226, 143, 0.28);
+            --alab-panel-top: rgba(19, 30, 27, 0.94);
+            --alab-panel-bottom: rgba(8, 19, 16, 0.98);
             --alab-text-1: rgba(255, 255, 255, 0.96);
-            --alab-text-2: rgba(226, 236, 231, 0.82);
-            --alab-text-3: rgba(193, 208, 200, 0.62);
-            --alab-warning: #ffd700;
-            --alab-radius-lg: 18px;
-            --alab-radius-md: 14px;
-            --alab-radius-sm: 11px;
-            --alab-shadow-lg: 0 22px 64px rgba(0, 0, 0, 0.34);
-            --alab-shadow-md: 0 14px 36px rgba(0, 0, 0, 0.24);
-            --alab-shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.18);
+            --alab-text-2: rgba(221, 231, 227, 0.78);
+            --alab-text-3: rgba(174, 190, 183, 0.58);
+            --alab-warning: #f3bf4c;
+            --alab-radius-lg: 22px;
+            --alab-radius-md: 16px;
+            --alab-radius-sm: 12px;
+            --alab-shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.42);
+            --alab-shadow-md: 0 18px 44px rgba(0, 0, 0, 0.28);
+            --alab-shadow-sm: 0 12px 28px rgba(0, 0, 0, 0.2);
         }
 
         .stApp {
             background:
-                radial-gradient(circle at 18% 14%, rgba(90, 154, 124, 0.14), transparent 34%),
-                radial-gradient(circle at 84% 24%, rgba(58, 102, 81, 0.18), transparent 30%),
-                linear-gradient(135deg, #3a6651 0%, #1a3a2a 44%, #0a1a14 100%);
+                radial-gradient(circle at 14% 10%, rgba(25, 226, 143, 0.08), transparent 28%),
+                radial-gradient(circle at 82% 20%, rgba(26, 86, 63, 0.2), transparent 26%),
+                linear-gradient(180deg, #132720 0%, #0d1b18 38%, #081310 100%);
             background-attachment: fixed;
             color: var(--alab-text-1);
         }
@@ -43,7 +43,7 @@ def load_custom_css():
         }
 
         [data-testid="stHeader"] {
-            background: linear-gradient(180deg, rgba(8, 20, 16, 0.98), rgba(8, 20, 16, 0.82));
+            background: linear-gradient(180deg, rgba(7, 14, 12, 0.98), rgba(7, 14, 12, 0.84));
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -71,8 +71,82 @@ def load_custom_css():
         }
 
         [data-testid="stDecoration"] {
-            background: linear-gradient(90deg, rgba(90, 154, 124, 0.55), rgba(143, 211, 180, 0.22));
+            background: linear-gradient(90deg, rgba(25, 226, 143, 0.78), rgba(25, 226, 143, 0.14));
             height: 2px;
+        }
+
+        .alab-dashboard-hero {
+            position: relative;
+            overflow: hidden;
+            margin: 0.35rem 0 1.4rem;
+            padding: 1.45rem 1.5rem 1.3rem;
+            border-radius: 26px;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            background:
+                radial-gradient(circle at top right, rgba(25, 226, 143, 0.13), transparent 28%),
+                linear-gradient(145deg, rgba(20, 32, 29, 0.98), rgba(8, 19, 16, 0.98));
+            box-shadow: var(--alab-shadow-lg);
+        }
+
+        .alab-dashboard-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 160px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(25, 226, 143, 0.95), rgba(25, 226, 143, 0));
+        }
+
+        .alab-dashboard-hero-kicker {
+            color: var(--alab-brand);
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+
+        .alab-dashboard-hero-title {
+            margin: 0;
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.8rem, 3vw, 2.55rem);
+            font-weight: 800;
+            line-height: 1.02;
+        }
+
+        .alab-dashboard-hero-copy {
+            max-width: 760px;
+            margin: 0.55rem 0 0;
+            color: var(--alab-text-2);
+            font-size: 0.96rem;
+            line-height: 1.55;
+        }
+
+        .alab-dashboard-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin-top: 0.95rem;
+        }
+
+        .alab-dashboard-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-height: 34px;
+            padding: 0.35rem 0.72rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--alab-text-2);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .alab-dashboard-chip strong {
+            color: var(--alab-text-1);
+            font-weight: 800;
         }
 
         .stApp p,
@@ -286,7 +360,7 @@ def load_custom_css():
         }
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(17, 37, 30, 0.98), rgba(8, 20, 16, 0.99)) !important;
+            background: linear-gradient(180deg, rgba(10, 20, 17, 0.99), rgba(6, 15, 13, 0.99)) !important;
             border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
 
@@ -314,8 +388,8 @@ def load_custom_css():
             min-height: 42px;
             justify-content: flex-start;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(135deg, rgba(27, 51, 42, 0.92), rgba(10, 26, 20, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: linear-gradient(135deg, rgba(20, 34, 30, 0.96), rgba(8, 18, 15, 0.98));
             color: var(--alab-text-1);
             font-family: 'Manrope', sans-serif;
             font-size: 0.92rem;
@@ -325,14 +399,16 @@ def load_custom_css():
         }
 
         [data-testid="stSidebar"] .stButton > button:hover {
-            border-color: rgba(90, 154, 124, 0.42);
-            background: linear-gradient(135deg, rgba(44, 77, 63, 0.96), rgba(14, 31, 24, 0.98));
+            border-color: rgba(25, 226, 143, 0.34);
+            background: linear-gradient(135deg, rgba(28, 50, 43, 0.98), rgba(11, 24, 20, 0.99));
             transform: translateY(-1px);
         }
 
         [data-testid="stSidebar"] .stButton > button[kind="primary"] {
-            border-color: rgba(90, 154, 124, 0.42);
-            background: linear-gradient(135deg, rgba(90, 154, 124, 0.34), rgba(27, 51, 42, 0.98));
+            border-color: rgba(25, 226, 143, 0.4);
+            background:
+                linear-gradient(135deg, rgba(164, 206, 189, 0.32), rgba(38, 77, 64, 0.98) 24%, rgba(10, 22, 18, 0.99));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
 
         .alab-section-title,
@@ -348,9 +424,9 @@ def load_custom_css():
         }
 
         .alab-block-header {
-            margin: 0.2rem 0 0.9rem;
-            padding: 0.2rem 0 0.55rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            margin: 0.25rem 0 1rem;
+            padding: 0.15rem 0 0.6rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
         }
 
         .alab-block-header-center {
@@ -359,18 +435,18 @@ def load_custom_css():
 
         .alab-block-eyebrow {
             color: var(--alab-brand);
-            font-size: 0.74rem;
+            font-size: 0.7rem;
             font-weight: 800;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            margin-bottom: 0.28rem;
+            margin-bottom: 0.32rem;
         }
 
         .alab-block-title {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
+            font-size: 1.08rem;
+            font-weight: 800;
             line-height: 1.15;
         }
 
@@ -393,6 +469,50 @@ def load_custom_css():
             line-height: 1.5;
         }
 
+        .alab-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
+            margin: 0.25rem 0 1rem;
+        }
+
+        .alab-mini-stat {
+            padding: 0.85rem 0.95rem;
+            border-radius: var(--alab-radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                linear-gradient(90deg, rgba(25, 226, 143, 0.08), transparent 38%),
+                linear-gradient(145deg, rgba(17, 28, 25, 0.98), rgba(8, 19, 16, 0.98));
+            box-shadow: var(--alab-shadow-sm);
+        }
+
+        .alab-mini-label {
+            display: block;
+            color: var(--alab-text-3);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .alab-mini-value {
+            display: block;
+            margin-top: 0.4rem;
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            line-height: 1.05;
+        }
+
+        .alab-mini-copy {
+            display: block;
+            margin-top: 0.22rem;
+            color: var(--alab-text-3);
+            font-size: 0.76rem;
+            line-height: 1.45;
+        }
+
         .alab-kpi-grid,
         .kpi-container {
             display: grid;
@@ -405,13 +525,24 @@ def load_custom_css():
         .kpi-card {
             position: relative;
             overflow: hidden;
-            padding: 1.15rem 1.15rem 1rem;
+            padding: 1.1rem 1.15rem 1rem;
             border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.09);
             background:
-                linear-gradient(180deg, rgba(30, 60, 114, 0.12), transparent 44%),
-                linear-gradient(140deg, rgba(58, 102, 81, 0.92), rgba(10, 26, 20, 0.96));
+                radial-gradient(circle at top right, rgba(25, 226, 143, 0.1), transparent 30%),
+                linear-gradient(145deg, rgba(19, 30, 27, 0.98), rgba(8, 19, 16, 0.98));
             box-shadow: var(--alab-shadow-md);
+        }
+
+        .alab-kpi::before,
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 72px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(25, 226, 143, 0.92), rgba(25, 226, 143, 0));
         }
 
         .alab-kpi-label,
@@ -430,7 +561,7 @@ def load_custom_css():
             margin-top: 0.5rem;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.95rem;
+            font-size: 2.1rem;
             font-weight: 800;
             line-height: 1.05;
         }
@@ -443,10 +574,12 @@ def load_custom_css():
             align-items: center;
             gap: 0.8rem;
             margin-bottom: 0.55rem;
-            padding: 0.85rem 1rem;
+            padding: 0.92rem 1rem;
             border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            background: linear-gradient(120deg, rgba(58, 102, 81, 0.86), rgba(10, 26, 20, 0.94));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                linear-gradient(90deg, rgba(25, 226, 143, 0.08), transparent 36%),
+                linear-gradient(140deg, rgba(18, 30, 27, 0.98), rgba(8, 19, 16, 0.96));
             box-shadow: var(--alab-shadow-sm);
         }
 
@@ -475,10 +608,10 @@ def load_custom_css():
 
         .alab-rank-score,
         .rank-score {
-            color: var(--alab-brand);
+            color: #9ef0c7;
             font-family: 'Sora', sans-serif;
             font-weight: 800;
-            font-size: 1rem;
+            font-size: 1.04rem;
         }
 
         .alab-player-panel {
@@ -616,6 +749,21 @@ def load_custom_css():
             text-align: center;
         }
 
+        .alab-panel-title,
+        .panel-title {
+            margin: 0.2rem 0 0.75rem;
+            padding: 0.75rem 0.85rem;
+            border-radius: var(--alab-radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(145deg, rgba(18, 30, 27, 0.96), rgba(8, 19, 16, 0.98));
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: var(--alab-shadow-sm);
+        }
+
         .alab-empty-slot {
             color: var(--alab-text-3);
             font-size: 0.76rem;
@@ -685,8 +833,14 @@ def load_custom_css():
 
         @media (max-width: 1024px) {
             .alab-kpi-grid,
-            .kpi-container {
+            .kpi-container,
+            .alab-mini-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+
+            .alab-dashboard-hero {
+                padding: 1.2rem 1.1rem 1.1rem;
+                border-radius: 22px;
             }
 
             .alab-detail-grid {

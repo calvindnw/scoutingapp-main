@@ -3456,19 +3456,30 @@ if st.session_state["menu"] == "Agenda":
 # 🏠 PANEL GENERAL — ScoutingApp PRO (FINAL + CONSENSO)
 # =========================================================
 if st.session_state["menu"] == "Panel General":
-    section_header(
-        "Panel General",
-        eyebrow="Resumen",
-        caption="Vista ejecutiva del scouting activo con foco en volumen, consenso, seguimientos críticos, contratos y comparación de perfiles.",
-        centered=True,
-    )
-
     # =========================
     # DATA BASE
     # =========================
     df_players = df_players_user.copy()
     df_reports = df_reports_user.copy()
     df_short = df_short_user.copy()
+
+    alcance_panel = "Vista total" if CURRENT_ROLE == "admin" else "Vista de scout"
+    periodo_panel = f"Temporada {datetime.today().year}/{str(datetime.today().year + 1)[-2:]}"
+
+    st.markdown(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Overview</div>
+            <h1 class="alab-dashboard-hero-title">Panel General</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Rol</strong> {CURRENT_ROLE}</span>
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> {alcance_panel}</span>
+                <span class="alab-dashboard-chip"><strong>Periodo</strong> {periodo_panel}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     df_players["ID_Jugador"] = df_players["ID_Jugador"].astype(str)
     df_reports["ID_Jugador"] = df_reports["ID_Jugador"].astype(str)
@@ -3539,11 +3550,7 @@ if st.session_state["menu"] == "Panel General":
     # =====================================================
     # ⭐ CONSENSO — LISTA CORTA
     # =====================================================
-    section_header(
-        "Consenso en lista corta",
-        eyebrow="Consenso",
-        caption="Detectá jugadores repetidos entre scouts para identificar coincidencias relevantes dentro de la observación activa.",
-    )
+    section_header("Consenso en lista corta", eyebrow="Coincidencias")
 
     df_short["Fecha_Agregado_dt"] = pd.to_datetime(
         df_short["Fecha_Agregado"], errors="coerce", dayfirst=True
@@ -3582,6 +3589,27 @@ if st.session_state["menu"] == "Panel General":
 
     df_consenso = df_consenso[df_consenso["Cantidad_Scouts"] > 1]
 
+    consenso_total = len(df_consenso)
+    consenso_max = int(df_consenso["Cantidad_Scouts"].max()) if not df_consenso.empty else 0
+
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Jugadores con consenso</span>
+                <span class="alab-mini-value">{consenso_total}</span>
+                <span class="alab-mini-copy">Perfiles repetidos entre scouts en el periodo filtrado.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Pico de coincidencia</span>
+                <span class="alab-mini-value">{consenso_max}</span>
+                <span class="alab-mini-copy">Máxima cantidad de scouts coincidiendo sobre un mismo jugador.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if df_consenso.empty:
         st.info("No hay jugadores con consenso entre scouts.")
     else:
@@ -3594,11 +3622,7 @@ if st.session_state["menu"] == "Panel General":
     # =====================================================
     # ⏰ SEGUIMIENTOS PRIORITARIOS VENCIDOS
     # =====================================================
-    section_header(
-        "Seguimientos prioritarios vencidos",
-        eyebrow="Alertas",
-        caption="Lista de jugadores que requieren nueva observación según antigüedad del último informe y línea asignada.",
-    )
+    section_header("Seguimientos prioritarios vencidos", eyebrow="Alertas")
 
     lineas_prioritarias = ["Exponencial", "Destacado", "En observación"]
 
@@ -3665,6 +3689,33 @@ if st.session_state["menu"] == "Panel General":
             (df_alertas["Dias_sin_evaluar"] <= r[1])
         ]
 
+    alertas_total = len(df_alertas)
+    alertas_media = int(round(df_alertas["Dias_sin_evaluar"].mean())) if not df_alertas.empty else 0
+    lineas_activas = df_alertas["Línea"].nunique() if not df_alertas.empty else 0
+
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Seguimientos vencidos</span>
+                <span class="alab-mini-value">{alertas_total}</span>
+                <span class="alab-mini-copy">Jugadores prioritarios que ya piden una nueva observación.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Demora promedio</span>
+                <span class="alab-mini-value">{alertas_media} días</span>
+                <span class="alab-mini-copy">Antigüedad media del último informe dentro del filtro actual.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Líneas activas</span>
+                <span class="alab-mini-value">{lineas_activas}</span>
+                <span class="alab-mini-copy">Cantidad de líneas de seguimiento afectadas.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if df_alertas.empty:
         st.success("No hay seguimientos prioritarios vencidos.")
     else:
@@ -3688,11 +3739,34 @@ if st.session_state["menu"] == "Panel General":
 
         df6 = df_c[df_c["Fecha_Fin_dt"] <= lim6]
         df12 = df_c[(df_c["Fecha_Fin_dt"] > lim6) & (df_c["Fecha_Fin_dt"] <= lim12)]
+        proximidad_min = (df6["Fecha_Fin_dt"].min() - hoy).days if not df6.empty else None
 
         section_header(
             "Contratos por vencer",
-            eyebrow="Oportunidades",
-            caption="Seguimiento contractual para detectar ventanas potenciales de mercado en el corto y mediano plazo.",
+            eyebrow="Mercado",
+        )
+
+        st.markdown(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Ventana inmediata</span>
+                    <span class="alab-mini-value">{len(df6)}</span>
+                    <span class="alab-mini-copy">Jugadores con finalización contractual dentro de los próximos 6 meses.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Ventana ampliada</span>
+                    <span class="alab-mini-value">{len(df12)}</span>
+                    <span class="alab-mini-copy">Casos que vencen entre 6 y 12 meses y merecen seguimiento comercial.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Próximo vencimiento</span>
+                    <span class="alab-mini-value">{"-" if proximidad_min is None else f'{proximidad_min} días'}</span>
+                    <span class="alab-mini-copy">Referencia del contrato más cercano detectado en la base actual.</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
         c1, c2 = st.columns(2)
@@ -3726,7 +3800,7 @@ if st.session_state["menu"] == "Panel General":
     )
 
     def render_top(df, titulo):
-        st.markdown(f"<div class='panel-title alab-section-title'>{titulo}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='panel-title alab-panel-title'>{titulo}</div>", unsafe_allow_html=True)
         if df.empty:
             st.info("Sin datos")
             return
@@ -3755,10 +3829,26 @@ if st.session_state["menu"] == "Panel General":
         ("Delantero centro","🎯 Delanteros centro"),
     ]
 
-    section_header(
-        "Top 5 por posición",
-        eyebrow="Ranking",
-        caption="Lectura rápida de los mejores puntajes promedio por rol dentro del universo filtrado actual.",
+    cobertura_posiciones = df_scores["Posición"].nunique() if not df_scores.empty else 0
+    mejor_score = round(df_scores["Score"].max(), 2) if not df_scores.empty else 0
+
+    section_header("Top 5 por posición", eyebrow="Ranking")
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Posiciones con ranking</span>
+                <span class="alab-mini-value">{cobertura_posiciones}</span>
+                <span class="alab-mini-copy">Roles con volumen suficiente de informes para ordenar perfiles.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Mejor score actual</span>
+                <span class="alab-mini-value">{mejor_score}</span>
+                <span class="alab-mini-copy">Puntaje promedio más alto del universo evaluado.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
     cols = st.columns(4)
     for i, (pos, titulo) in enumerate(posiciones):
@@ -3768,11 +3858,7 @@ if st.session_state["menu"] == "Panel General":
     # =========================
     # COMPARADOR DE JUGADORES
     # =========================
-    section_header(
-        "Comparador de jugadores",
-        eyebrow="Comparación",
-        caption="Seleccioná entre 2 y 6 perfiles para contrastar métricas promedio y contexto general dentro del mismo tablero.",
-    )
+    section_header("Comparador de jugadores", eyebrow="Comparación")
 
     col_f1, col_f2, col_f3 = st.columns(3)
 
@@ -3793,6 +3879,24 @@ if st.session_state["menu"] == "Panel General":
         df_base = df_base[df_base["Pie_Hábil"] == filtro_pie]
 
     df_base = df_base[(df_base["Edad"] >= edad_min) & (df_base["Edad"] <= edad_max)]
+
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Base comparable</span>
+                <span class="alab-mini-value">{df_base['ID_Jugador'].nunique()}</span>
+                <span class="alab-mini-copy">Jugadores disponibles según posición, pie hábil y franja etaria.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Selección recomendada</span>
+                <span class="alab-mini-value">2 a 6</span>
+                <span class="alab-mini-copy">Rango óptimo para comparar métricas sin perder legibilidad.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     opciones_cmp = {f"{r.Nombre} ({r.Club})": r.ID_Jugador for r in df_base.itertuples()}
 
@@ -3817,11 +3921,64 @@ if st.session_state["menu"] == "Panel General":
             )
         )
 
+        df_cmp["Score"] = df_cmp[metricas].mean(axis=1).round(2)
+        df_cmp = df_cmp.sort_values("Score", ascending=False)
+
+        mejor_perfil = df_cmp.iloc[0]["Nombre"] if not df_cmp.empty else "-"
+        score_medio_cmp = round(df_cmp["Score"].mean(), 2) if not df_cmp.empty else 0
+        clubes_cmp = df_cmp["Club"].nunique() if not df_cmp.empty else 0
+        edad_media_cmp = int(round(df_cmp["Edad"].mean())) if df_cmp["Edad"].notna().any() else 0
+
+        st.markdown(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Perfiles comparados</span>
+                    <span class="alab-mini-value">{len(df_cmp)}</span>
+                    <span class="alab-mini-copy">Selección activa dentro del universo filtrado.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Score medio</span>
+                    <span class="alab-mini-value">{score_medio_cmp}</span>
+                    <span class="alab-mini-copy">Promedio general de la muestra comparada.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Perfil líder</span>
+                    <span class="alab-mini-value">{mejor_perfil}</span>
+                    <span class="alab-mini-copy">Jugador con mayor score sintético entre los seleccionados.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Contexto</span>
+                    <span class="alab-mini-value">{clubes_cmp} clubes · {edad_media_cmp} años</span>
+                    <span class="alab-mini-copy">Diversidad de origen y edad promedio del grupo analizado.</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        fig_cmp = px.bar(
+            df_cmp,
+            x="Nombre",
+            y="Score",
+            color="Posición",
+            text="Score",
+            title="Comparación sintética de perfiles",
+        )
+        fig_cmp.update_traces(textposition="outside")
+        fig_cmp.update_layout(showlegend=False, yaxis_title="Score", xaxis_title="")
+        apply_glass_plotly(fig_cmp)
+        st.plotly_chart(fig_cmp, use_container_width=True)
+
         st.dataframe(
-            df_cmp[["Nombre","Club","Posición","Pie_Hábil","Edad"] + metricas],
+            df_cmp[["Nombre","Club","Posición","Pie_Hábil","Edad","Score"] + metricas],
             use_container_width=True,
             hide_index=True
         )
+    elif len(seleccionados) == 1:
+        st.info("Seleccioná al menos 2 jugadores para habilitar la comparación.")
+    else:
+        st.info("Elegí entre 2 y 6 jugadores para ver el comparador completo.")
 
 # =========================================================
 # 🧭 PANEL SCOUTS — BLOQUE ESTABLE Y COHERENTE

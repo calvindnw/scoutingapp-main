@@ -2275,57 +2275,59 @@ if menu == "Jugadores":
             st.session_state["toast_guardado_informe"] = False
 
 
-    # =========================================================
-    # BLOQUE ESTADÍSTICAS — Comparativo jugador vs promedio de liga
-    # =========================================================
 
-    if menu == "Estadísticas":
 
-        st.subheader("Estadísticas comparativas")
+# =========================================================
+# BLOQUE ESTADÍSTICAS — Comparativo jugador vs promedio de liga
+# =========================================================
 
-        df_players = df_players_all.copy()
+if menu == "Estadísticas":
 
-        opciones = {
-            f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
-            for _, row in df_players.iterrows()
-        }
+    st.subheader("Estadísticas comparativas")
 
-        seleccion_jug = st.selectbox(
-            "🔍 Buscar jugador",
-            [""] + list(opciones.keys()),
-            key="estadisticas_buscar_jugador"
+    df_players = df_players_all.copy()
+
+    opciones = {
+        f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+        for _, row in df_players.iterrows()
+    }
+
+    seleccion_jug = st.selectbox(
+        "🔍 Buscar jugador",
+        [""] + list(opciones.keys()),
+        key="estadisticas_buscar_jugador"
+    )
+
+    if seleccion_jug:
+        id_jugador = str(opciones[seleccion_jug])
+        jugador = df_players[df_players["ID_Jugador"].astype(str) == id_jugador].iloc[0]
+
+        st.markdown(
+            f"**Jugador:** {jugador.get('Nombre', '-')}  |  "
+            f"**Posición:** {jugador.get('Posición', '-')}  |  "
+            f"**Liga:** {jugador.get('Liga', '-')}"
         )
 
-        if seleccion_jug:
-            id_jugador = str(opciones[seleccion_jug])
-            jugador = df_players[df_players["ID_Jugador"].astype(str) == id_jugador].iloc[0]
+        df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+        tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
+            jugador,
+            df_promedios,
+            df_data_jugadores,
+        )
 
-            st.markdown(
-                f"**Jugador:** {jugador.get('Nombre', '-')}  |  "
-                f"**Posición:** {jugador.get('Posición', '-')}  |  "
-                f"**Liga:** {jugador.get('Liga', '-')}"
+        if estado_estadisticas == "jugador_sin_estadisticas":
+            st.info("Jugador sin estadísticas disponibles")
+        elif estado_estadisticas == "posicion_no_configurada":
+            st.warning("No hay estadísticas clave configuradas para la posición seleccionada.")
+        else:
+            if estado_estadisticas == "sin_promedios":
+                st.warning("No hay promedios de liga disponibles para la posición y liga seleccionadas.")
+
+            st.dataframe(
+                tabla_estadisticas,
+                use_container_width=True,
+                hide_index=True,
             )
-
-            df_promedios, df_data_jugadores = cargar_datos_estadisticas()
-            tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
-                jugador,
-                df_promedios,
-                df_data_jugadores,
-            )
-
-            if estado_estadisticas == "jugador_sin_estadisticas":
-                st.info("Jugador sin estadísticas disponibles")
-            elif estado_estadisticas == "posicion_no_configurada":
-                st.warning("No hay estadísticas clave configuradas para la posición seleccionada.")
-            else:
-                if estado_estadisticas == "sin_promedios":
-                    st.warning("No hay promedios de liga disponibles para la posición y liga seleccionadas.")
-
-                st.dataframe(
-                    tabla_estadisticas,
-                    use_container_width=True,
-                    hide_index=True,
-                )
 
 
 

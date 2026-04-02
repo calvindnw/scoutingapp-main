@@ -1011,6 +1011,112 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
     return pd.DataFrame(filas), "ok"
 
 
+def abreviar_titulo_estadistica_pdf(texto):
+    equivalencias = {
+        "Jugador / Año": "Jugador / Año",
+        "Goles recibidos / 90": "Goles rec./90",
+        "Remates en contra / 90": "Remates c./90",
+        "Porcentaje de paradas": "% paradas",
+        "Porterías imbatidas / 90": "Port. imb./90",
+        "Duelos defensivos ganados": "Duelos def.",
+        "Duelos aéreos ganados": "Duelos aéreos",
+        "Interceptaciones / 90": "Intercep./90",
+        "Precisión de pases": "Prec. pases",
+        "Precisión de pases largos": "Prec. pases largos",
+        "Duelos ofensivos ganados": "Duelos of.",
+        "Regates exitosos": "Regates",
+        "Precisión de centros": "Prec. centros",
+        "Precisión de remates": "Prec. remates",
+    }
+    return equivalencias.get(texto, texto)
+
+
+def asegurar_espacio_pdf(pdf, alto_necesario):
+    if pdf.get_y() + alto_necesario > pdf.h - pdf.b_margin - 8:
+        pdf.add_page()
+
+
+def agregar_estadisticas_pdf(
+    pdf,
+    jugador,
+    color_verde_principal,
+    color_gris_fondo,
+    color_gris_oscuro,
+    color_texto,
+):
+    df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+    tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
+        jugador,
+        df_promedios,
+        df_data_jugadores,
+    )
+
+    alto_estimado = 28
+    if tabla_estadisticas is not None and not tabla_estadisticas.empty:
+        alto_estimado += 10 + (len(tabla_estadisticas) * 7)
+
+    asegurar_espacio_pdf(pdf, alto_estimado)
+
+    pdf.set_font("Arial", "B", 12)
+    pdf.set_text_color(*color_verde_principal)
+    pdf.cell(0, 8, "Estadísticas", ln=True, align="C")
+    pdf.ln(1)
+
+    if tabla_estadisticas is None or tabla_estadisticas.empty:
+        mensajes_estado = {
+            "jugador_sin_estadisticas": "Jugador sin estadísticas disponibles",
+            "posicion_no_configurada": "Sin estadísticas configuradas para la posición",
+            "sin_promedios": "No hay promedios de liga disponibles",
+        }
+        mensaje = mensajes_estado.get(estado_estadisticas, "Sin estadísticas disponibles")
+        pdf.set_font("Arial", "I", 10)
+        pdf.set_text_color(120, 120, 120)
+        pdf.cell(0, 6, sanitizar_texto_pdf(mensaje), ln=True, align="C")
+        pdf.ln(3)
+        return
+
+    columnas = list(tabla_estadisticas.columns)
+    ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
+    ancho_primera = 28
+    ancho_resto = (ancho_total - ancho_primera) / max(1, len(columnas) - 1)
+    anchos = [ancho_primera] + [ancho_resto] * (len(columnas) - 1)
+
+    pdf.set_fill_color(*color_gris_oscuro)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 7)
+
+    for columna, ancho in zip(columnas, anchos):
+        titulo = sanitizar_texto_pdf(abreviar_titulo_estadistica_pdf(columna))
+        pdf.cell(ancho, 8, titulo, border=1, align="C", fill=True)
+    pdf.ln()
+
+    for indice, (_, fila) in enumerate(tabla_estadisticas.iterrows()):
+        es_jugador = indice == 0
+        if es_jugador:
+            pdf.set_fill_color(232, 241, 236)
+            pdf.set_text_color(*color_gris_oscuro)
+            pdf.set_font("Arial", "B", 8)
+        else:
+            fill_color = color_gris_fondo if indice % 2 else (248, 250, 252)
+            pdf.set_fill_color(*fill_color)
+            pdf.set_text_color(*color_texto)
+            pdf.set_font("Arial", "", 8)
+
+        for posicion_columna, (columna, ancho) in enumerate(zip(columnas, anchos)):
+            valor = sanitizar_texto_pdf(str(fila.get(columna, "-")))
+            alineacion = "L" if posicion_columna == 0 else "C"
+            pdf.cell(ancho, 7, valor, border=1, align=alineacion, fill=True)
+        pdf.ln()
+
+    if estado_estadisticas == "sin_promedios":
+        pdf.ln(1)
+        pdf.set_font("Arial", "I", 8)
+        pdf.set_text_color(120, 120, 120)
+        pdf.cell(0, 5, "No hay promedios de liga disponibles para la posición y liga seleccionadas.", ln=True, align="L")
+
+    pdf.ln(4)
+
+
 # ---------------------------------------------------------
 # FUNCIONES DE PROMEDIOS (OBLIGATORIAS PARA BLOQUE 3)
 # ---------------------------------------------------------
@@ -1600,6 +1706,22 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.ln(8)
         if pdf.get_y() < y_linea + 8:
             pdf.set_y(y_linea + 8)
+
+        agregar_estadisticas_pdf(
+            pdf,
+            jugador,
+            COLOR_VERDE_PRINCIPAL,
+            COLOR_GRIS_FONDO,
+            COLOR_GRIS_OSCURO,
+            COLOR_TEXTO,
+        )
+
+        y_linea_stats = pdf.get_y()
+        pdf.set_draw_color(90, 154, 124)
+        pdf.set_line_width(0.8)
+        pdf.line(pdf.l_margin, y_linea_stats, pdf.w - pdf.r_margin, y_linea_stats)
+        pdf.ln(6)
+
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación
         df_reports_limpio["ID_Jugador"] = df_reports_limpio["ID_Jugador"].astype(str)

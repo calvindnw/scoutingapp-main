@@ -190,7 +190,11 @@ st.session_state["df_reports"] = df_reports.copy()
 st.session_state["df_short"]   = df_short.copy()
 
 
-def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.DataFrame:
+def cargar_datos_sheets(
+    nombre_hoja: str,
+    columnas_base: list = None,
+    conservar_texto: bool = False,
+) -> pd.DataFrame:
     try:
         ahora = datetime.now()
         if ahora - st.session_state["ultima_lectura"] < timedelta(seconds=2):
@@ -198,8 +202,17 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
         st.session_state["ultima_lectura"] = ahora
 
         ws = obtener_hoja(nombre_hoja, columnas_base)
-        data = ws.get_all_records()
-        df = pd.DataFrame(data)
+        if conservar_texto:
+            valores = ws.get_all_values()
+            if valores:
+                encabezados = valores[0]
+                filas = valores[1:]
+                df = pd.DataFrame(filas, columns=encabezados)
+            else:
+                df = pd.DataFrame(columns=columnas_base or [])
+        else:
+            data = ws.get_all_records()
+            df = pd.DataFrame(data)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
         return df
@@ -885,8 +898,8 @@ def formatear_valor_estadistica(valor):
 
 @st.cache_data(ttl=120)
 def cargar_datos_estadisticas():
-    df_promedios = cargar_datos_sheets("Promedios de Liga")
-    df_data_jugadores = cargar_datos_sheets("Data Jugadores")
+    df_promedios = cargar_datos_sheets("Promedios de Liga", conservar_texto=True)
+    df_data_jugadores = cargar_datos_sheets("Data Jugadores", conservar_texto=True)
     return df_promedios, df_data_jugadores
 
 

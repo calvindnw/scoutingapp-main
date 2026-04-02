@@ -341,7 +341,7 @@ def boton_refrescar_datos():
 st.set_page_config(
     page_title="ScoutingApp Profesional",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 load_custom_css()
@@ -407,6 +407,21 @@ def login_ui():
 # Siempre mostrar el bloque de login/acceso de usuario en la barra lateral
 login_success = login_ui()
 if not login_success:
+    st.markdown(
+        """
+        <div style="max-width:680px;margin:8vh auto 0 auto;padding:32px 30px;text-align:center;">
+            <div class="kpi-card" style="padding:32px 28px; text-align:center;">
+                <div class="kpi-title" style="margin-bottom:10px;">Acceso a la plataforma</div>
+                <div class="kpi-value" style="font-size:2.2rem; margin-bottom:14px;">ScoutingApp Profesional</div>
+                <p style="max-width:520px;margin:0 auto;color:rgba(226,236,231,0.82);">
+                    Iniciá sesión desde la barra lateral izquierda para acceder a jugadores, informes, shortlist y paneles de análisis.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info("Usá el formulario de login de la barra lateral para ingresar.")
     st.stop()
 
 CURRENT_USER = st.session_state["user"]

@@ -365,13 +365,19 @@ if not all(col in df_users.columns for col in ["Usuario", "Contraseña", "Rol"])
 # =========================================================
 # BLOQUE DE LOGIN CON ROLES
 # =========================================================
-def login_ui():
-    st.sidebar.title("🔐 Acceso de usuario")
+def autenticar_usuario(usuario, clave):
+    match = df_users[(df_users["Usuario"] == usuario) & (df_users["Contraseña"] == clave)]
+    if match.empty:
+        return None
+    return match.iloc[0]
 
+
+def login_ui():
     if "user" not in st.session_state:
         st.session_state["user"] = None
         st.session_state["role"] = None
 
+    st.sidebar.title("🔐 Acceso de usuario")
 
     # Línea divisoria y título grande (solo una vez)
     st.sidebar.markdown("---")
@@ -385,19 +391,34 @@ def login_ui():
             st.rerun()
         return True
 
-    with st.sidebar.form("login_form"):
-        usuario = st.text_input("Usuario")
-        clave = st.text_input("Contraseña", type="password")
-        enviar = st.form_submit_button("Ingresar")
+    st.sidebar.caption("Si no ves la barra lateral, usá el formulario principal.")
 
-    if enviar:
-        match = df_users[(df_users["Usuario"] == usuario) & (df_users["Contraseña"] == clave)]
-        if not match.empty:
-            st.session_state["user"] = match.iloc[0]["Usuario"]
-            st.session_state["role"] = match.iloc[0]["Rol"]
-            st.success(f"Bienvenido, {st.session_state['user']} ({st.session_state['role']})")
-            st.rerun()
-        else:
+    _, col_login, _ = st.columns([1.1, 1.3, 1.1])
+    with col_login:
+        st.markdown(
+            """
+            <div class="kpi-card" style="padding:28px 26px 20px 26px; text-align:center; margin-top:7vh;">
+                <div class="kpi-title" style="margin-bottom:10px;">Acceso a la plataforma</div>
+                <div class="kpi-value" style="font-size:2.15rem; margin-bottom:12px;">ScoutingApp Profesional</div>
+                <p style="max-width:480px;margin:0 auto 6px auto;color:rgba(226,236,231,0.82);">
+                    Ingresá con tu usuario y contraseña para acceder a jugadores, informes, shortlist y paneles de análisis.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        with st.form("login_form_main"):
+            usuario = st.text_input("Usuario", key="login_usuario_main")
+            clave = st.text_input("Contraseña", type="password", key="login_clave_main")
+            enviar = st.form_submit_button("Ingresar")
+
+        if enviar:
+            usuario_validado = autenticar_usuario(usuario, clave)
+            if usuario_validado is not None:
+                st.session_state["user"] = usuario_validado["Usuario"]
+                st.session_state["role"] = usuario_validado["Rol"]
+                st.rerun()
             st.error("Usuario o contraseña incorrectos")
     return False
 # =========================================================
@@ -407,21 +428,6 @@ def login_ui():
 # Siempre mostrar el bloque de login/acceso de usuario en la barra lateral
 login_success = login_ui()
 if not login_success:
-    st.markdown(
-        """
-        <div style="max-width:680px;margin:8vh auto 0 auto;padding:32px 30px;text-align:center;">
-            <div class="kpi-card" style="padding:32px 28px; text-align:center;">
-                <div class="kpi-title" style="margin-bottom:10px;">Acceso a la plataforma</div>
-                <div class="kpi-value" style="font-size:2.2rem; margin-bottom:14px;">ScoutingApp Profesional</div>
-                <p style="max-width:520px;margin:0 auto;color:rgba(226,236,231,0.82);">
-                    Iniciá sesión desde la barra lateral izquierda para acceder a jugadores, informes, shortlist y paneles de análisis.
-                </p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.info("Usá el formulario de login de la barra lateral para ingresar.")
     st.stop()
 
 CURRENT_USER = st.session_state["user"]

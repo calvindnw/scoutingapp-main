@@ -1079,13 +1079,13 @@ def agregar_estadisticas_pdf(
 
     columnas = list(tabla_estadisticas.columns)
     ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
-    ancho_primera = 28
+    ancho_primera = 42
     ancho_resto = (ancho_total - ancho_primera) / max(1, len(columnas) - 1)
     anchos = [ancho_primera] + [ancho_resto] * (len(columnas) - 1)
 
     pdf.set_fill_color(*color_gris_oscuro)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", "B", 7)
+    pdf.set_font("Arial", "B", 6)
 
     for columna, ancho in zip(columnas, anchos):
         titulo = sanitizar_texto_pdf(abreviar_titulo_estadistica_pdf(columna))
@@ -1102,7 +1102,7 @@ def agregar_estadisticas_pdf(
             fill_color = color_gris_fondo if indice % 2 else (248, 250, 252)
             pdf.set_fill_color(*fill_color)
             pdf.set_text_color(*color_texto)
-            pdf.set_font("Arial", "", 8)
+            pdf.set_font("Arial", "", 7)
 
         for posicion_columna, (columna, ancho) in enumerate(zip(columnas, anchos)):
             valor = sanitizar_texto_pdf(str(fila.get(columna, "-")))

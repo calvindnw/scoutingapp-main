@@ -34,6 +34,66 @@ def load_custom_css():
                 radial-gradient(circle at 84% 24%, rgba(58, 102, 81, 0.18), transparent 30%),
                 linear-gradient(135deg, #3a6651 0%, #1a3a2a 44%, #0a1a14 100%);
             background-attachment: fixed;
+            color: var(--alab-text-1);
+        }
+
+        .stApp p,
+        .stApp li,
+        .stApp label,
+        .stApp .stMarkdown,
+        .stApp .stMarkdown p,
+        .stApp .stCaption,
+        .stApp [data-testid="stCaptionContainer"],
+        .stApp [data-testid="stText"],
+        .stApp [data-testid="stMarkdownContainer"] {
+            color: var(--alab-text-2);
+        }
+
+        .stApp h1,
+        .stApp h2,
+        .stApp h3,
+        .stApp h4,
+        .stApp h5,
+        .stApp h6,
+        .stApp .stSubheader,
+        .stApp .stHeader {
+            color: var(--alab-text-1);
+        }
+
+        .stApp a,
+        .stApp a:visited,
+        .stApp .stMarkdown a,
+        .stApp .stMarkdown a:visited {
+            color: #8fd3b4;
+            text-decoration-color: rgba(143, 211, 180, 0.55);
+        }
+
+        .stApp a:hover,
+        .stApp .stMarkdown a:hover {
+            color: #c6f5df;
+        }
+
+        .stApp [data-testid="stMetric"] {
+            color: var(--alab-text-1);
+        }
+
+        .stApp [data-testid="stMetricLabel"] p,
+        .stApp [data-testid="stMetricLabel"] div {
+            color: var(--alab-text-3);
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .stApp [data-testid="stMetricValue"] div,
+        .stApp [data-testid="stMetricValue"] p {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+        }
+
+        .stApp [data-testid="stMetricDelta"] div,
+        .stApp [data-testid="stMetricDelta"] p {
+            color: var(--alab-text-2);
         }
 
         [data-testid="stSidebar"] .stButton > button {

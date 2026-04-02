@@ -1564,9 +1564,16 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
         # El bloque de info (título + info lines) se alinea arriba, justo a la derecha de la foto
         pdf.set_xy(datos_x, datos_y - 1)
+        video_url_pdf = str(jugador.get("video_url", "")).strip()
         pdf.set_font("Arial", 'B', 12)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        pdf.cell(datos_w, 7, "Información del jugador", ln=True, align='L')
+        pdf.cell(datos_w * 0.68, 7, "Información del jugador", ln=False, align='L')
+        if video_url_pdf.startswith("http"):
+            pdf.set_font("Arial", 'U', 9)
+            pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
+            pdf.cell(datos_w * 0.32, 7, "Ver video", ln=True, align='R', link=video_url_pdf)
+        else:
+            pdf.cell(datos_w * 0.32, 7, "", ln=True, align='R')
         pdf.ln(0.5)
         pdf.set_font("Arial", '', 9.5)
         pdf.set_text_color(*COLOR_TEXTO)

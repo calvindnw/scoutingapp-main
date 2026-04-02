@@ -324,7 +324,6 @@ def boton_refrescar_datos():
 # =========================================================
 # CONFIGURACIÓN INICIAL DE LA APP
 # =========================================================
-load_custom_css()
 
 
 # =========================================================
@@ -357,42 +356,19 @@ def login_ui():
         st.session_state["user"] = None
         st.session_state["role"] = None
 
-    st.sidebar.title("🔐 Acceso de usuario")
-
-    # Línea divisoria y título grande (solo una vez)
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<h4 style='color:#5a9a7c;'>🔐 Acceso de usuario</h4>", unsafe_allow_html=True)
-
     if st.session_state["user"]:
-        st.sidebar.markdown(f"<b>Usuario:</b> {st.session_state['user']}", unsafe_allow_html=True)
-        if st.sidebar.button("Cerrar sesión"):
-            st.session_state["user"] = None
-            st.session_state["role"] = None
-            st.rerun()
         return True
 
-    st.sidebar.caption("Si no ves la barra lateral, usá el formulario principal.")
+    st.title("ScoutingApp Profesional")
+    st.subheader("Acceso a la plataforma")
+    st.write(
+        "Ingresá con tu usuario y contraseña para acceder a jugadores, informes, shortlist y paneles de análisis."
+    )
 
-    login_container = st.container()
-    with login_container:
-        st.markdown(
-            """
-            <div class="login-shell">
-                <div class="login-title">Acceso a la plataforma</div>
-                <div class="login-heading">ScoutingApp Profesional</div>
-                <p class="login-copy">
-                    Ingresá con tu usuario y contraseña para acceder a jugadores, informes,
-                    shortlist y paneles de análisis.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        with st.form("login_form_main"):
-            usuario = st.text_input("Usuario", key="login_usuario_main")
-            clave = st.text_input("Contraseña", type="password", key="login_clave_main")
-            enviar = st.form_submit_button("Ingresar", type="primary")
+    with st.form("login_form_main"):
+        usuario = st.text_input("Usuario", key="login_usuario_main")
+        clave = st.text_input("Contraseña", type="password", key="login_clave_main")
+        enviar = st.form_submit_button("Ingresar")
 
     if enviar:
         usuario_validado = autenticar_usuario(usuario, clave)
@@ -411,8 +387,21 @@ login_success = login_ui()
 if not login_success:
     st.stop()
 
+load_custom_css()
+
 CURRENT_USER = st.session_state["user"]
 CURRENT_ROLE = st.session_state["role"]
+
+st.sidebar.title("🔐 Acceso de usuario")
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"<b>Usuario:</b> {CURRENT_USER}", unsafe_allow_html=True)
+st.sidebar.markdown(f"<b>Rol:</b> {CURRENT_ROLE}", unsafe_allow_html=True)
+if st.sidebar.button("Cerrar sesión"):
+    st.session_state["user"] = None
+    st.session_state["role"] = None
+    for clave in ["df_players", "df_reports", "df_short"]:
+        st.session_state.pop(clave, None)
+    st.rerun()
 
 
 def inicializar_datasets_sesion():

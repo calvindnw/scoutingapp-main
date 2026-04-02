@@ -1,6 +1,94 @@
 import streamlit as st
 
 
+def load_login_css():
+    st.markdown(
+        """
+        <style>
+        body {
+            color: #f2f6f3;
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at 20% 16%, rgba(90, 154, 124, 0.16), transparent 32%),
+                linear-gradient(135deg, #3a6651 0%, #1a3a2a 44%, #0a1a14 100%);
+        }
+
+        .block-container {
+            max-width: 760px;
+            padding-top: 2.4rem;
+            padding-bottom: 2rem;
+        }
+
+        .login-shell {
+            padding: 1.5rem 1.4rem 1.1rem;
+            border-radius: 24px;
+            background: linear-gradient(160deg, rgba(27, 51, 42, 0.9), rgba(10, 26, 20, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+            margin-top: 7vh;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .login-title {
+            color: #5a9a7c;
+            font-size: 0.84rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-heading {
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.08;
+            margin-bottom: 0.8rem;
+        }
+
+        .login-copy {
+            color: rgba(226, 236, 231, 0.82);
+            max-width: 430px;
+            margin: 0 auto;
+            line-height: 1.55;
+        }
+
+        div[data-testid="stForm"] {
+            padding: 1rem 1.1rem 1.1rem;
+            border-radius: 20px;
+            background: rgba(10, 26, 20, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        div[data-baseweb="input"] > div {
+            min-height: 46px;
+            border-radius: 12px;
+            background: rgba(9, 21, 17, 0.96) !important;
+            border: 1px solid rgba(90, 154, 124, 0.28) !important;
+        }
+
+        input {
+            color: #ffffff !important;
+        }
+
+        div[data-testid="stFormSubmitButton"] > button {
+            width: 100%;
+            min-height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(90, 154, 124, 0.94), rgba(58, 102, 81, 0.96));
+            border: 1px solid rgba(90, 154, 124, 0.72);
+            color: #ffffff;
+            font-weight: 700;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def load_custom_css():
     st.markdown(
         """

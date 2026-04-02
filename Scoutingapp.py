@@ -1092,20 +1092,20 @@ def agregar_estadisticas_pdf(
         df_data_jugadores,
     )
 
-    alto_estimado = 22
+    alto_estimado = 26
     if tabla_estadisticas is not None and not tabla_estadisticas.empty:
-        alto_estimado += 8 + (len(tabla_estadisticas) * 6)
+        alto_estimado += 10 + (len(tabla_estadisticas) * 6.5)
 
     asegurar_espacio_pdf(pdf, alto_estimado)
 
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_font("Arial", "B", 12)
     pdf.set_text_color(*color_verde_principal)
-    pdf.cell(0, 6, "Estadísticas", ln=True, align="C")
-    pdf.set_font("Arial", "", 8)
+    pdf.cell(0, 7, "Estadísticas", ln=True, align="C")
+    pdf.set_font("Arial", "", 9)
     pdf.set_text_color(*color_texto)
     pdf.cell(
         0,
-        5,
+        6,
         sanitizar_texto_pdf(
             f"Partidos jugados: {resumen_estadistico['partidos_jugados']}  |  "
             f"Minutos jugados: {resumen_estadistico['minutos_jugados']}"
@@ -1113,7 +1113,7 @@ def agregar_estadisticas_pdf(
         ln=True,
         align="C",
     )
-    pdf.ln(0.5)
+    pdf.ln(1.5)
 
     if tabla_estadisticas is None or tabla_estadisticas.empty:
         mensajes_estado = {
@@ -1124,23 +1124,23 @@ def agregar_estadisticas_pdf(
         mensaje = mensajes_estado.get(estado_estadisticas, "Sin estadísticas disponibles")
         pdf.set_font("Arial", "I", 9)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(0, 5, sanitizar_texto_pdf(mensaje), ln=True, align="C")
-        pdf.ln(2)
+        pdf.cell(0, 6, sanitizar_texto_pdf(mensaje), ln=True, align="C")
+        pdf.ln(3)
         return
 
     columnas = list(tabla_estadisticas.columns)
     ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
-    ancho_primera = 40
+    ancho_primera = 44
     ancho_resto = (ancho_total - ancho_primera) / max(1, len(columnas) - 1)
     anchos = [ancho_primera] + [ancho_resto] * (len(columnas) - 1)
 
     pdf.set_fill_color(*color_gris_oscuro)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", "B", 5)
+    pdf.set_font("Arial", "B", 6)
 
     for columna, ancho in zip(columnas, anchos):
         titulo = sanitizar_texto_pdf(abreviar_titulo_estadistica_pdf(columna))
-        pdf.cell(ancho, 6, titulo, border=1, align="C", fill=True)
+        pdf.cell(ancho, 7, titulo, border=1, align="C", fill=True)
     pdf.ln()
 
     for indice, (_, fila) in enumerate(tabla_estadisticas.iterrows()):
@@ -1148,26 +1148,26 @@ def agregar_estadisticas_pdf(
         if es_jugador:
             pdf.set_fill_color(232, 241, 236)
             pdf.set_text_color(*color_gris_oscuro)
-            pdf.set_font("Arial", "B", 7)
+            pdf.set_font("Arial", "B", 8)
         else:
             fill_color = color_gris_fondo if indice % 2 else (248, 250, 252)
             pdf.set_fill_color(*fill_color)
             pdf.set_text_color(*color_texto)
-            pdf.set_font("Arial", "", 6)
+            pdf.set_font("Arial", "", 7)
 
         for posicion_columna, (columna, ancho) in enumerate(zip(columnas, anchos)):
             valor = sanitizar_texto_pdf(str(fila.get(columna, "-")))
             alineacion = "L" if posicion_columna == 0 else "C"
-            pdf.cell(ancho, 6, valor, border=1, align=alineacion, fill=True)
+            pdf.cell(ancho, 6.5, valor, border=1, align=alineacion, fill=True)
         pdf.ln()
 
     if estado_estadisticas == "sin_promedios":
-        pdf.ln(0.5)
+        pdf.ln(1)
         pdf.set_font("Arial", "I", 7)
         pdf.set_text_color(120, 120, 120)
         pdf.cell(0, 5, "No hay promedios de liga disponibles para la posición y liga seleccionadas.", ln=True, align="L")
 
-    pdf.ln(3)
+    pdf.ln(4)
 
 
 # ---------------------------------------------------------
@@ -1456,7 +1456,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         # CONFIGURACIÓN INICIAL DEL PDF CON FPDF_SEGURO
         # =========================================
         pdf = FPDF_SEGURO()
-        pdf.set_margins(left=12, top=12, right=12)
+        pdf.set_margins(left=14, top=12, right=14)
         pdf.add_page()
 
         # Colores del diseño futurista
@@ -1484,7 +1484,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "B", 19)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
         nombre_jugador = sanitizar_texto_pdf(jugador.get("Nombre", ""))
-        pdf.cell(0, 10, nombre_jugador, ln=True, align="C")
+        pdf.cell(0, 11, nombre_jugador, ln=True, align="C")
         # Línea decorativa superior
         margen_linea = 20
         ancho_linea = pdf.w - 2 * margen_linea
@@ -1492,13 +1492,13 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_draw_color(*COLOR_VERDE_PRINCIPAL)
         pdf.set_line_width(1.2)
         pdf.line(margen_linea, y_linea_sup, margen_linea + ancho_linea, y_linea_sup)
-        pdf.ln(4)
+        pdf.ln(5)
 
         # FOTO Y DATOS (en la misma línea)
         # Centramos verticalmente entre las dos líneas decorativas, pero cada bloque por separado
         # Línea superior ya definida: y_linea_sup
         # Calculamos posición de la línea inferior (después de info y descripción)
-        bloque_altura = 32
+        bloque_altura = 34
         # Calcular cantidad de info lines
         info_lines = 0
         club = sanitizar_texto_pdf(jugador.get('Club', ''))
@@ -1514,7 +1514,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         info_lines += int(bool(altura and altura != '-'))
         info_lines += int(bool(nacionalidad))
         info_lines += int(bool(pie_habil))
-        info_altura = 7 + 6 * info_lines
+        info_altura = 8 + 6.2 * info_lines
         # Posición superior e inferior
         y_sup = y_linea_sup
         # Reduce el espacio entre la línea superior y el título
@@ -1524,12 +1524,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         altura_grupo = max(altura_foto, altura_info)
         # Ajuste: el grupo comienza más cerca de la línea superior
         # En vez de centrar, dejamos un margen fijo arriba
-        margen_arriba = 5
+        margen_arriba = 6
         foto_x = pdf.l_margin
         foto_y = y_sup + margen_arriba
-        foto_w = 32
-        foto_h = 32
-        datos_x = foto_x + foto_w + 8
+        foto_w = 34
+        foto_h = 34
+        datos_x = foto_x + foto_w + 10
         datos_w = pdf.w - pdf.r_margin - datos_x
         datos_y = foto_y
         pdf.set_y(foto_y)
@@ -1563,12 +1563,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         # Datos principales (alineados a la derecha de la foto, NO superpuestos)
         # El bloque de info (título + info lines) se alinea arriba, justo a la derecha de la foto
-        pdf.set_xy(datos_x, datos_y - 3)
-        pdf.set_font("Arial", 'B', 11)
+        pdf.set_xy(datos_x, datos_y - 1)
+        pdf.set_font("Arial", 'B', 12)
         pdf.set_text_color(*COLOR_GRIS_OSCURO)
-        pdf.cell(datos_w, 6, "Información del jugador", ln=True, align='L')
-        pdf.ln(0.2)
-        pdf.set_font("Arial", '', 9)
+        pdf.cell(datos_w, 7, "Información del jugador", ln=True, align='L')
+        pdf.ln(0.5)
+        pdf.set_font("Arial", '', 9.5)
         pdf.set_text_color(*COLOR_TEXTO)
         info = []
         if club and liga and liga != "-":
@@ -1606,11 +1606,11 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             info.append(f"Pie hábil: {pie_habil}")
         for dato in info:
             pdf.set_x(datos_x)
-            pdf.cell(datos_w, 5.3, dato, ln=True, align='L')
+            pdf.cell(datos_w, 5.8, dato, ln=True, align='L')
 
         # Asegurarse de que el cursor esté debajo de la foto antes de la línea y descripción
         y_actual = pdf.get_y()
-        y_bajo_foto = foto_y + foto_h + 1
+        y_bajo_foto = foto_y + foto_h + 2
         if y_actual < y_bajo_foto:
             pdf.set_y(y_bajo_foto)
 
@@ -1619,22 +1619,26 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_line_width(1)
         y_linea_desc = pdf.get_y() + 2
         pdf.line(pdf.l_margin, y_linea_desc, pdf.w - pdf.r_margin, y_linea_desc)
-        pdf.ln(4)
+        pdf.ln(5)
 
         # Descripción del jugador (debajo de info, justificada, +1pt tamaño, de lado a lado, cursiva)
         desc = sanitizar_texto_pdf(jugador.get("Descripcion", ""))
         if desc:
+            pdf.set_font("Arial", 'B', 11)
+            pdf.set_text_color(*COLOR_VERDE_PRINCIPAL)
+            pdf.cell(0, 6, "Descripción", ln=True, align="C")
             pdf.set_xy(pdf.l_margin, pdf.get_y())
             pdf.set_font("Arial", 'I', 10)
             pdf.set_text_color(50, 50, 50)
-            pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin, 6, desc, 0, 'J')
+            pdf.multi_cell(pdf.w - pdf.l_margin - pdf.r_margin, 5.5, desc, 0, 'J')
+            pdf.ln(1)
 
         # Línea decorativa debajo de la sección de datos y descripción
         pdf.set_draw_color(90, 154, 124)
         pdf.set_line_width(0.5)
         y_linea = max(foto_y + foto_h, pdf.get_y() + 2)
         pdf.line(margen_linea, y_linea, margen_linea + ancho_linea, y_linea)
-        pdf.ln(3)
+        pdf.ln(4)
 
 
         # =========================================
@@ -1683,7 +1687,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         radar_labels_multiline = [split_label(lbl) for lbl in radar_labels[:-1]]
 
         # Canvas más grande, radar más pequeño
-        fig, ax = plt.subplots(figsize=(3.6, 3.6), subplot_kw=dict(polar=True))
+        fig, ax = plt.subplots(figsize=(3.9, 3.9), subplot_kw=dict(polar=True))
         # Dibujar radar más pequeño dentro del canvas
         radar_radius = 8.2  # Limitar el radio máximo del radar
         ax.set_ylim(0, radar_radius)
@@ -1704,25 +1708,28 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         for i, angle in enumerate(angles[:-1]):
             label = radar_labels_multiline[i]
             # Coordenadas polares: radio mayor que el máximo
-            ax.text(angle, radar_radius + 0.8, label, ha='center', va='center', color="#1e3c72", fontsize=8, linespacing=1.2, fontweight='bold')
-        plt.tight_layout(pad=0.8)
+            ax.text(angle, radar_radius + 0.9, label, ha='center', va='center', color="#1e3c72", fontsize=8.5, linespacing=1.25, fontweight='bold')
+        plt.tight_layout(pad=0.9)
         img_buffer = BytesIO()
-        plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=130)
+        plt.savefig(img_buffer, format="PNG", bbox_inches="tight", dpi=140)
         plt.close(fig)
         img_buffer.seek(0)
 
         # --- Distribución PDF mejorada ---
         # Centrar el título "Valoración de aspectos"
-        pdf.ln(2)
-        pdf.set_font("Arial", "B", 11)
+        pdf.ln(3)
+        pdf.set_font("Arial", "B", 12)
         pdf.set_text_color(90, 154, 124)
         titulo = "Valoración de aspectos"
-        pdf.cell(0, 6, titulo, ln=True, align="C")
+        pdf.cell(0, 7, titulo, ln=True, align="C")
 
         y_seccion = pdf.get_y()
-        radar_width = (pdf.w - pdf.l_margin - pdf.r_margin) * 0.31
-        radar_x = pdf.w - pdf.r_margin - radar_width  # Margen derecho
-        tabla_x = pdf.l_margin  # Margen izquierdo
+        ancho_disponible = pdf.w - pdf.l_margin - pdf.r_margin
+        radar_width = ancho_disponible * 0.35
+        separacion_bloques = 8
+        tabla_x = pdf.l_margin
+        radar_x = pdf.w - pdf.r_margin - radar_width
+        tabla_w = radar_x - tabla_x - separacion_bloques
         y_max = y_seccion
 
         # Gráfico radar alineado a la derecha
@@ -1733,32 +1740,32 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_xy(tabla_x, y_seccion)
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(30, 60, 114)
-        pdf.cell(radar_width * 1.15, 6, "Detalle de puntajes por grupo:", ln=True)
+        pdf.cell(tabla_w, 6, "Detalle de puntajes por grupo:", ln=True)
         pdf.ln(1)
-        col1_w = radar_width * 0.62
-        col2_w = radar_width * 0.33
+        col1_w = tabla_w * 0.72
+        col2_w = tabla_w * 0.22
         for grupo, val in promedios_grupos.items():
-            pdf.set_font("Arial", '', 9)
+            pdf.set_font("Arial", '', 9.5)
             pdf.set_text_color(50, 50, 50)
-            pdf.cell(col1_w, 5.5, grupo, border=0)
-            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(col1_w, 6, grupo, border=0)
+            pdf.set_font("Arial", 'B', 10.5)
             pdf.set_text_color(90, 154, 124)
             val_str = f"{val:.2f}" if val is not None else "-"
-            pdf.cell(col2_w, 5.5, val_str, border=0, ln=True, align="R")
-        pdf.ln(1)
+            pdf.cell(col2_w, 6, val_str, border=0, ln=True, align="R")
+        pdf.ln(1.5)
         pdf.set_font("Arial", "I", 8)
         pdf.set_text_color(120, 120, 120)
-        pdf.cell(radar_width * 1.15, 5, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
-        pdf.ln(1)
+        pdf.cell(tabla_w, 5, "*Puntaje otorgado por el equipo de scouting", ln=True, align="L")
+        pdf.ln(1.5)
 
         # Línea divisoria verde
-        y_linea = max(y_seccion + radar_width + 4, pdf.get_y())
+        y_linea = max(y_seccion + radar_width + 5, pdf.get_y())
         pdf.set_draw_color(90, 154, 124)
         pdf.set_line_width(1.1)
         pdf.line(pdf.l_margin, y_linea, pdf.w - pdf.r_margin, y_linea)
-        pdf.ln(5)
-        if pdf.get_y() < y_linea + 5:
-            pdf.set_y(y_linea + 5)
+        pdf.ln(6)
+        if pdf.get_y() < y_linea + 6:
+            pdf.set_y(y_linea + 6)
 
         agregar_estadisticas_pdf(
             pdf,
@@ -1773,7 +1780,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_draw_color(90, 154, 124)
         pdf.set_line_width(0.8)
         pdf.line(pdf.l_margin, y_linea_stats, pdf.w - pdf.r_margin, y_linea_stats)
-        pdf.ln(4)
+        pdf.ln(5)
+
+        pdf.add_page()
 
         # ...resto del código...
         jugador_id = str(jugador.get("ID_Jugador"))  # Convertir a string para comparación

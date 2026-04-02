@@ -1661,19 +1661,31 @@ else:
 # -----------------------------
 # Menú principal
 # -----------------------------
-menu = st.sidebar.radio(
-    "📋 Menú principal",
-    [
-        "Panel General",
-        "Agenda",
-        "Jugadores",
-        "Ver informes",
-        "Lista corta",
-        "Panel Scouts",
-        "Estadísticas",
-    ]
-    , key="menu"
-)
+menu_options = [
+    "Panel General",
+    "Agenda",
+    "Jugadores",
+    "Ver informes",
+    "Lista corta",
+    "Panel Scouts",
+    "Estadísticas",
+]
+
+if st.session_state.get("menu") not in menu_options:
+    st.session_state["menu"] = "Panel General"
+
+st.sidebar.markdown("### Navegación")
+for option in menu_options:
+    button_key = f"menu_btn_{option.lower().replace(' ', '_')}"
+    if st.sidebar.button(
+        option,
+        key=button_key,
+        use_container_width=True,
+        type="primary" if st.session_state["menu"] == option else "secondary",
+    ):
+        st.session_state["menu"] = option
+
+menu = st.session_state["menu"]
 
 
 # =========================================================
@@ -2030,51 +2042,30 @@ if menu == "Jugadores":
             caracteristicas = [
                 item.strip() for item in str(jugador.get("Caracteristica", "") or "").split(",") if item.strip()
             ]
+            st.markdown("#### Descripción")
+            if descripcion_jugador:
+                st.write(descripcion_jugador)
+            else:
+                st.caption("Todavía no hay una descripción cargada para este jugador.")
 
-            st.markdown(
-                f"""
-                <div class="alab-copy-panel">
-                    <div class="alab-copy-title">Resumen cualitativo</div>
-                    <p class="alab-copy-text">{descripcion_jugador if descripcion_jugador else 'Todavía no hay una descripción cargada para este jugador.'}</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown("#### Rasgos destacados")
+            if caracteristicas:
+                st.markdown(" | ".join(caracteristicas))
+            else:
+                st.caption("Sin etiquetas cargadas.")
 
-            caracteristicas_html = "".join(
-                f"<span class='alab-badge alab-badge-muted'>{item}</span>" for item in caracteristicas
-            ) or "<span class='alab-badge alab-badge-muted'>Sin etiquetas cargadas</span>"
-
-            st.markdown(
-                f"""
-                <div class="alab-copy-panel">
-                    <div class="alab-copy-title">Rasgos destacados</div>
-                    <div class="alab-badge-row">{caracteristicas_html}</div>
-                    <p class="alab-copy-text">Estas etiquetas funcionan como lectura rápida del perfil observado antes de editar o cargar un nuevo informe.</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.caption("Esta lectura rápida queda separada del bloque de edición para evitar mezclas entre contenido y acciones.")
 
         with col3:
             nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
             scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
             scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
 
-            st.markdown(
-                f"""
-                <div class="alab-copy-panel">
-                    <div class="alab-copy-title">Contexto de seguimiento</div>
-                    <ul class="alab-copy-list">
-                        <li>Segunda nacionalidad: {nacionalidad_secundaria}</li>
-                        <li>Última línea registrada: {linea_actual}</li>
-                        <li>Scouts vinculados en shortlist: {scouts_texto}</li>
-                        <li>Nombre Wyscout: {jugador.get('nombre_wyscout', '-') or '-'}</li>
-                    </ul>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown("#### Contexto de seguimiento")
+            st.markdown(f"**Segunda nacionalidad:** {nacionalidad_secundaria}")
+            st.markdown(f"**Última línea registrada:** {linea_actual}")
+            st.markdown(f"**Scouts vinculados en shortlist:** {scouts_texto}")
+            st.markdown(f"**Nombre Wyscout:** {jugador.get('nombre_wyscout', '-') or '-'}")
 
             section_note("La edición del jugador y la carga de informes permanecen debajo, con sus widgets nativos y sin overrides directos.")
 

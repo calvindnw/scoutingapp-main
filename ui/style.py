@@ -36,6 +36,32 @@ def load_custom_css():
             background-attachment: fixed;
         }
 
+        [data-testid="stSidebar"] .stButton > button {
+            width: 100%;
+            min-height: 42px;
+            justify-content: flex-start;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, rgba(27, 51, 42, 0.92), rgba(10, 26, 20, 0.96));
+            color: var(--alab-text-1);
+            font-family: 'Manrope', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            box-shadow: none;
+            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+        }
+
+        [data-testid="stSidebar"] .stButton > button:hover {
+            border-color: rgba(90, 154, 124, 0.42);
+            background: linear-gradient(135deg, rgba(44, 77, 63, 0.96), rgba(14, 31, 24, 0.98));
+            transform: translateY(-1px);
+        }
+
+        [data-testid="stSidebar"] .stButton > button[kind="primary"] {
+            border-color: rgba(90, 154, 124, 0.42);
+            background: linear-gradient(135deg, rgba(90, 154, 124, 0.34), rgba(27, 51, 42, 0.98));
+        }
+
         .alab-section-title,
         .panel-title {
             color: var(--alab-brand);

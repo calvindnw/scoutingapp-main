@@ -878,21 +878,35 @@ def cargar_datos_estadisticas():
 
 
 def obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout):
-    if df_data_jugadores.empty or not str(nombre_wyscout).strip():
+    nombre_wyscout = str(nombre_wyscout).strip()
+    if df_data_jugadores.empty or not nombre_wyscout:
         return None
 
     columna_nombre = obtener_columna_por_aliases(
         df_data_jugadores,
-        ["Jugador", "Nombre", "Player", "nombre_wyscout", "Nombre Wyscout"],
+        [
+            "Nombre jugador",
+            "Nombre_jugador",
+            "Jugador",
+            "Nombre",
+            "Player",
+            "nombre_wyscout",
+            "Nombre Wyscout",
+        ],
     )
     if not columna_nombre:
-        columna_nombre = df_data_jugadores.columns[0]
+        return None
 
     objetivo = normalizar_clave_estadistica(nombre_wyscout)
+    if not objetivo:
+        return None
+
     coincidencias = df_data_jugadores[
         df_data_jugadores[columna_nombre].astype(str).map(normalizar_clave_estadistica) == objetivo
     ]
-    if coincidencias.empty:
+    coincidencias = coincidencias.dropna(how="all")
+
+    if coincidencias.empty or len(coincidencias) != 1:
         return None
     return coincidencias.iloc[0]
 
@@ -905,6 +919,9 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
 
     if not metricas:
         return None, "posicion_no_configurada"
+
+    if not nombre_wyscout:
+        return None, "jugador_sin_estadisticas"
 
     fila_jugador = obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout)
     if fila_jugador is None:

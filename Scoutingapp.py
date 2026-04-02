@@ -373,15 +373,16 @@ def login_ui():
 
     st.sidebar.caption("Si no ves la barra lateral, usá el formulario principal.")
 
-    _, col_login, _ = st.columns([1.1, 1.3, 1.1])
-    with col_login:
+    login_container = st.container()
+    with login_container:
         st.markdown(
             """
-            <div class="kpi-card" style="padding:28px 26px 20px 26px; text-align:center; margin-top:7vh;">
-                <div class="kpi-title" style="margin-bottom:10px;">Acceso a la plataforma</div>
-                <div class="kpi-value" style="font-size:2.15rem; margin-bottom:12px;">ScoutingApp Profesional</div>
-                <p style="max-width:480px;margin:0 auto 6px auto;color:rgba(226,236,231,0.82);">
-                    Ingresá con tu usuario y contraseña para acceder a jugadores, informes, shortlist y paneles de análisis.
+            <div class="login-shell">
+                <div class="login-title">Acceso a la plataforma</div>
+                <div class="login-heading">ScoutingApp Profesional</div>
+                <p class="login-copy">
+                    Ingresá con tu usuario y contraseña para acceder a jugadores, informes,
+                    shortlist y paneles de análisis.
                 </p>
             </div>
             """,
@@ -391,15 +392,15 @@ def login_ui():
         with st.form("login_form_main"):
             usuario = st.text_input("Usuario", key="login_usuario_main")
             clave = st.text_input("Contraseña", type="password", key="login_clave_main")
-            enviar = st.form_submit_button("Ingresar")
+            enviar = st.form_submit_button("Ingresar", type="primary")
 
-        if enviar:
-            usuario_validado = autenticar_usuario(usuario, clave)
-            if usuario_validado is not None:
-                st.session_state["user"] = usuario_validado["Usuario"]
-                st.session_state["role"] = usuario_validado["Rol"]
-                st.rerun()
-            st.error("Usuario o contraseña incorrectos")
+    if enviar:
+        usuario_validado = autenticar_usuario(usuario, clave)
+        if usuario_validado is not None:
+            st.session_state["user"] = usuario_validado["Usuario"]
+            st.session_state["role"] = usuario_validado["Rol"]
+            st.rerun()
+        st.error("Usuario o contraseña incorrectos")
     return False
 # =========================================================
 # INICIALIZACIÓN DE USUARIO Y ROL GLOBAL

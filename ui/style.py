@@ -90,6 +90,32 @@ def load_custom_css():
             background: transparent;
         }
 
+        [data-testid="collapsedControl"] {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            margin-top: 0.45rem;
+            margin-left: 0.45rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(180deg, rgba(14, 24, 20, 0.94), rgba(10, 26, 20, 0.98)) !important;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 1000;
+        }
+
+        [data-testid="collapsedControl"]:hover {
+            border-color: rgba(90, 154, 124, 0.42);
+            background: linear-gradient(180deg, rgba(18, 33, 27, 0.98), rgba(10, 26, 20, 1)) !important;
+        }
+
+        [data-testid="collapsedControl"] svg {
+            fill: rgba(255, 255, 255, 0.94) !important;
+        }
+
         .block-container {
             max-width: 1540px;
             padding-top: 1.15rem;
@@ -163,6 +189,59 @@ def load_custom_css():
             letter-spacing: 0.06em;
             margin: 0.2rem 0 0.55rem;
             text-align: center;
+        }
+
+        .login-shell {
+            max-width: 560px;
+            margin: 7vh auto 0;
+            padding: 1.35rem;
+            border-radius: 24px;
+            background:
+                linear-gradient(180deg, rgba(30, 60, 114, 0.12), transparent 42%),
+                linear-gradient(160deg, rgba(27, 51, 42, 0.92), rgba(10, 26, 20, 0.97));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-shell h2,
+        .login-shell p {
+            text-align: center;
+        }
+
+        .login-shell .login-title {
+            color: var(--brand) !important;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-shell .login-heading {
+            color: var(--text-1) !important;
+            font-family: 'Sora', sans-serif !important;
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.08;
+            margin-bottom: 0.8rem;
+        }
+
+        .login-shell .login-copy {
+            max-width: 420px;
+            margin: 0 auto 1rem;
+            color: var(--text-2) !important;
+        }
+
+        .login-shell div[data-testid="stForm"] {
+            margin-top: 0.4rem;
+            padding: 0.2rem;
+            overflow: visible;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
         }
 
         div[data-testid="stContainer"],

@@ -953,7 +953,7 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
     if fila_jugador is None:
         return None, "jugador_sin_estadisticas"
 
-    fila_comparativa = {"Jugador / Año": jugador.get("Nombre", "Jugador")}
+    fila_comparativa = {"Jugador / Promedio de liga": jugador.get("Nombre", "Jugador")}
     estadisticas_encontradas = 0
 
     for etiqueta, aliases in metricas:
@@ -1001,7 +1001,9 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
     )
 
     for _, fila_promedio in df_filtrado.iterrows():
-        fila_anual = {"Jugador / Año": str(int(fila_promedio["_anio_orden"]))}
+        fila_anual = {
+            "Jugador / Promedio de liga": f"Promedio de liga {int(fila_promedio['_anio_orden'])}"
+        }
         for etiqueta, aliases in metricas:
             columna = obtener_columna_por_aliases(df_promedios, aliases)
             valor = fila_promedio.get(columna) if columna else None
@@ -1013,7 +1015,7 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
 
 def abreviar_titulo_estadistica_pdf(texto):
     equivalencias = {
-        "Jugador / Año": "Jugador / Año",
+        "Jugador / Promedio de liga": "Jugador / Prom. liga",
         "Goles recibidos / 90": "Goles rec./90",
         "Remates en contra / 90": "Remates c./90",
         "Porcentaje de paradas": "% paradas",

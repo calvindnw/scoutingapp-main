@@ -1760,7 +1760,6 @@ if st.session_state["menu"] == "Jugadores":
         "🔍 Buscar jugador",
         [""] + list(opciones.keys())
     )
-    section_note("La búsqueda abre la ficha completa del jugador. Si no seleccionás ninguno, queda disponible el alta manual debajo.")
 
     # ---------------------------------------------------------
     # CREAR NUEVO JUGADOR
@@ -2064,8 +2063,6 @@ if st.session_state["menu"] == "Jugadores":
             st.markdown(f"**Última línea registrada:** {linea_actual}")
             st.markdown(f"**Scouts vinculados en shortlist:** {scouts_texto}")
             st.markdown(f"**Nombre Wyscout:** {jugador.get('nombre_wyscout', '-') or '-'}")
-
-            section_note("La edición del jugador y la carga de informes permanecen debajo, con sus widgets nativos y sin overrides directos.")
 
             
         # ---------------------------------------------------------
@@ -2396,7 +2393,6 @@ if st.session_state["menu"] == "Estadísticas":
             f"**Partidos jugados:** {resumen_estadistico['partidos_jugados']}  |  "
             f"**Minutos jugados:** {resumen_estadistico['minutos_jugados']}"
         )
-        section_note("La tabla compara los indicadores clave del jugador contra los promedios históricos de su liga y posición.")
 
         tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
             jugador,
@@ -2546,7 +2542,6 @@ if st.session_state["menu"] == "Ver informes":
             eyebrow="Listado",
             caption="El listado mantiene la lectura operativa y deja el detalle completo para el selector inferior.",
         )
-        section_note("Hacé clic sobre una fila para abrir directamente la ficha completa del jugador y sus informes asociados.")
 
         columnas = [
             "Fecha_Informe", "Nombre", "Club",
@@ -2748,8 +2743,6 @@ if st.session_state["menu"] == "Ver informes":
                             mime="application/pdf",
                             key=f"descarga_{j['ID_Jugador']}"
                         )
-
-                    section_note("Los informes asociados se gestionan abajo. La exportación PDF sigue consolidando toda la información disponible del jugador seleccionado.")
 
                 # =========================================================
                 # EXPANDER — EDITAR / ELIMINAR INFORMES
@@ -3331,7 +3324,6 @@ if st.session_state["menu"] == "Agenda":
         st.metric("Para hoy", para_hoy)
     with agenda_cols[3]:
         st.metric("Próximos 7 días", proximos)
-    section_note("Las tarjetas mantienen el flujo operativo actual. Este bloque solo mejora lectura y priorización del estado de agenda.")
 
     # =========================================================
     # FUNCIÓN DE BACKUP LOCAL
@@ -3543,7 +3535,6 @@ if st.session_state["menu"] == "Panel General":
         <div class="kpi-card alab-kpi"><div class="kpi-title alab-kpi-label">Informes últimos 30 días</div><div class="kpi-value alab-kpi-value">{informes_30}</div></div>
     </div>
     """, unsafe_allow_html=True)
-    section_note("Este panel concentra indicadores globales y accesos de análisis transversal. Los filtros operativos siguen funcionando igual que antes.")
 
     # =====================================================
     # ⭐ CONSENSO — LISTA CORTA

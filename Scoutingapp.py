@@ -180,7 +180,8 @@ def cargar_datos_sheets(nombre_hoja: str, columnas_base: list = None) -> pd.Data
             time.sleep(1)
         st.session_state["ultima_lectura"] = ahora
 
-        data = _leer_datos(nombre_hoja)
+        ws = obtener_hoja(nombre_hoja, columnas_base)
+        data = ws.get_all_records()
         df = pd.DataFrame(data)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
@@ -2122,89 +2123,83 @@ if menu == "Ver informes":
             "Línea", "Scout", "Equipos_Resultados", "Observaciones"
         ]
 
-        df_tabla = df_filtrado[[c for c in columnas if c in df_filtrado.columns]].copy()
+        df_detalle = df_filtrado.copy()
 
         try:
-            df_tabla["Fecha_dt"] = pd.to_datetime(
-                df_tabla["Fecha_Informe"],
+            df_detalle["Fecha_dt"] = pd.to_datetime(
+                df_detalle["Fecha_Informe"],
                 format="%d/%m/%Y",
                 errors="coerce"
             )
-            df_tabla = (
-                df_tabla
+            df_detalle = (
+                df_detalle
                 .sort_values("Fecha_dt", ascending=False)
-                .drop(columns="Fecha_dt")
             )
         except Exception:
             pass
 
-        gb = GridOptionsBuilder.from_dataframe(df_tabla)
-        gb.configure_selection("single", use_checkbox=False)
-        gb.configure_pagination(enabled=True, paginationAutoPageSize=True)
-        gb.configure_grid_options(domLayout="normal")
+        df_detalle = df_detalle.reset_index(drop=True)
+        df_detalle["N°"] = df_detalle.index + 1
 
-        widths = {
-            "Fecha_Informe": 100,
-            "Nombre": 150,
-            "Club": 130,
-            "Línea": 120,
-            "Scout": 120,
-            "Equipos_Resultados": 150,
-            "Observaciones": 420
-        }
+        df_tabla = df_detalle[[c for c in ["N°"] + columnas if c in df_detalle.columns]].copy()
 
-        for c in df_tabla.columns:
-            if c == "Observaciones":
-                gb.configure_column(c, wrapText=True, autoHeight=True, width=widths[c])
-            else:
-                gb.configure_column(c, width=widths.get(c, 120))
+        col_pag_1, col_pag_2, col_pag_3 = st.columns([1, 1, 3])
+        with col_pag_1:
+            page_size = st.selectbox(
+                "Informes por página",
+                [10, 15, 25, 50],
+                index=1,
+                key="ver_informes_page_size"
+            )
 
-        grid_response = AgGrid(
-            df_tabla,
-            gridOptions=gb.build(),
-            fit_columns_on_grid_load=True,
-            theme="blue",
-            height=580,
-            allow_unsafe_jscode=True,
-            update_mode="MODEL_CHANGED",
-            custom_css={
-                ".ag-header": {
-                    "background-color": "#3a6651",
-                    "color": "white",
-                    "font-weight": "bold",
-                    "font-size": "13px"
-                },
-                ".ag-row-even": {
-                    "background-color": "#2a4a3a !important",
-                    "color": "white !important"
-                },
-                ".ag-row-odd": {
-                    "background-color": "#3a6651 !important",
-                    "color": "white !important"
-                },
-                ".ag-cell": {
-                    "white-space": "normal !important",
-                    "line-height": "1.25",
-                    "padding": "5px",
-                    "font-size": "12.5px"
-                },
-            },
+        total_pages = max(1, (len(df_tabla) + page_size - 1) // page_size)
+
+        with col_pag_2:
+            pagina = st.number_input(
+                "Página",
+                min_value=1,
+                max_value=total_pages,
+                value=1,
+                step=1,
+                key="ver_informes_page"
+            )
+
+        inicio = (pagina - 1) * page_size
+        fin = inicio + page_size
+
+        with col_pag_3:
+            st.caption(
+                f"Mostrando {inicio + 1} a {min(fin, len(df_tabla))} de {len(df_tabla)} informes"
+            )
+
+        df_tabla_pagina = df_tabla.iloc[inicio:fin].copy()
+        df_detalle_pagina = df_detalle.iloc[inicio:fin].copy()
+
+        st.dataframe(
+            df_tabla_pagina,
+            use_container_width=True,
+            hide_index=True,
+            height=580
         )
 
-        # =========================================================
-        # SELECCIÓN ULTRA SEGURA (AgGrid FIX DEFINITIVO)
-        # =========================================================
-        selected_data = grid_response.get("selected_rows")
+        selected_data = []
+        opciones_seleccion = {
+            (
+                f"#{int(row['N°'])} | {row.get('Fecha_Informe', '-') } | "
+                f"{row.get('Nombre', '-') } | {row.get('Scout', '-') }"
+            ): idx
+            for idx, row in df_detalle_pagina.iterrows()
+        }
 
-        # Normalización TOTAL
-        if selected_data is None:
-            selected_data = []
-        elif isinstance(selected_data, pd.DataFrame):
-            selected_data = selected_data.to_dict("records")
-        elif isinstance(selected_data, dict):
-            selected_data = [selected_data]
-        elif not isinstance(selected_data, list):
-            selected_data = []
+        seleccion_informe = st.selectbox(
+            "Seleccionar informe para ver detalle",
+            [""] + list(opciones_seleccion.keys()),
+            key=f"ver_informes_select_{pagina}_{page_size}"
+        )
+
+        if seleccion_informe:
+            selected_idx = opciones_seleccion[seleccion_informe]
+            selected_data = [df_detalle.loc[selected_idx].to_dict()]
 
         # A PARTIR DE ACÁ SIEMPRE ES list[dict]
         if len(selected_data) > 0:
@@ -2369,6 +2364,9 @@ if menu == "Ver informes":
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"⚠️ Error al eliminar el informe: {e}")
+    else:
+        st.info("No hay informes que coincidan con los filtros actuales.")
+
     # Mostrar toast persistente si corresponde (eliminación de informe)
     if st.session_state.get("toast_eliminado_informe"):
         st.toast("🗑️ Informe eliminado correctamente", icon="🗑️")

@@ -1687,14 +1687,6 @@ menu = st.session_state["menu"]
 # =========================================================
 
 if st.session_state["menu"] == "Jugadores":
-
-    st.subheader("Gestión de jugadores e informes individuales")
-    section_header(
-        "Base de jugadores y seguimiento individual",
-        eyebrow="Jugadores",
-        caption="Buscá una ficha existente o cargá un nuevo jugador manteniendo intactos los formularios operativos de Streamlit.",
-    )
-
     # ---------------------------------------------------------
     # DATASETS
     # ---------------------------------------------------------
@@ -1755,6 +1747,30 @@ if st.session_state["menu"] == "Jugadores":
         for _, row in df_players.iterrows()
     }
 
+    ultimo_registro_jugador = "-"
+    if "Fecha_Informe" in df_reports.columns and not df_reports.empty:
+        fechas_base_jug = pd.to_datetime(df_reports["Fecha_Informe"], format="%d/%m/%Y", errors="coerce")
+        if fechas_base_jug.notna().any():
+            ultimo_registro_jugador = fechas_base_jug.max().strftime("%d/%m/%Y")
+
+    alcance_jugadores = "Base completa" if CURRENT_ROLE == "admin" else "Jugadores vinculados"
+
+    st.markdown(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Repositorio</div>
+            <h1 class="alab-dashboard-hero-title">Jugadores</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> {alcance_jugadores}</span>
+                <span class="alab-dashboard-chip"><strong>Jugadores</strong> {df_players['ID_Jugador'].nunique()}</span>
+                <span class="alab-dashboard-chip"><strong>Informes visibles</strong> {len(df_reports)}</span>
+                <span class="alab-dashboard-chip"><strong>Último registro</strong> {ultimo_registro_jugador}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     seleccion_jug = ""
     seleccion_jug = st.selectbox(
         "🔍 Buscar jugador",
@@ -1766,10 +1782,31 @@ if st.session_state["menu"] == "Jugadores":
     # ---------------------------------------------------------
     if not seleccion_jug:
 
+        st.markdown(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Jugadores cargados</span>
+                    <span class="alab-mini-value">{df_players['ID_Jugador'].nunique()}</span>
+                    <span class="alab-mini-copy">Base disponible para búsqueda, edición o alta manual.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Ligas cubiertas</span>
+                    <span class="alab-mini-value">{df_players['Liga'].nunique() if 'Liga' in df_players.columns else 0}</span>
+                    <span class="alab-mini-copy">Volumen actual de competencias representadas en el repositorio.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Nacionalidades</span>
+                    <span class="alab-mini-value">{df_players['Nacionalidad'].nunique() if 'Nacionalidad' in df_players.columns else 0}</span>
+                    <span class="alab-mini-copy">Cobertura geográfica del universo de jugadores cargados.</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         section_header(
             "Alta de nuevo jugador",
-            eyebrow="Operación",
-            caption="El formulario conserva el flujo original de carga y solo suma jerarquía visual alrededor del bloque.",
         )
 
 
@@ -1886,11 +1923,7 @@ if st.session_state["menu"] == "Jugadores":
         if not informes_jugador.empty and "Línea" in informes_jugador.columns:
             linea_actual = str(informes_jugador.iloc[-1].get("Línea", "-")) or "-"
 
-        section_header(
-            f"Ficha integral de {jugador['Nombre']}",
-            eyebrow="Perfil",
-            caption="Resumen de contexto, seguimiento e información operativa del jugador seleccionado.",
-        )
+        section_header(f"Ficha de {jugador['Nombre']}")
         resumen_cols = st.columns(4)
         with resumen_cols[0]:
             st.metric("Informes visibles", len(informes_jugador))
@@ -1907,8 +1940,6 @@ if st.session_state["menu"] == "Jugadores":
         col1, col2, col3 = st.columns([1.2, 1.2, 1.6])
 
         with col1:
-            st.markdown(f"### {jugador['Nombre']}")
-
             if str(jugador.get("URL_Foto", "")).startswith("http"):
                 st.image(jugador["URL_Foto"], width=160)
 
@@ -2039,30 +2070,54 @@ if st.session_state["menu"] == "Jugadores":
             caracteristicas = [
                 item.strip() for item in str(jugador.get("Caracteristica", "") or "").split(",") if item.strip()
             ]
-            st.markdown("#### Descripción")
-            if descripcion_jugador:
-                st.write(descripcion_jugador)
-            else:
-                st.caption("Todavía no hay una descripción cargada para este jugador.")
+            badges_caracteristicas = "".join(
+                f"<span class='alab-badge alab-badge-muted'>{item}</span>" for item in caracteristicas
+            )
+            if not badges_caracteristicas:
+                badges_caracteristicas = "<span class='alab-player-panel-copy'>Sin rasgos destacados cargados.</span>"
 
-            st.markdown("#### Rasgos destacados")
-            if caracteristicas:
-                st.markdown(" | ".join(caracteristicas))
-            else:
-                st.caption("Sin etiquetas cargadas.")
-
-            st.caption("Esta lectura rápida queda separada del bloque de edición para evitar mezclas entre contenido y acciones.")
+            st.markdown(
+                f"""
+                <div class="alab-player-panel">
+                    <div class="alab-player-panel-title">Lectura rápida</div>
+                    <div class="alab-player-panel-copy">{descripcion_jugador or 'Todavía no hay una descripción cargada para este jugador.'}</div>
+                    <div class="alab-badge-row" style="margin-top:0.9rem;">{badges_caracteristicas}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         with col3:
             nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
             scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
             scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
 
-            st.markdown("#### Contexto de seguimiento")
-            st.markdown(f"**Segunda nacionalidad:** {nacionalidad_secundaria}")
-            st.markdown(f"**Última línea registrada:** {linea_actual}")
-            st.markdown(f"**Scouts vinculados en shortlist:** {scouts_texto}")
-            st.markdown(f"**Nombre Wyscout:** {jugador.get('nombre_wyscout', '-') or '-'}")
+            st.markdown(
+                f"""
+                <div class="alab-player-panel">
+                    <div class="alab-player-panel-title">Contexto de seguimiento</div>
+                    <div class="alab-detail-grid">
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Segunda nacionalidad</span>
+                            <span class="alab-detail-value">{nacionalidad_secundaria}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Última línea</span>
+                            <span class="alab-detail-value">{linea_actual}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Shortlist</span>
+                            <span class="alab-detail-value">{scouts_texto}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Nombre Wyscout</span>
+                            <span class="alab-detail-value">{jugador.get('nombre_wyscout', '-') or '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
             
         # ---------------------------------------------------------
@@ -2202,7 +2257,7 @@ if st.session_state["menu"] == "Jugadores":
         if CURRENT_ROLE in ["admin", "scout"]:
 
             st.markdown("---")
-            st.subheader(f"📝 Cargar nuevo informe para {jugador['Nombre']}")
+            section_header("Cargar nuevo informe")
 
             with st.form(f"nuevo_informe_form_{jugador['ID_Jugador']}", clear_on_submit=True):
 
@@ -2226,8 +2281,6 @@ if st.session_state["menu"] == "Jugadores":
                         "En observación"
                     ]
                 )
-
-                st.markdown("### Evaluación técnica (1 a 10)")
 
                 with st.expander("🎯 Habilidades técnicas"):
                     col1, col2, col3 = st.columns(3)
@@ -2421,13 +2474,6 @@ if st.session_state["menu"] == "Estadísticas":
 # =========================================================
 
 if st.session_state["menu"] == "Ver informes":
-    st.subheader("📝 Informes cargados")
-    section_header(
-        "Base de informes y ficha extendida",
-        eyebrow="Análisis",
-        caption="Filtrá por scout, jugador, club, posición, línea o nacionalidad y profundizá sobre cada evaluación cargada.",
-    )
-
     # ---------------------------------------------------------
     # DATASETS SEGÚN ROL
     # ---------------------------------------------------------
@@ -2449,14 +2495,33 @@ if st.session_state["menu"] == "Ver informes":
         st.error(f"❌ Error al unir datos: {e}")
         st.stop()
 
+    ultimo_informe_base = "-"
+    if "Fecha_Informe" in df_reports.columns and not df_reports.empty:
+        fechas_tmp = pd.to_datetime(df_reports["Fecha_Informe"], format="%d/%m/%Y", errors="coerce")
+        if fechas_tmp.notna().any():
+            ultimo_informe_base = fechas_tmp.max().strftime("%d/%m/%Y")
+
+    alcance_informes = "Base completa" if CURRENT_ROLE == "admin" else "Tus informes"
+
+    st.markdown(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Repositorio</div>
+            <h1 class="alab-dashboard-hero-title">Ver informes</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> {alcance_informes}</span>
+                <span class="alab-dashboard-chip"><strong>Informes</strong> {len(df_reports)}</span>
+                <span class="alab-dashboard-chip"><strong>Último registro</strong> {ultimo_informe_base}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # =========================================================
     # FILTROS SUPERIORES
     # =========================================================
-    section_header(
-        "Filtros de consulta",
-        eyebrow="Exploración",
-        caption="Usá filtros combinados para acotar el universo de informes antes de abrir el detalle individual.",
-    )
+    section_header("Filtros")
 
     f1, f2, f3, f4, f5, f6 = st.columns(6)
 
@@ -2523,25 +2588,44 @@ if st.session_state["menu"] == "Ver informes":
     if filtro_nac:
         df_filtrado = df_filtrado[df_filtrado["Nacionalidad"].isin(filtro_nac)]
 
+    informes_filtrados = len(df_filtrado)
+    jugadores_filtrados = df_filtrado["ID_Jugador"].nunique() if not df_filtrado.empty else 0
+    scouts_filtrados = df_filtrado["Scout"].nunique() if not df_filtrado.empty else 0
+    clubes_filtrados = df_filtrado["Club"].nunique() if not df_filtrado.empty else 0
+
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Informes visibles</span>
+                <span class="alab-mini-value">{informes_filtrados}</span>
+                <span class="alab-mini-copy">Resultado actual luego de aplicar los filtros activos.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Jugadores</span>
+                <span class="alab-mini-value">{jugadores_filtrados}</span>
+                <span class="alab-mini-copy">Perfiles distintos presentes en el listado filtrado.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Scouts</span>
+                <span class="alab-mini-value">{scouts_filtrados}</span>
+                <span class="alab-mini-copy">Cantidad de observadores representados en la muestra.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Clubes</span>
+                <span class="alab-mini-value">{clubes_filtrados}</span>
+                <span class="alab-mini-copy">Instituciones incluidas dentro de la vista actual.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # =========================================================
     # TABLA PRINCIPAL (AgGrid) — DISEÑO ORIGINAL
     # =========================================================
     if not df_filtrado.empty:
-        resumen_cols = st.columns(4)
-        with resumen_cols[0]:
-            st.metric("Informes filtrados", len(df_filtrado))
-        with resumen_cols[1]:
-            st.metric("Jugadores", df_filtrado["ID_Jugador"].nunique())
-        with resumen_cols[2]:
-            st.metric("Scouts", df_filtrado["Scout"].nunique())
-        with resumen_cols[3]:
-            st.metric("Clubes", df_filtrado["Club"].nunique())
-
-        section_header(
-            "Informes disponibles",
-            eyebrow="Listado",
-            caption="El listado mantiene la lectura operativa y deja el detalle completo para el selector inferior.",
-        )
+        section_header("Informes disponibles")
 
         columnas = [
             "Fecha_Informe", "Nombre", "Club",
@@ -2623,6 +2707,8 @@ if st.session_state["menu"] == "Ver informes":
         if len(selected_data) > 0:
             jugador_sel = selected_data[0]
             nombre_jug = jugador_sel.get("Nombre", "")
+        else:
+            st.info("Seleccioná un informe del listado para abrir la ficha completa del jugador.")
 
 
         # =========================================================
@@ -2640,8 +2726,34 @@ if st.session_state["menu"] == "Ver informes":
                 st.markdown("---")
                 section_header(
                     f"Ficha del jugador: {j['Nombre']}",
-                    eyebrow="Detalle",
-                    caption="Resumen del perfil general con acceso directo a exportación PDF y gestión de informes asociados.",
+                )
+
+                st.markdown(
+                    f"""
+                    <div class="alab-mini-grid">
+                        <div class="alab-mini-stat">
+                            <span class="alab-mini-label">Informe seleccionado</span>
+                            <span class="alab-mini-value">{jugador_sel.get('Fecha_Informe', '-') or '-'}</span>
+                            <span class="alab-mini-copy">Fecha del registro abierto actualmente en la tabla.</span>
+                        </div>
+                        <div class="alab-mini-stat">
+                            <span class="alab-mini-label">Scout</span>
+                            <span class="alab-mini-value">{jugador_sel.get('Scout', '-') or '-'}</span>
+                            <span class="alab-mini-copy">Observador responsable del informe activo.</span>
+                        </div>
+                        <div class="alab-mini-stat">
+                            <span class="alab-mini-label">Línea</span>
+                            <span class="alab-mini-value">{jugador_sel.get('Línea', '-') or '-'}</span>
+                            <span class="alab-mini-copy">Criterio o estado asignado en la última evaluación visible.</span>
+                        </div>
+                        <div class="alab-mini-stat">
+                            <span class="alab-mini-label">Partido</span>
+                            <span class="alab-mini-value">{jugador_sel.get('Fecha_Partido', '-') or '-'}</span>
+                            <span class="alab-mini-copy">Referencia del encuentro asociado al informe seleccionado.</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
                 ficha_cols = st.columns(4)
@@ -2715,17 +2827,20 @@ if st.session_state["menu"] == "Ver informes":
                                     <span class="alab-detail-label">Nombre Wyscout</span>
                                     <span class="alab-detail-value">{nombre_wyscout}</span>
                                 </div>
+                                <div class="alab-detail-item">
+                                    <span class="alab-detail-label">Característica</span>
+                                    <span class="alab-detail-value">{caracteristica}</span>
+                                </div>
                             </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
 
-                    st.markdown(f"**Característica principal:** {caracteristica}")
                     if descripcion:
                         section_note(descripcion)
                     else:
-                        st.caption("Este jugador no tiene descripción cargada todavía.")
+                        st.info("Este jugador no tiene descripción cargada todavía.")
 
                 # =========================================================
                 # EXPORTAR PDF SIMPLE
@@ -2859,13 +2974,6 @@ if st.session_state["menu"] == "Ver informes":
 # =========================================================
 
 if st.session_state["menu"] == "Lista corta":
-    st.subheader("Lista corta de jugadores")
-    section_header(
-        "Lista corta táctica",
-        eyebrow="Shortlist",
-        caption="Visualizá la estructura 4-2-3-1, filtrá por período y mantené el control operativo de altas y bajas sin intervenir widgets nativos.",
-    )
-
     # -----------------------------------------------------
     # DATASETS
     # -----------------------------------------------------
@@ -2884,6 +2992,29 @@ if st.session_state["menu"] == "Lista corta":
 
     # Cortar referencia (evita SettingWithCopyWarning)
     df_short = df_short.copy()
+
+    ultimo_mov_short = "-"
+    if "Fecha_Agregado" in df_short.columns and not df_short.empty:
+        fechas_short = pd.to_datetime(df_short["Fecha_Agregado"], errors="coerce", dayfirst=True)
+        if fechas_short.notna().any():
+            ultimo_mov_short = fechas_short.max().strftime("%d/%m/%Y")
+
+    alcance_short = "Vista global" if CURRENT_ROLE == "admin" else "Tu shortlist"
+
+    st.markdown(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Shortlist</div>
+            <h1 class="alab-dashboard-hero-title">Lista corta</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> {alcance_short}</span>
+                <span class="alab-dashboard-chip"><strong>Registros</strong> {len(df_short)}</span>
+                <span class="alab-dashboard-chip"><strong>Último movimiento</strong> {ultimo_mov_short}</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # =========================================================
     # NORMALIZAR FECHA / AÑO / SEMESTRE (LISTA CORTA)
@@ -2928,11 +3059,7 @@ if st.session_state["menu"] == "Lista corta":
     # =========================================================
     # FILTROS
     # =========================================================
-    section_header(
-        "Filtros de shortlist",
-        eyebrow="Exploración",
-        caption="Combiná scout, liga, nacionalidad y ventana temporal para recalcular la vista táctica actual.",
-    )
+    section_header("Filtros")
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
@@ -3035,21 +3162,35 @@ if st.session_state["menu"] == "Lista corta":
     elif filtro_sem:
         periodo_activo = f"Semestre {filtro_sem}"
 
-    shortlist_cols = st.columns(4)
-    with shortlist_cols[0]:
-        st.metric("Jugadores filtrados", total_jugadores)
-    with shortlist_cols[1]:
-        st.metric("Scouts representados", df_filtrado["Agregado_Por"].nunique())
-    with shortlist_cols[2]:
-        st.metric("Posiciones cubiertas", df_filtrado_vista["Posición"].nunique())
-    with shortlist_cols[3]:
-        st.metric("Período activo", periodo_activo)
-
-    section_header(
-        "Vista táctica 4-2-3-1",
-        eyebrow="Distribución",
-        caption=f"Total de jugadores visibles: {total_jugadores}. Cada línea mantiene el orden táctico original y destaca vacantes cuando faltan perfiles.",
+    st.markdown(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Jugadores filtrados</span>
+                <span class="alab-mini-value">{total_jugadores}</span>
+                <span class="alab-mini-copy">Perfiles visibles en la estructura táctica actual.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Scouts representados</span>
+                <span class="alab-mini-value">{df_filtrado['Agregado_Por'].nunique()}</span>
+                <span class="alab-mini-copy">Cantidad de observadores con presencia en la vista filtrada.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Posiciones cubiertas</span>
+                <span class="alab-mini-value">{df_filtrado_vista['Posición'].nunique()}</span>
+                <span class="alab-mini-copy">Diversidad posicional disponible dentro del 4-2-3-1.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Período activo</span>
+                <span class="alab-mini-value">{periodo_activo}</span>
+                <span class="alab-mini-copy">Ventana temporal hoy aplicada sobre la shortlist.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+
+    section_header("Vista táctica 4-2-3-1")
 
     # =========================================================
     # CSS TARJETAS
@@ -3190,11 +3331,7 @@ if st.session_state["menu"] == "Lista corta":
     # GESTOR DE LISTA CORTA — Eliminación
     # =========================================================
     st.markdown("---")
-    section_header(
-        "Gestor de lista corta",
-        eyebrow="Mantenimiento",
-        caption="Buscá por nombre o club para revisar rápidamente qué jugadores siguen activos y eliminarlos de tu shortlist cuando corresponda.",
-    )
+    section_header("Gestor de lista corta")
 
     busqueda = st.text_input("Buscar jugador para eliminar (por nombre o club)")
 
@@ -3550,7 +3687,7 @@ if st.session_state["menu"] == "Panel General":
     # =====================================================
     # ⭐ CONSENSO — LISTA CORTA
     # =====================================================
-    section_header("Consenso en lista corta", eyebrow="Coincidencias")
+    section_header("Consenso en lista corta")
 
     df_short["Fecha_Agregado_dt"] = pd.to_datetime(
         df_short["Fecha_Agregado"], errors="coerce", dayfirst=True
@@ -3622,7 +3759,7 @@ if st.session_state["menu"] == "Panel General":
     # =====================================================
     # ⏰ SEGUIMIENTOS PRIORITARIOS VENCIDOS
     # =====================================================
-    section_header("Seguimientos prioritarios vencidos", eyebrow="Alertas")
+    section_header("Seguimientos prioritarios vencidos")
 
     lineas_prioritarias = ["Exponencial", "Destacado", "En observación"]
 
@@ -3743,7 +3880,6 @@ if st.session_state["menu"] == "Panel General":
 
         section_header(
             "Contratos por vencer",
-            eyebrow="Mercado",
         )
 
         st.markdown(
@@ -3832,7 +3968,7 @@ if st.session_state["menu"] == "Panel General":
     cobertura_posiciones = df_scores["Posición"].nunique() if not df_scores.empty else 0
     mejor_score = round(df_scores["Score"].max(), 2) if not df_scores.empty else 0
 
-    section_header("Top 5 por posición", eyebrow="Ranking")
+    section_header("Top 5 por posición")
     st.markdown(
         f"""
         <div class="alab-mini-grid">
@@ -3858,7 +3994,7 @@ if st.session_state["menu"] == "Panel General":
     # =========================
     # COMPARADOR DE JUGADORES
     # =========================
-    section_header("Comparador de jugadores", eyebrow="Comparación")
+    section_header("Comparador de jugadores")
 
     col_f1, col_f2, col_f3 = st.columns(3)
 

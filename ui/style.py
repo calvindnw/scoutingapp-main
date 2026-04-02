@@ -633,6 +633,16 @@ def load_custom_css():
             line-height: 1.15;
         }
 
+        .alab-player-panel-copy {
+            color: var(--alab-text-2);
+            font-size: 0.9rem;
+            line-height: 1.58;
+        }
+
+        .alab-player-panel-copy strong {
+            color: var(--alab-text-1);
+        }
+
         .alab-badge-row {
             display: flex;
             flex-wrap: wrap;

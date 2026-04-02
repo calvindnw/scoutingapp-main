@@ -37,6 +37,44 @@ def load_custom_css():
             color: var(--alab-text-1);
         }
 
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"] {
+            background: transparent;
+        }
+
+        [data-testid="stHeader"] {
+            background: linear-gradient(180deg, rgba(8, 20, 16, 0.98), rgba(8, 20, 16, 0.82));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        [data-testid="stToolbar"] {
+            right: 0.9rem;
+            top: 0.35rem;
+        }
+
+        [data-testid="stToolbar"] button,
+        [data-testid="stToolbar"] a,
+        [data-testid="stToolbar"] svg,
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"] {
+            color: rgba(255, 255, 255, 0.72) !important;
+            fill: rgba(255, 255, 255, 0.72) !important;
+        }
+
+        [data-testid="stToolbar"] button:hover,
+        [data-testid="stToolbar"] a:hover,
+        [data-testid="stToolbar"] button:hover svg {
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }
+
+        [data-testid="stDecoration"] {
+            background: linear-gradient(90deg, rgba(90, 154, 124, 0.55), rgba(143, 211, 180, 0.22));
+            height: 2px;
+        }
+
         .stApp p,
         .stApp li,
         .stApp label,

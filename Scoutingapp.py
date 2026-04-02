@@ -1085,6 +1085,7 @@ def agregar_estadisticas_pdf(
     color_texto,
 ):
     df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+    resumen_estadistico = obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores)
     tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
         jugador,
         df_promedios,
@@ -1100,6 +1101,18 @@ def agregar_estadisticas_pdf(
     pdf.set_font("Arial", "B", 12)
     pdf.set_text_color(*color_verde_principal)
     pdf.cell(0, 8, "Estadísticas", ln=True, align="C")
+    pdf.set_font("Arial", "", 9)
+    pdf.set_text_color(*color_texto)
+    pdf.cell(
+        0,
+        6,
+        sanitizar_texto_pdf(
+            f"Partidos jugados: {resumen_estadistico['partidos_jugados']}  |  "
+            f"Minutos jugados: {resumen_estadistico['minutos_jugados']}"
+        ),
+        ln=True,
+        align="C",
+    )
     pdf.ln(1)
 
     if tabla_estadisticas is None or tabla_estadisticas.empty:

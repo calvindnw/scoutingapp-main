@@ -846,17 +846,30 @@ def obtener_columna_por_aliases(df, aliases):
 def convertir_valor_numerico(valor):
     if valor is None or pd.isna(valor):
         return None
+    if isinstance(valor, (int, float, np.integer, np.floating)):
+        return float(valor)
+
     texto = str(valor).strip()
     if not texto or texto.lower() in {"nan", "none", "-", "—"}:
         return None
-    texto = texto.replace("%", "").replace(" ", "")
-    if "," in texto and "." in texto:
+
+    texto = texto.replace("%", "")
+    texto = re.sub(r"\s+", "", texto)
+    texto = texto.replace("−", "-").replace("–", "-").replace("—", "-")
+
+    if texto.count(",") > 1 and "." not in texto:
+        texto = texto.replace(",", "")
+    elif texto.count(".") > 1 and "," not in texto:
+        texto = texto.replace(".", "")
+    elif "," in texto and "." in texto:
         if texto.rfind(",") > texto.rfind("."):
-            texto = texto.replace(".", "").replace(",", ".")
+            texto = texto.replace(".", "")
+            texto = texto.replace(",", ".")
         else:
             texto = texto.replace(",", "")
-    else:
+    elif "," in texto:
         texto = texto.replace(",", ".")
+
     try:
         return float(texto)
     except ValueError:

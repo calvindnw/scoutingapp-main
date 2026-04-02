@@ -206,6 +206,71 @@ def load_custom_css():
             color: rgba(226, 236, 231, 0.62) !important;
         }
 
+        .stApp .stButton > button,
+        .stApp .stFormSubmitButton > button {
+            min-height: 42px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: linear-gradient(135deg, rgba(35, 67, 55, 0.96), rgba(10, 26, 20, 0.98));
+            color: #f6fcf8;
+            font-family: 'Manrope', sans-serif;
+            font-size: 0.94rem;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+        }
+
+        .stApp .stButton > button:hover,
+        .stApp .stFormSubmitButton > button:hover {
+            border-color: rgba(143, 211, 180, 0.54);
+            background: linear-gradient(135deg, rgba(53, 98, 80, 0.98), rgba(14, 31, 24, 0.99));
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .stApp .stButton > button[kind="primary"],
+        .stApp .stFormSubmitButton > button[kind="primary"] {
+            border-color: rgba(143, 211, 180, 0.58);
+            background: linear-gradient(135deg, rgba(90, 154, 124, 0.42), rgba(24, 54, 43, 0.98));
+            color: #ffffff;
+        }
+
+        .stApp .stButton > button:disabled,
+        .stApp .stFormSubmitButton > button:disabled,
+        .stApp .stButton > button[disabled],
+        .stApp .stFormSubmitButton > button[disabled] {
+            border-color: rgba(255, 255, 255, 0.09) !important;
+            background: linear-gradient(135deg, rgba(44, 55, 50, 0.9), rgba(25, 31, 28, 0.92)) !important;
+            color: rgba(236, 244, 240, 0.5) !important;
+            opacity: 1 !important;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, rgba(17, 37, 30, 0.98), rgba(8, 20, 16, 0.99)) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        [data-testid="stSidebar"] > div:first-child {
+            background: transparent !important;
+        }
+
+        [data-testid="stSidebar"] * {
+            color: var(--alab-text-1);
+        }
+
+        [data-testid="stSidebar"] .stMarkdown,
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] [data-testid="stText"],
+        [data-testid="stSidebar"] label p,
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
+            color: var(--alab-text-1) !important;
+        }
+
         [data-testid="stSidebar"] .stButton > button {
             width: 100%;
             min-height: 42px;

@@ -23,6 +23,7 @@ import plotly.express as px
 
 from io import BytesIO
 from datetime import date, datetime, timedelta
+from textwrap import dedent
 from fpdf import FPDF
 from st_aggrid import AgGrid, GridOptionsBuilder
 import matplotlib.patches as patches
@@ -32,6 +33,10 @@ import requests
 from PIL import Image
 from ui.style import load_custom_css
 from ui.components import section_header, section_note
+
+
+def render_html_block(content: str):
+    st.markdown(dedent(content).strip(), unsafe_allow_html=True)
 
 st.set_page_config(
     page_title="ScoutingApp Profesional",
@@ -1755,7 +1760,7 @@ if st.session_state["menu"] == "Jugadores":
 
     alcance_jugadores = "Base completa" if CURRENT_ROLE == "admin" else "Jugadores vinculados"
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-dashboard-hero">
             <div class="alab-dashboard-hero-kicker">Repositorio</div>
@@ -1767,8 +1772,7 @@ if st.session_state["menu"] == "Jugadores":
                 <span class="alab-dashboard-chip"><strong>Último registro</strong> {ultimo_registro_jugador}</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     seleccion_jug = ""
@@ -1782,7 +1786,7 @@ if st.session_state["menu"] == "Jugadores":
     # ---------------------------------------------------------
     if not seleccion_jug:
 
-        st.markdown(
+        render_html_block(
             f"""
             <div class="alab-mini-grid">
                 <div class="alab-mini-stat">
@@ -1801,8 +1805,7 @@ if st.session_state["menu"] == "Jugadores":
                     <span class="alab-mini-copy">Cobertura geográfica del universo de jugadores cargados.</span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
         section_header(
@@ -2076,15 +2079,14 @@ if st.session_state["menu"] == "Jugadores":
             if not badges_caracteristicas:
                 badges_caracteristicas = "<span class='alab-player-panel-copy'>Sin rasgos destacados cargados.</span>"
 
-            st.markdown(
+            render_html_block(
                 f"""
                 <div class="alab-player-panel">
                     <div class="alab-player-panel-title">Lectura rápida</div>
                     <div class="alab-player-panel-copy">{descripcion_jugador or 'Todavía no hay una descripción cargada para este jugador.'}</div>
                     <div class="alab-badge-row" style="margin-top:0.9rem;">{badges_caracteristicas}</div>
                 </div>
-                """,
-                unsafe_allow_html=True,
+                """
             )
 
         with col3:
@@ -2092,7 +2094,7 @@ if st.session_state["menu"] == "Jugadores":
             scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
             scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
 
-            st.markdown(
+            render_html_block(
                 f"""
                 <div class="alab-player-panel">
                     <div class="alab-player-panel-title">Contexto de seguimiento</div>
@@ -2115,8 +2117,7 @@ if st.session_state["menu"] == "Jugadores":
                         </div>
                     </div>
                 </div>
-                """,
-                unsafe_allow_html=True,
+                """
             )
 
             
@@ -2503,7 +2504,7 @@ if st.session_state["menu"] == "Ver informes":
 
     alcance_informes = "Base completa" if CURRENT_ROLE == "admin" else "Tus informes"
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-dashboard-hero">
             <div class="alab-dashboard-hero-kicker">Repositorio</div>
@@ -2514,8 +2515,7 @@ if st.session_state["menu"] == "Ver informes":
                 <span class="alab-dashboard-chip"><strong>Último registro</strong> {ultimo_informe_base}</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     # =========================================================
@@ -2593,7 +2593,7 @@ if st.session_state["menu"] == "Ver informes":
     scouts_filtrados = df_filtrado["Scout"].nunique() if not df_filtrado.empty else 0
     clubes_filtrados = df_filtrado["Club"].nunique() if not df_filtrado.empty else 0
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -2617,8 +2617,7 @@ if st.session_state["menu"] == "Ver informes":
                 <span class="alab-mini-copy">Instituciones incluidas dentro de la vista actual.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     # =========================================================
@@ -2728,7 +2727,7 @@ if st.session_state["menu"] == "Ver informes":
                     f"Ficha del jugador: {j['Nombre']}",
                 )
 
-                st.markdown(
+                render_html_block(
                     f"""
                     <div class="alab-mini-grid">
                         <div class="alab-mini-stat">
@@ -2752,8 +2751,7 @@ if st.session_state["menu"] == "Ver informes":
                             <span class="alab-mini-copy">Referencia del encuentro asociado al informe seleccionado.</span>
                         </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
 
                 ficha_cols = st.columns(4)
@@ -2793,7 +2791,7 @@ if st.session_state["menu"] == "Ver informes":
                     fin_contrato = j.get("Fecha_Fin_Contrato", "-") or "-"
                     nombre_wyscout = j.get("nombre_wyscout", "-") or "-"
 
-                    st.markdown(
+                    render_html_block(
                         f"""
                         <div class="alab-player-panel">
                             <div class="alab-player-panel-title">Perfil general</div>
@@ -2833,8 +2831,7 @@ if st.session_state["menu"] == "Ver informes":
                                 </div>
                             </div>
                         </div>
-                        """,
-                        unsafe_allow_html=True,
+                        """
                     )
 
                     if descripcion:
@@ -3001,7 +2998,7 @@ if st.session_state["menu"] == "Lista corta":
 
     alcance_short = "Vista global" if CURRENT_ROLE == "admin" else "Tu shortlist"
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-dashboard-hero">
             <div class="alab-dashboard-hero-kicker">Shortlist</div>
@@ -3012,8 +3009,7 @@ if st.session_state["menu"] == "Lista corta":
                 <span class="alab-dashboard-chip"><strong>Último movimiento</strong> {ultimo_mov_short}</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     # =========================================================
@@ -3162,7 +3158,7 @@ if st.session_state["menu"] == "Lista corta":
     elif filtro_sem:
         periodo_activo = f"Semestre {filtro_sem}"
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -3186,8 +3182,7 @@ if st.session_state["menu"] == "Lista corta":
                 <span class="alab-mini-copy">Ventana temporal hoy aplicada sobre la shortlist.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     section_header("Vista táctica 4-2-3-1")
@@ -3603,7 +3598,7 @@ if st.session_state["menu"] == "Panel General":
     alcance_panel = "Vista total" if CURRENT_ROLE == "admin" else "Vista de scout"
     periodo_panel = f"Temporada {datetime.today().year}/{str(datetime.today().year + 1)[-2:]}"
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-dashboard-hero">
             <div class="alab-dashboard-hero-kicker">Overview</div>
@@ -3614,8 +3609,7 @@ if st.session_state["menu"] == "Panel General":
                 <span class="alab-dashboard-chip"><strong>Periodo</strong> {periodo_panel}</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     df_players["ID_Jugador"] = df_players["ID_Jugador"].astype(str)
@@ -3729,7 +3723,7 @@ if st.session_state["menu"] == "Panel General":
     consenso_total = len(df_consenso)
     consenso_max = int(df_consenso["Cantidad_Scouts"].max()) if not df_consenso.empty else 0
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -3743,8 +3737,7 @@ if st.session_state["menu"] == "Panel General":
                 <span class="alab-mini-copy">Máxima cantidad de scouts coincidiendo sobre un mismo jugador.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     if df_consenso.empty:
@@ -3830,7 +3823,7 @@ if st.session_state["menu"] == "Panel General":
     alertas_media = int(round(df_alertas["Dias_sin_evaluar"].mean())) if not df_alertas.empty else 0
     lineas_activas = df_alertas["Línea"].nunique() if not df_alertas.empty else 0
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -3849,8 +3842,7 @@ if st.session_state["menu"] == "Panel General":
                 <span class="alab-mini-copy">Cantidad de líneas de seguimiento afectadas.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     if df_alertas.empty:
@@ -3882,7 +3874,7 @@ if st.session_state["menu"] == "Panel General":
             "Contratos por vencer",
         )
 
-        st.markdown(
+        render_html_block(
             f"""
             <div class="alab-mini-grid">
                 <div class="alab-mini-stat">
@@ -3901,8 +3893,7 @@ if st.session_state["menu"] == "Panel General":
                     <span class="alab-mini-copy">Referencia del contrato más cercano detectado en la base actual.</span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
         c1, c2 = st.columns(2)
@@ -3969,7 +3960,7 @@ if st.session_state["menu"] == "Panel General":
     mejor_score = round(df_scores["Score"].max(), 2) if not df_scores.empty else 0
 
     section_header("Top 5 por posición")
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -3983,8 +3974,7 @@ if st.session_state["menu"] == "Panel General":
                 <span class="alab-mini-copy">Puntaje promedio más alto del universo evaluado.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
     cols = st.columns(4)
     for i, (pos, titulo) in enumerate(posiciones):
@@ -4016,7 +4006,7 @@ if st.session_state["menu"] == "Panel General":
 
     df_base = df_base[(df_base["Edad"] >= edad_min) & (df_base["Edad"] <= edad_max)]
 
-    st.markdown(
+    render_html_block(
         f"""
         <div class="alab-mini-grid">
             <div class="alab-mini-stat">
@@ -4030,8 +4020,7 @@ if st.session_state["menu"] == "Panel General":
                 <span class="alab-mini-copy">Rango óptimo para comparar métricas sin perder legibilidad.</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     opciones_cmp = {f"{r.Nombre} ({r.Club})": r.ID_Jugador for r in df_base.itertuples()}
@@ -4065,7 +4054,7 @@ if st.session_state["menu"] == "Panel General":
         clubes_cmp = df_cmp["Club"].nunique() if not df_cmp.empty else 0
         edad_media_cmp = int(round(df_cmp["Edad"].mean())) if df_cmp["Edad"].notna().any() else 0
 
-        st.markdown(
+        render_html_block(
             f"""
             <div class="alab-mini-grid">
                 <div class="alab-mini-stat">
@@ -4089,8 +4078,7 @@ if st.session_state["menu"] == "Panel General":
                     <span class="alab-mini-copy">Diversidad de origen y edad promedio del grupo analizado.</span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
         fig_cmp = px.bar(

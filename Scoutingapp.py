@@ -112,14 +112,29 @@ def conectar_sheets():
         st.stop()
 
 
+def normalizar_nombre_hoja(nombre):
+    if nombre is None:
+        return ""
+    texto = unicodedata.normalize("NFKD", str(nombre).strip())
+    texto = "".join(char for char in texto if not unicodedata.combining(char))
+    texto = re.sub(r"\s+", " ", texto)
+    return texto.casefold()
+
+
 # =========================================================
 # OBTENER O CREAR HOJA
 # =========================================================
 def obtener_hoja(nombre_hoja: str, columnas_base: list = None):
     try:
         book = conectar_sheets()
-        hojas = [ws.title for ws in book.worksheets()]
-        if nombre_hoja not in hojas:
+        hojas = book.worksheets()
+        nombre_normalizado = normalizar_nombre_hoja(nombre_hoja)
+
+        for hoja in hojas:
+            if normalizar_nombre_hoja(hoja.title) == nombre_normalizado:
+                return hoja
+
+        if nombre_hoja not in [ws.title for ws in hojas]:
             ws = book.add_worksheet(title=nombre_hoja, rows=500, cols=20)
             if columnas_base:
                 ws.append_row(columnas_base)

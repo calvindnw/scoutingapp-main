@@ -13,6 +13,8 @@
 # ----------------------
 import os
 import base64
+import re
+import unicodedata
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -690,6 +692,265 @@ def generar_id_unico(df, columna="ID_Jugador"):
     ids = df[columna].dropna().astype(str)
     nums = [int(i) for i in ids if i.isdigit()]
     return max(nums) + 1 if nums else 1
+
+
+POSICION_ESTADISTICAS_CLAVE = {
+    "Arquero": [
+        ("Goles recibidos / 90", ["Goles_recibidos/90", "Goles_recibidos_90"]),
+        ("Remates en contra / 90", ["Remates_en_contra/90", "Remates_en_contra_90"]),
+        ("Porcentaje de paradas", ["Paradas"]),
+        (
+            "Porterías imbatidas / 90",
+            ["Porterías_imbatidas_en_los_90", "Porterias_imbatidas_en_los_90"],
+        ),
+    ],
+    "Defensa central derecho": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+    ],
+    "Defensa central izquierdo": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+    ],
+    "Lateral derecho": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+    ],
+    "Lateral izquierdo": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+    ],
+    "Mediocampista defensivo": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+    ],
+    "Mediocampista mixto": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+    ],
+    "Mediocampista ofensivo": [
+        ("Duelos defensivos ganados", ["Duelos_defensivos_ganados"]),
+        ("Interceptaciones / 90", ["Interceptaciones/90", "Interceptaciones_90"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+    ],
+    "Extremo derecho": [
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+        ("Regates exitosos", ["Regates_realizados"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+        ("Precisión de centros", ["Precisión_centros", "Precision_centros"]),
+    ],
+    "Extremo izquierdo": [
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+        ("Regates exitosos", ["Regates_realizados"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        (
+            "Precisión de pases largos",
+            ["Precisión_pases_largos", "Precision_pases_largos"],
+        ),
+        ("Precisión de centros", ["Precisión_centros", "Precision_centros"]),
+    ],
+    "Delantero centro": [
+        ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
+        ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
+        ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
+        ("Precisión de remates", ["Tiros_a_la_portería", "Tiros_a_la_porteria"]),
+    ],
+}
+
+
+def normalizar_clave_estadistica(valor):
+    if valor is None or pd.isna(valor):
+        return ""
+    texto = str(valor).strip().lower()
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(char for char in texto if not unicodedata.combining(char))
+    texto = texto.replace("%", " porcentaje ")
+    texto = texto.replace("/", " ")
+    texto = re.sub(r"[^a-z0-9]+", "_", texto)
+    return texto.strip("_")
+
+
+def obtener_columna_por_aliases(df, aliases):
+    if df.empty:
+        return None
+    columnas_normalizadas = {
+        normalizar_clave_estadistica(columna): columna for columna in df.columns
+    }
+    for alias in aliases:
+        columna = columnas_normalizadas.get(normalizar_clave_estadistica(alias))
+        if columna:
+            return columna
+    return None
+
+
+def convertir_valor_numerico(valor):
+    if valor is None or pd.isna(valor):
+        return None
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "-", "—"}:
+        return None
+    texto = texto.replace("%", "").replace(" ", "")
+    if "," in texto and "." in texto:
+        if texto.rfind(",") > texto.rfind("."):
+            texto = texto.replace(".", "").replace(",", ".")
+        else:
+            texto = texto.replace(",", "")
+    else:
+        texto = texto.replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return None
+
+
+def formatear_valor_estadistica(valor):
+    numero = convertir_valor_numerico(valor)
+    if numero is None:
+        return "-"
+    return f"{numero:.2f}"
+
+
+@st.cache_data(ttl=120)
+def cargar_datos_estadisticas():
+    df_promedios = cargar_datos_sheets("Promedios de Liga")
+    df_data_jugadores = cargar_datos_sheets("Data Jugadores")
+    return df_promedios, df_data_jugadores
+
+
+def obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout):
+    if df_data_jugadores.empty or not str(nombre_wyscout).strip():
+        return None
+
+    columna_nombre = obtener_columna_por_aliases(
+        df_data_jugadores,
+        ["Jugador", "Nombre", "Player", "nombre_wyscout", "Nombre Wyscout"],
+    )
+    if not columna_nombre:
+        columna_nombre = df_data_jugadores.columns[0]
+
+    objetivo = normalizar_clave_estadistica(nombre_wyscout)
+    coincidencias = df_data_jugadores[
+        df_data_jugadores[columna_nombre].astype(str).map(normalizar_clave_estadistica) == objetivo
+    ]
+    if coincidencias.empty:
+        return None
+    return coincidencias.iloc[0]
+
+
+def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
+    posicion = str(jugador.get("Posición", "")).strip()
+    liga = str(jugador.get("Liga", "")).strip()
+    nombre_wyscout = str(jugador.get("nombre_wyscout", "")).strip()
+    metricas = POSICION_ESTADISTICAS_CLAVE.get(posicion, [])
+
+    if not metricas:
+        return None, "posicion_no_configurada"
+
+    fila_jugador = obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout)
+    if fila_jugador is None:
+        return None, "jugador_sin_estadisticas"
+
+    fila_comparativa = {"Jugador / Año": jugador.get("Nombre", "Jugador")}
+    estadisticas_encontradas = 0
+
+    for etiqueta, aliases in metricas:
+        columna = obtener_columna_por_aliases(df_data_jugadores, aliases)
+        valor = fila_jugador.get(columna) if columna else None
+        fila_comparativa[etiqueta] = formatear_valor_estadistica(valor)
+        if fila_comparativa[etiqueta] != "-":
+            estadisticas_encontradas += 1
+
+    if estadisticas_encontradas == 0:
+        return None, "jugador_sin_estadisticas"
+
+    filas = [fila_comparativa]
+
+    if df_promedios.empty:
+        return pd.DataFrame(filas), "sin_promedios"
+
+    col_posicion = obtener_columna_por_aliases(df_promedios, ["Posición", "Posicion"])
+    col_liga = obtener_columna_por_aliases(df_promedios, ["Liga"])
+    col_anio = obtener_columna_por_aliases(df_promedios, ["Año", "Ano", "Temporada", "Year"])
+
+    if not all([col_posicion, col_liga, col_anio]):
+        return pd.DataFrame(filas), "sin_promedios"
+
+    posicion_objetivo = normalizar_clave_estadistica(posicion)
+    liga_objetivo = normalizar_clave_estadistica(liga)
+
+    df_filtrado = df_promedios[
+        (df_promedios[col_posicion].astype(str).map(normalizar_clave_estadistica) == posicion_objetivo)
+        & (df_promedios[col_liga].astype(str).map(normalizar_clave_estadistica) == liga_objetivo)
+    ].copy()
+
+    if df_filtrado.empty:
+        return pd.DataFrame(filas), "sin_promedios"
+
+    df_filtrado["_anio_orden"] = pd.to_numeric(df_filtrado[col_anio], errors="coerce")
+    df_filtrado = df_filtrado.dropna(subset=["_anio_orden"])
+
+    if df_filtrado.empty:
+        return pd.DataFrame(filas), "sin_promedios"
+
+    df_filtrado = (
+        df_filtrado.sort_values("_anio_orden", ascending=False)
+        .drop_duplicates(subset=[col_anio], keep="first")
+    )
+
+    for _, fila_promedio in df_filtrado.iterrows():
+        fila_anual = {"Jugador / Año": str(int(fila_promedio["_anio_orden"]))}
+        for etiqueta, aliases in metricas:
+            columna = obtener_columna_por_aliases(df_promedios, aliases)
+            valor = fila_promedio.get(columna) if columna else None
+            fila_anual[etiqueta] = formatear_valor_estadistica(valor)
+        filas.append(fila_anual)
+
+    return pd.DataFrame(filas), "ok"
 
 
 # ---------------------------------------------------------
@@ -1454,6 +1715,7 @@ menu = st.sidebar.radio(
         "Ver informes",
         "Lista corta",
         "Panel Scouts",
+        "Estadísticas",
     ]
     , key="menu"
 )
@@ -2011,6 +2273,59 @@ if menu == "Jugadores":
         if st.session_state.get("toast_guardado_informe"):
             st.toast(f"✅ Informe guardado correctamente para {st.session_state['toast_guardado_informe']}", icon="✅")
             st.session_state["toast_guardado_informe"] = False
+
+
+    # =========================================================
+    # BLOQUE ESTADÍSTICAS — Comparativo jugador vs promedio de liga
+    # =========================================================
+
+    if menu == "Estadísticas":
+
+        st.subheader("Estadísticas comparativas")
+
+        df_players = df_players_all.copy()
+
+        opciones = {
+            f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
+            for _, row in df_players.iterrows()
+        }
+
+        seleccion_jug = st.selectbox(
+            "🔍 Buscar jugador",
+            [""] + list(opciones.keys()),
+            key="estadisticas_buscar_jugador"
+        )
+
+        if seleccion_jug:
+            id_jugador = str(opciones[seleccion_jug])
+            jugador = df_players[df_players["ID_Jugador"].astype(str) == id_jugador].iloc[0]
+
+            st.markdown(
+                f"**Jugador:** {jugador.get('Nombre', '-')}  |  "
+                f"**Posición:** {jugador.get('Posición', '-')}  |  "
+                f"**Liga:** {jugador.get('Liga', '-')}"
+            )
+
+            df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+            tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
+                jugador,
+                df_promedios,
+                df_data_jugadores,
+            )
+
+            if estado_estadisticas == "jugador_sin_estadisticas":
+                st.info("Jugador sin estadísticas disponibles")
+            elif estado_estadisticas == "posicion_no_configurada":
+                st.warning("No hay estadísticas clave configuradas para la posición seleccionada.")
+            else:
+                if estado_estadisticas == "sin_promedios":
+                    st.warning("No hay promedios de liga disponibles para la posición y liga seleccionadas.")
+
+                st.dataframe(
+                    tabla_estadisticas,
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
 
 

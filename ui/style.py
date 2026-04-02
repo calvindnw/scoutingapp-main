@@ -120,47 +120,6 @@ def load_custom_css():
             line-height: 1.5;
         }
 
-        .alab-stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 0.8rem;
-            margin: 0.4rem 0 1rem;
-        }
-
-        .alab-stat-card {
-            padding: 0.9rem 0.95rem;
-            border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            background:
-                linear-gradient(180deg, rgba(30, 60, 114, 0.08), transparent 44%),
-                linear-gradient(145deg, rgba(27, 51, 42, 0.92), rgba(10, 26, 20, 0.96));
-            box-shadow: var(--alab-shadow-sm);
-        }
-
-        .alab-stat-label {
-            color: var(--alab-text-3);
-            font-size: 0.72rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .alab-stat-value {
-            margin-top: 0.42rem;
-            color: var(--alab-text-1);
-            font-family: 'Sora', sans-serif;
-            font-size: 1.35rem;
-            font-weight: 700;
-            line-height: 1.1;
-        }
-
-        .alab-stat-meta {
-            margin-top: 0.25rem;
-            color: var(--alab-text-3);
-            font-size: 0.76rem;
-            line-height: 1.35;
-        }
-
         .alab-kpi-grid,
         .kpi-container {
             display: grid;
@@ -266,45 +225,6 @@ def load_custom_css():
             font-size: 1.1rem;
             font-weight: 700;
             line-height: 1.15;
-        }
-
-        .alab-copy-panel {
-            height: 100%;
-            margin-bottom: 0.9rem;
-            padding: 1rem 1rem 0.95rem;
-            border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            background:
-                linear-gradient(180deg, rgba(30, 60, 114, 0.08), transparent 42%),
-                linear-gradient(145deg, rgba(27, 51, 42, 0.9), rgba(10, 26, 20, 0.96));
-            box-shadow: var(--alab-shadow-sm);
-        }
-
-        .alab-copy-title {
-            margin: 0 0 0.55rem;
-            color: var(--alab-text-1);
-            font-family: 'Sora', sans-serif;
-            font-size: 0.98rem;
-            font-weight: 700;
-        }
-
-        .alab-copy-text {
-            margin: 0;
-            color: var(--alab-text-2);
-            font-size: 0.87rem;
-            line-height: 1.58;
-        }
-
-        .alab-copy-list {
-            margin: 0;
-            padding-left: 1rem;
-            color: var(--alab-text-2);
-            font-size: 0.84rem;
-            line-height: 1.55;
-        }
-
-        .alab-copy-list li + li {
-            margin-top: 0.24rem;
         }
 
         .alab-badge-row {
@@ -492,8 +412,7 @@ def load_custom_css():
 
         @media (max-width: 1024px) {
             .alab-kpi-grid,
-            .kpi-container,
-            .alab-stat-grid {
+            .kpi-container {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
 

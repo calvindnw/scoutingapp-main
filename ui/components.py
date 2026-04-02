@@ -26,33 +26,6 @@ def section_note(text):
     )
 
 
-def stat_strip(items):
-    blocks = []
-    for item in items:
-        label = item.get("label", "")
-        value = item.get("value", "")
-        meta = item.get("meta", "")
-        meta_html = f"<div class='alab-stat-meta'>{meta}</div>" if meta else ""
-        blocks.append(
-            f"""
-            <div class="alab-stat-card">
-                <div class="alab-stat-label">{label}</div>
-                <div class="alab-stat-value">{value}</div>
-                {meta_html}
-            </div>
-            """
-        )
-
-    st.markdown(
-        f"""
-        <div class="alab-stat-grid">
-            {''.join(blocks)}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def kpi_card(title, value):
     st.markdown(
         f"""

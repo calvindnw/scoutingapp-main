@@ -2049,7 +2049,6 @@ if st.session_state["menu"] == "Jugadores":
                         </div>
                         <div class="alab-player-summary">
                             <div class="alab-player-identity-block alab-player-identity-block-compact">
-                                <div class="alab-player-access-label">Identidad y accesos</div>
                                 <div class="alab-player-subtitle">{perfil_subtitulo}</div>
                                 <div class="alab-player-context">{perfil_contexto}</div>
                             </div>
@@ -2076,11 +2075,6 @@ if st.session_state["menu"] == "Jugadores":
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Ficha rápida</div>
-                    <div class="alab-badge-row">
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Posición', '-')}</span>
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Club', '-')}</span>
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Liga', '-')}</span>
-                    </div>
                     <div class="alab-detail-grid">
                         <div class="alab-detail-item">
                             <span class="alab-detail-label">Nacimiento</span>

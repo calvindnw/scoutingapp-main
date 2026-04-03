@@ -702,7 +702,7 @@ def load_custom_css():
             min-height: 150px;
             flex-direction: column;
             justify-content: center;
-            gap: 1rem;
+            gap: 1.15rem;
         }
 
         .alab-player-identity-block {
@@ -715,14 +715,6 @@ def load_custom_css():
             gap: 0.18rem;
         }
 
-        .alab-player-access-label {
-            color: var(--alab-text-3);
-            font-size: 0.72rem;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
         .alab-player-name {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
@@ -733,14 +725,14 @@ def load_custom_css():
 
         .alab-player-subtitle {
             color: var(--alab-text-2);
-            font-size: 0.96rem;
+            font-size: 1rem;
             font-weight: 600;
             line-height: 1.35;
         }
 
         .alab-player-context {
             color: var(--alab-text-3);
-            font-size: 0.82rem;
+            font-size: 0.9rem;
             font-weight: 600;
             line-height: 1.35;
         }
@@ -773,7 +765,7 @@ def load_custom_css():
         }
 
         .alab-player-photo {
-            width: 164px;
+            width: 188px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
             border-radius: 18px;
@@ -785,7 +777,7 @@ def load_custom_css():
         .alab-player-photo-placeholder {
             display: grid;
             place-items: center;
-            width: 164px;
+            width: 188px;
             aspect-ratio: 1 / 1;
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.08);

@@ -1631,7 +1631,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
 
         barras_fin_y = barras_y + 2
         if grafico_barras is not None:
-            barras_w, barras_h = ajustar_imagen_a_limites(grafico_barras, panel_w - 14, 37)
+            barras_w, barras_h = ajustar_imagen_a_limites(grafico_barras, panel_w - 8, 43)
             barras_x = pdf.l_margin + (panel_w - barras_w) / 2
             barras_img_y = barras_y + 5
             pdf.set_draw_color(*color_borde)
@@ -1639,16 +1639,16 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
             pdf.image(grafico_barras, x=barras_x, y=barras_img_y, w=barras_w)
             barras_fin_y = barras_img_y + barras_h
 
-        radar_titulo_y = barras_fin_y + 4.5
+        radar_titulo_y = barras_fin_y + 3
         pdf.set_xy(pdf.l_margin, radar_titulo_y)
         pdf.set_font("Arial", "B", 8.5)
         pdf.set_text_color(*color_texto)
         pdf.cell(panel_w, 4, "Radar", ln=True)
 
         if grafico_radar is not None:
-            radar_w, radar_h = ajustar_imagen_a_limites(grafico_radar, 66, 38)
+            radar_w, radar_h = ajustar_imagen_a_limites(grafico_radar, 80, 46)
             radar_x = pdf.l_margin + (panel_w - radar_w) / 2
-            radar_y = radar_titulo_y + 5
+            radar_y = radar_titulo_y + 4.2
             pdf.set_draw_color(*color_borde)
             pdf.rect(radar_x - 1.5, radar_y - 1.5, radar_w + 3, radar_h + 3)
             pdf.image(grafico_radar, x=radar_x, y=radar_y, w=radar_w)

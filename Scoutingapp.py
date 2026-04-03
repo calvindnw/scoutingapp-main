@@ -4430,6 +4430,13 @@ if st.session_state["menu"] == "Panel Scouts":
         on="ID_Jugador",
         how="left"
     )
+    df["Posición"] = (
+        df["Posición"]
+        .fillna("Sin posición")
+        .astype(str)
+        .str.strip()
+        .replace({"": "Sin posición", "nan": "Sin posición", "None": "Sin posición", "undefined": "Sin posición"})
+    )
 
     # -----------------------------------------------------
     # 🔎 FILTROS
@@ -4549,7 +4556,13 @@ if st.session_state["menu"] == "Panel Scouts":
         pos_df.columns = ["Posición", "Cantidad"]
 
         fig = px.pie(pos_df, names="Posición", values="Cantidad", hole=0.45)
+        fig.update_traces(
+            textinfo="percent",
+            textposition="inside",
+            hovertemplate="%{label}<br>Informes: %{value}<br>Participación: %{percent}<extra></extra>",
+        )
         fig = apply_glass_plotly(fig)
+        fig.update_layout(legend_title_text="")
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:

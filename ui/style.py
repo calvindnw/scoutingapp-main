@@ -216,7 +216,7 @@ def load_custom_css():
         }
 
         .alab-login-top-spacer {
-            height: 1.65rem;
+            height: 1.95rem;
         }
 
         .alab-login-section-gap {
@@ -409,7 +409,7 @@ def load_custom_css():
 
         [data-testid="stAppViewContainer"] .block-container {
             max-width: 1280px;
-            padding-top: 1.9rem;
+            padding-top: 0.85rem;
         }
 
         .stApp [data-testid="stExpander"] {

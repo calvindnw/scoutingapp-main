@@ -680,6 +680,74 @@ def load_custom_css():
             min-height: 222px;
         }
 
+        .alab-player-media-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+        }
+
+        .alab-player-media-wrap {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin: 0.2rem 0 0.85rem;
+        }
+
+        .alab-player-photo {
+            width: min(170px, 72%);
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: var(--alab-shadow-sm);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .alab-player-photo-placeholder {
+            display: grid;
+            place-items: center;
+            width: min(170px, 72%);
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--alab-text-3);
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+
+        .alab-player-link-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .alab-player-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+
+        .alab-player-link a,
+        .alab-player-link a:visited {
+            color: var(--alab-text-2);
+            text-decoration: none;
+        }
+
+        .alab-player-link a:hover {
+            color: var(--alab-text-1);
+        }
+
         .alab-player-panel-title {
             margin: 0 0 0.65rem;
             color: var(--alab-text-1);

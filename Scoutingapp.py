@@ -2010,88 +2010,38 @@ if st.session_state["menu"] == "Jugadores":
         nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
         scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
         scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
+        foto_url = str(jugador.get("URL_Foto", "") or "").strip()
+
+        links_html = []
+        if str(jugador.get("URL_Perfil", "")).startswith("http"):
+            links_html.append(f"<a href='{jugador['URL_Perfil']}' target='_blank'>Perfil externo</a>")
+        if str(jugador.get("video_url", "")).startswith("http"):
+            links_html.append(f"<a href='{jugador['video_url']}' target='_blank'>Ver video</a>")
+        if str(jugador.get("Instagram", "")).startswith("http"):
+            links_html.append(f"<a href='{jugador['Instagram']}' target='_blank'>Instagram</a>")
+        links_row = "".join(f"<span class='alab-player-link'>{link}</span>" for link in links_html)
+
+        foto_html = (
+            f"<img src='{foto_url}' alt='Foto de {jugador.get('Nombre', 'jugador')}' class='alab-player-photo'/>"
+            if foto_url.startswith("http")
+            else "<div class='alab-player-photo-placeholder'>Sin foto</div>"
+        )
 
         top_left, top_right = st.columns(2)
         bottom_left, bottom_right = st.columns(2)
 
         with top_left:
-            section_header("Perfil")
-            foto_left, foto_center, foto_right = st.columns([0.2, 0.6, 0.2])
-            if str(jugador.get("URL_Foto", "")).startswith("http"):
-                with foto_center:
-                    st.image(jugador["URL_Foto"], width=240)
-
-            enlaces = []
-            if str(jugador.get("URL_Perfil", "")).startswith("http"):
-                enlaces.append(f"[🌐 Perfil externo]({jugador['URL_Perfil']})")
-            if str(jugador.get("video_url", "")).startswith("http"):
-                enlaces.append(f"[🎬 Ver video]({jugador['video_url']})")
-            if str(jugador.get("Instagram", "")).startswith("http"):
-                enlaces.append(f"[📸 Instagram]({jugador['Instagram']})")
-
-            if enlaces:
-                st.markdown("  ".join(enlaces))
-
-            if CURRENT_ROLE in ["admin", "scout"]:
-                if st.button("⭐ Agregar a lista corta"):
-                    try:
-                        ws_short = obtener_hoja("Lista corta")
-                        data_short = ws_short.get_all_records()
-                        df_short_local = pd.DataFrame(data_short)
-
-                        from datetime import date
-                        hoy = date.today()
-                        ANIO_ACTUAL = hoy.year
-                        SEMESTRE_ACTUAL = 1 if hoy.month <= 6 else 2
-
-                        if not df_short_local.empty:
-                            df_short_local["Fecha_Agregado_dt"] = pd.to_datetime(
-                                df_short_local["Fecha_Agregado"],
-                                format="%d/%m/%Y",
-                                errors="coerce"
-                            )
-
-                            df_short_local["Año"] = df_short_local["Fecha_Agregado_dt"].dt.year
-                            df_short_local["Semestre"] = df_short_local["Fecha_Agregado_dt"].dt.month.apply(
-                                lambda m: 1 if m <= 6 else 2
-                            )
-
-                            existe = df_short_local[
-                                (df_short_local["ID_Jugador"].astype(str) == str(jugador["ID_Jugador"])) &
-                                (df_short_local["Agregado_Por"] == CURRENT_USER) &
-                                (df_short_local["Año"] == ANIO_ACTUAL) &
-                                (df_short_local["Semestre"] == SEMESTRE_ACTUAL)
-                            ]
-                        else:
-                            existe = pd.DataFrame()
-
-                        if not existe.empty:
-                            st.info("⚠️ Ya agregaste este jugador a tu lista corta en este semestre")
-                        else:
-                            nueva_fila = [
-                                jugador["ID_Jugador"],
-                                jugador["Nombre"],
-                                edad,
-                                jugador.get("Altura", "-"),
-                                jugador.get("Club", "-"),
-                                jugador.get("Posición", "-"),
-                                jugador.get("URL_Foto", ""),
-                                jugador.get("URL_Perfil", ""),
-                                CURRENT_USER,
-                                hoy.strftime("%d/%m/%Y")
-                            ]
-                            nueva_fila = [
-                                int(x) if isinstance(x, (np.integer,)) else
-                                float(x) if isinstance(x, (np.floating,)) else
-                                str(x) if x is not None else ""
-                                for x in nueva_fila
-                            ]
-                            ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
-                            st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
-                            st.cache_data.clear()
-
-                    except Exception as e:
-                        st.error(f"Error al agregar a lista corta: {e}")
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall alab-player-media-panel">
+                    <div class="alab-player-panel-title">Perfil</div>
+                    <div class="alab-player-media-wrap">
+                        {foto_html}
+                    </div>
+                    <div class="alab-player-link-row">{links_row}</div>
+                </div>
+                """
+            )
 
         with top_right:
             render_html_block(
@@ -2174,6 +2124,69 @@ if st.session_state["menu"] == "Jugadores":
                 </div>
                 """
             )
+
+        if CURRENT_ROLE in ["admin", "scout"]:
+            accion_left, accion_center, accion_right = st.columns([1.2, 1, 1.2])
+            with accion_center:
+                if st.button("⭐ Agregar a lista corta", use_container_width=True):
+                    try:
+                        ws_short = obtener_hoja("Lista corta")
+                        data_short = ws_short.get_all_records()
+                        df_short_local = pd.DataFrame(data_short)
+
+                        from datetime import date
+                        hoy = date.today()
+                        ANIO_ACTUAL = hoy.year
+                        SEMESTRE_ACTUAL = 1 if hoy.month <= 6 else 2
+
+                        if not df_short_local.empty:
+                            df_short_local["Fecha_Agregado_dt"] = pd.to_datetime(
+                                df_short_local["Fecha_Agregado"],
+                                format="%d/%m/%Y",
+                                errors="coerce"
+                            )
+
+                            df_short_local["Año"] = df_short_local["Fecha_Agregado_dt"].dt.year
+                            df_short_local["Semestre"] = df_short_local["Fecha_Agregado_dt"].dt.month.apply(
+                                lambda m: 1 if m <= 6 else 2
+                            )
+
+                            existe = df_short_local[
+                                (df_short_local["ID_Jugador"].astype(str) == str(jugador["ID_Jugador"])) &
+                                (df_short_local["Agregado_Por"] == CURRENT_USER) &
+                                (df_short_local["Año"] == ANIO_ACTUAL) &
+                                (df_short_local["Semestre"] == SEMESTRE_ACTUAL)
+                            ]
+                        else:
+                            existe = pd.DataFrame()
+
+                        if not existe.empty:
+                            st.info("⚠️ Ya agregaste este jugador a tu lista corta en este semestre")
+                        else:
+                            nueva_fila = [
+                                jugador["ID_Jugador"],
+                                jugador["Nombre"],
+                                edad,
+                                jugador.get("Altura", "-"),
+                                jugador.get("Club", "-"),
+                                jugador.get("Posición", "-"),
+                                jugador.get("URL_Foto", ""),
+                                jugador.get("URL_Perfil", ""),
+                                CURRENT_USER,
+                                hoy.strftime("%d/%m/%Y")
+                            ]
+                            nueva_fila = [
+                                int(x) if isinstance(x, (np.integer,)) else
+                                float(x) if isinstance(x, (np.floating,)) else
+                                str(x) if x is not None else ""
+                                for x in nueva_fila
+                            ]
+                            ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
+                            st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
+                            st.cache_data.clear()
+
+                    except Exception as e:
+                        st.error(f"Error al agregar a lista corta: {e}")
 
             
         # ---------------------------------------------------------

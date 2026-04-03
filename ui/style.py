@@ -693,22 +693,24 @@ def load_custom_css():
             display: flex;
             align-items: center;
             gap: 1.35rem;
-            width: 100%;
+            width: fit-content;
+            max-width: 100%;
+            margin: 0 auto;
             min-height: 176px;
         }
 
         .alab-player-summary {
             display: flex;
-            flex: 1 1 auto;
+            flex: 0 1 340px;
             min-width: 0;
-            min-height: 176px;
+            min-height: auto;
             flex-direction: column;
             justify-content: center;
-            gap: 0.8rem;
+            gap: 0.65rem;
         }
 
         .alab-player-summary-focused {
-            padding-left: 0.1rem;
+            padding-left: 0.15rem;
         }
 
         .alab-player-identity-block {
@@ -771,7 +773,7 @@ def load_custom_css():
         }
 
         .alab-player-photo {
-            width: 212px;
+            width: 168px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
             border-radius: 18px;
@@ -783,7 +785,7 @@ def load_custom_css():
         .alab-player-photo-placeholder {
             display: grid;
             place-items: center;
-            width: 212px;
+            width: 168px;
             aspect-ratio: 1 / 1;
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -802,7 +804,7 @@ def load_custom_css():
         }
 
         .alab-player-link-row-inline {
-            flex: 1 1 auto;
+            flex: 0 1 auto;
             justify-content: flex-start;
             align-content: center;
             margin-top: 0;
@@ -931,7 +933,7 @@ def load_custom_css():
             box-shadow: var(--alab-shadow-sm);
         }
 
-        .alab-player-photo,
+        .alab-player-card .alab-player-photo,
         .player-photo {
             width: 56px;
             height: 56px;
@@ -940,7 +942,7 @@ def load_custom_css():
             border: 1px solid rgba(90, 154, 124, 0.55);
         }
 
-        .alab-player-name,
+        .alab-player-card .alab-player-name,
         .player-info h5 {
             margin: 0 0 0.16rem;
             color: var(--alab-text-1);
@@ -949,7 +951,7 @@ def load_custom_css():
             font-weight: 700;
         }
 
-        .alab-player-copy,
+        .alab-player-card .alab-player-copy,
         .player-info p {
             margin: 0.08rem 0;
             color: var(--alab-text-3);

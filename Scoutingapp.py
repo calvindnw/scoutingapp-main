@@ -913,17 +913,19 @@ def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo="", espacio_posterior_mini
     pdf.set_draw_color(110, 132, 128)
     pdf.set_line_width(0.5)
     pdf.rect(bloque_x, bloque_y, bloque_w, bloque_h, "DF")
+    pdf.set_fill_color(102, 140, 128)
+    pdf.rect(bloque_x, bloque_y, 3.2, bloque_h, "F")
 
-    pdf.set_xy(bloque_x + 4, bloque_y + 2.2)
+    pdf.set_xy(bloque_x + 7, bloque_y + 2.2)
     pdf.set_font("Arial", "B", 12)
     pdf.set_text_color(245, 247, 248)
-    pdf.cell(bloque_w - 8, 5, titulo, ln=True)
+    pdf.cell(bloque_w - 14, 5, titulo, ln=True)
 
     if subtitulo:
-        pdf.set_x(bloque_x + 4)
+        pdf.set_x(bloque_x + 7)
         pdf.set_font("Arial", "", 8.5)
         pdf.set_text_color(198, 207, 209)
-        pdf.multi_cell(bloque_w - 8, 4, subtitulo)
+        pdf.multi_cell(bloque_w - 14, 4, subtitulo)
 
     pdf.set_y(bloque_y + bloque_h + 4)
 
@@ -958,7 +960,7 @@ def crear_radar_valoracion_pdf(promedios_grupos):
     angulos = np.linspace(0, 2 * np.pi, len(etiquetas), endpoint=False).tolist()
     angulos += angulos[:1]
 
-    fig, ax = plt.subplots(figsize=(4.1, 4.1), subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(figsize=(3.5, 3.5), subplot_kw=dict(polar=True))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
     ax.set_ylim(0, 10)
@@ -1002,7 +1004,7 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     posiciones = np.arange(len(etiquetas_validas))
     alto_barra = 0.34
 
-    fig, ax = plt.subplots(figsize=(7.8, 4.9))
+    fig, ax = plt.subplots(figsize=(7.8, 3.55))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
     barras_jugador = ax.barh(
@@ -1063,7 +1065,7 @@ def crear_radar_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqu
     angulos = np.linspace(0, 2 * np.pi, len(metricas), endpoint=False).tolist()
     angulos += angulos[:1]
 
-    fig, ax = plt.subplots(figsize=(4.6, 4.6), subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(figsize=(5.3, 5.0), subplot_kw=dict(polar=True))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
     ax.plot(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", linewidth=2.2, label=valor_campo_pdf(etiqueta_jugador, "Jugador"))
@@ -1109,7 +1111,7 @@ def agregar_estadisticas_pdf(
     resumen_y = pdf.get_y()
     resumen_x = pdf.l_margin
     resumen_w = pdf.w - pdf.l_margin - pdf.r_margin
-    resumen_h = 16
+    resumen_h = 13
     pdf.set_fill_color(11, 18, 24)
     pdf.set_draw_color(118, 138, 132)
     pdf.rect(resumen_x, resumen_y, resumen_w, resumen_h, "DF")
@@ -1126,7 +1128,7 @@ def agregar_estadisticas_pdf(
         f"Partidos jugados: {valor_campo_pdf(resumen_estadistico['partidos_jugados'])}   |   Minutos jugados: {valor_campo_pdf(resumen_estadistico['minutos_jugados'])}",
         ln=True,
     )
-    pdf.ln(6)
+    pdf.ln(4)
 
     if tabla_estadisticas is None or tabla_estadisticas.empty:
         mensajes_estado = {
@@ -1150,37 +1152,37 @@ def agregar_estadisticas_pdf(
     if grafico_barras is not None:
         ancho_barras = pdf.w - pdf.l_margin - pdf.r_margin
         alto_barras = obtener_alto_imagen_pdf(grafico_barras, ancho_barras)
-        asegurar_espacio_pdf(pdf, alto_barras + 12)
+        asegurar_espacio_pdf(pdf, alto_barras + 9)
         pdf.set_font("Arial", "B", 10)
         pdf.set_text_color(255, 255, 255)
         pdf.cell(0, 5, "Jugador vs promedio de liga más reciente", ln=True)
-        pdf.ln(1)
+        pdf.ln(0.5)
         y_barras = pdf.get_y()
         pdf.image(grafico_barras, x=pdf.l_margin, y=y_barras, w=ancho_barras)
-        pdf.set_y(y_barras + alto_barras + 4)
+        pdf.set_y(y_barras + alto_barras + 2)
 
     if grafico_radar is not None:
-        radar_w = 76
+        radar_w = 98
         radar_h = obtener_alto_imagen_pdf(grafico_radar, radar_w)
-        asegurar_espacio_pdf(pdf, radar_h + 12)
+        asegurar_espacio_pdf(pdf, radar_h + 10)
         pdf.set_font("Arial", "B", 10)
         pdf.set_text_color(255, 255, 255)
         pdf.cell(0, 5, "Radar comparativo", ln=True)
-        pdf.ln(1)
+        pdf.ln(0.5)
         radar_x = (pdf.w - radar_w) / 2
         y_radar = pdf.get_y()
         pdf.image(grafico_radar, x=radar_x, y=y_radar, w=radar_w)
-        pdf.set_y(y_radar + radar_h + 4)
+        pdf.set_y(y_radar + radar_h + 2)
 
     asegurar_espacio_pdf(pdf, 24 + (len(tabla_estadisticas) * 7))
     pdf.set_font("Arial", "B", 10)
     pdf.set_text_color(255, 255, 255)
     pdf.cell(0, 5, "Tabla comparativa", ln=True)
-    pdf.ln(2)
+    pdf.ln(1)
 
     columnas = list(tabla_estadisticas.columns)
     ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
-    ancho_primera = 46
+    ancho_primera = 50
     ancho_resto = (ancho_total - ancho_primera) / max(1, len(columnas) - 1)
     anchos = [ancho_primera] + [ancho_resto] * (len(columnas) - 1)
 
@@ -1213,12 +1215,12 @@ def agregar_estadisticas_pdf(
         pdf.ln()
 
     if estado_estadisticas == "sin_promedios":
-        pdf.ln(1)
+        pdf.ln(0.5)
         pdf.set_font("Arial", "I", 7.5)
         pdf.set_text_color(177, 191, 184)
         pdf.cell(0, 5, "No hay promedios de liga disponibles para la posición y liga seleccionadas.", ln=True, align="L")
 
-    pdf.ln(4)
+    pdf.ln(2)
 
 
 # ---------------------------------------------------------
@@ -1520,8 +1522,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         color_borde = (118, 138, 132)
 
         pdf = FPDF_SEGURO()
-        pdf.set_margins(left=14, top=16, right=14)
-        pdf.set_auto_page_break(auto=True, margin=16)
+        pdf.set_margins(left=10, top=12, right=10)
+        pdf.set_auto_page_break(auto=True, margin=12)
         pdf.alias_nb_pages()
         pdf.add_page()
 
@@ -1674,9 +1676,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             ("Último informe", ultimo_informe),
             ("Contrato", fecha_legible(jugador.get("Fecha_Fin_Contrato"))),
         ]
-        chip_gap = 4
+        chip_gap = 3
         chip_w = (pdf.w - pdf.l_margin - pdf.r_margin - chip_gap * 2) / 3
-        chip_h = 14
+        chip_h = 12
         chip_y = pdf.get_y()
         for indice, (etiqueta, valor) in enumerate(chips):
             fila = indice // 3
@@ -1684,10 +1686,10 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             chip_x = pdf.l_margin + columna * (chip_w + chip_gap)
             chip_actual_y = chip_y + fila * (chip_h + chip_gap)
             dibujar_chip_resumen(chip_x, chip_actual_y, chip_w, chip_h, etiqueta, valor)
-        pdf.set_y(chip_y + 2 * chip_h + chip_gap + 6)
+        pdf.set_y(chip_y + 2 * chip_h + chip_gap + 4)
 
         panel_y = pdf.get_y()
-        panel_h = 72
+        panel_h = 68
         total_w = pdf.w - pdf.l_margin - pdf.r_margin
         foto_w = 50
         gap_panel = 6
@@ -1756,7 +1758,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.cell(info_w - 8, 3.5, "ENLACES EXTERNOS")
         dibujar_pildoras_enlaces(info_x + 4, enlaces_titulo_y + 5, info_w - 8, enlaces)
 
-        pdf.set_y(panel_y + panel_h + 4)
+        pdf.set_y(panel_y + panel_h + 3)
 
         descripcion = texto("Descripcion", "Sin descripción cargada.")
         lineas_desc = max(3, min(7, len(descripcion) // 105 + 1))
@@ -1773,28 +1775,28 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_font("Arial", "", 10)
         pdf.set_text_color(*color_texto_muted)
         pdf.multi_cell(total_w - 8, 5, descripcion, align="J")
-        pdf.set_y(desc_y + desc_h + 6)
+        pdf.set_y(desc_y + desc_h + 4)
 
         dibujar_titulo_seccion_pdf(
             pdf,
             "Valoración de aspectos",
             "Radar y promedio de puntuación brindada por el equipo de scouting.",
-            espacio_posterior_minimo=98,
+            espacio_posterior_minimo=72,
         )
 
-        asegurar_espacio_pdf(pdf, 82)
+        asegurar_espacio_pdf(pdf, 68)
         radar_valoracion = crear_radar_valoracion_pdf(promedios_grupos)
         bloque_y = pdf.get_y()
-        radar_panel_w = 82
+        radar_panel_w = 76
         resumen_panel_x = pdf.l_margin + radar_panel_w + 6
         resumen_panel_w = pdf.w - pdf.r_margin - resumen_panel_x
-        bloque_h = 74
+        bloque_h = 62
 
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
         pdf.rect(pdf.l_margin, bloque_y, radar_panel_w, bloque_h, "DF")
         pdf.rect(resumen_panel_x, bloque_y, resumen_panel_w, bloque_h, "DF")
-        pdf.image(radar_valoracion, x=pdf.l_margin + 4, y=bloque_y + 6, w=radar_panel_w - 8)
+        pdf.image(radar_valoracion, x=pdf.l_margin + 4, y=bloque_y + 5, w=radar_panel_w - 8)
 
         pdf.set_xy(resumen_panel_x + 4, bloque_y + 5)
         pdf.set_font("Arial", "B", 10)
@@ -1819,7 +1821,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.set_text_color(*color_texto)
             pdf.cell(resumen_panel_w * 0.2, 5.2, f"{valor:.2f}" if valor is not None else "-", ln=True, align="R")
 
-        pdf.set_y(bloque_y + bloque_h + 8)
+        pdf.set_y(bloque_y + bloque_h + 5)
 
         pdf.add_page()
         agregar_estadisticas_pdf(

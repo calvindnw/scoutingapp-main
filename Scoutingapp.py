@@ -901,6 +901,31 @@ def valor_campo_pdf(valor, fallback="-"):
     return sanitizar_texto_pdf(texto)
 
 
+def medir_altura_texto_pdf(pdf, texto, ancho, alto_linea):
+    texto = valor_campo_pdf(texto, "")
+    ancho_util = max(float(ancho) - (pdf.c_margin * 2), 1)
+    if not texto:
+        return alto_linea
+
+    cantidad_lineas = 1
+    for parrafo in texto.split("\n"):
+        palabras = parrafo.split()
+        if not palabras:
+            cantidad_lineas += 1
+            continue
+
+        linea_actual = ""
+        for palabra in palabras:
+            candidata = palabra if not linea_actual else f"{linea_actual} {palabra}"
+            if pdf.get_string_width(candidata) <= ancho_util:
+                linea_actual = candidata
+            else:
+                cantidad_lineas += 1
+                linea_actual = palabra
+
+    return max(cantidad_lineas, 1) * alto_linea
+
+
 def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo="", espacio_posterior_minimo=26):
     asegurar_espacio_pdf(pdf, (11 if not subtitulo else 15) + espacio_posterior_minimo)
 
@@ -1448,6 +1473,8 @@ def sanitizar_texto_pdf(texto):
 class FPDF_SEGURO(FPDF):
     """Extensión de FPDF que sanitiza automáticamente todos los strings."""
 
+    _background_cache = {}
+
     def _normalizar_ancho_texto(self, width):
         if width == 0:
             disponible = self.w - self.r_margin - self.get_x()
@@ -1468,7 +1495,17 @@ class FPDF_SEGURO(FPDF):
     def header(self):
         fondo_path = "fondo informe cancha.png"
         if os.path.exists(fondo_path):
-            self.image(fondo_path, x=0, y=0, w=self.w, h=self.h)
+            fondo_bytes = self._background_cache.get(fondo_path)
+            if fondo_bytes is None:
+                with Image.open(fondo_path) as imagen_origen:
+                    fondo_tratado = imagen_origen.convert("RGB")
+                overlay = Image.new("RGB", fondo_tratado.size, (16, 23, 28))
+                fondo_tratado = Image.blend(fondo_tratado, overlay, 0.42)
+                fondo_buffer = BytesIO()
+                fondo_tratado.save(fondo_buffer, format="PNG", optimize=True)
+                fondo_bytes = fondo_buffer.getvalue()
+                self._background_cache[fondo_path] = fondo_bytes
+            self.image(BytesIO(fondo_bytes), x=0, y=0, w=self.w, h=self.h)
         else:
             self.set_fill_color(17, 27, 32)
             self.rect(0, 0, self.w, self.h, "F")
@@ -1551,17 +1588,22 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             return sanitizar_texto_pdf(texto_valor)
 
         def dibujar_chip_resumen(x_pos, y_pos, ancho, alto, etiqueta, valor):
-            ancho_texto = max(ancho - 6, 8)
+            valor = valor_campo_pdf(valor)
+            padding_x = 3.2
+            ancho_texto = max(ancho - (padding_x * 2), 8)
             pdf.set_fill_color(18, 26, 32)
             pdf.set_draw_color(*color_borde)
             pdf.rect(x_pos, y_pos, ancho, alto, "DF")
-            pdf.set_xy(x_pos + 3, y_pos + 2)
+            pdf.set_xy(x_pos + padding_x, y_pos + 1.6)
             pdf.set_font("Arial", "B", 7.2)
             pdf.set_text_color(*color_acento)
             pdf.cell(ancho_texto, 3.5, etiqueta.upper(), ln=True)
-            pdf.set_x(x_pos + 3)
-            pdf.set_font("Arial", "B", 10)
+
+            pdf.set_font("Arial", "B", 9.6 if len(valor) <= 22 else 8.8)
             pdf.set_text_color(*color_texto)
+            alto_valor = medir_altura_texto_pdf(pdf, valor, ancho_texto, 3.8)
+            y_valor = y_pos + max(5.2, ((alto - alto_valor) / 2) + 2.6)
+            pdf.set_xy(x_pos + padding_x, y_valor)
             pdf.multi_cell(ancho_texto, 4.2, valor)
 
         def dibujar_pildoras_enlaces(x_pos, y_pos, ancho_disponible, enlaces):
@@ -1580,7 +1622,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pdf.set_fill_color(22, 31, 38)
                 pdf.set_draw_color(*color_borde)
                 pdf.rect(cursor_x, cursor_y, ancho_pildora, alto, "DF")
-                pdf.set_xy(cursor_x, cursor_y + 1.5)
+                pdf.set_xy(cursor_x, cursor_y + 1.9)
                 pdf.set_font("Arial", "B", 7.8)
                 pdf.set_text_color(*color_acento_suave)
                 pdf.cell(ancho_pildora, 3.5, etiqueta, align="C", link=str(url))
@@ -1706,7 +1748,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         if foto_buffer is not None:
             pdf.image(foto_buffer, x=foto_x + 4, y=panel_y + 4, w=foto_w - 8, h=foto_w - 8)
         else:
-            pdf.set_xy(foto_x + 6, panel_y + 28)
+            pdf.set_xy(foto_x + 6, panel_y + 29.5)
             pdf.set_font("Arial", "B", 11)
             pdf.set_text_color(*color_texto_muted)
             pdf.multi_cell(foto_w - 12, 5.2, "Sin foto disponible", align="C")
@@ -1755,7 +1797,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_xy(info_x + 4, enlaces_titulo_y)
         pdf.set_font("Arial", "B", 7)
         pdf.set_text_color(*color_acento_suave)
-        pdf.cell(info_w - 8, 3.5, "ENLACES EXTERNOS")
+        pdf.cell(info_w - 8, 3.5, "ENLACES EXTERNOS", ln=True)
         dibujar_pildoras_enlaces(info_x + 4, enlaces_titulo_y + 5, info_w - 8, enlaces)
 
         pdf.set_y(panel_y + panel_h + 3)
@@ -1883,9 +1925,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pdf.set_xy(card_x + 4, card_y + 3)
                 pdf.set_font("Arial", "B", 11)
                 pdf.set_text_color(*color_texto)
-                ancho_titulo = card_w * 0.3
+                ancho_titulo = card_w * 0.32
                 ancho_fecha = card_w - 8 - ancho_titulo
-                pdf.cell(ancho_titulo, 4.5, f"Informe {indice:02d}")
+                pdf.cell(ancho_titulo, 4.5, f"Informe {indice:02d}", align="L")
                 pdf.set_font("Arial", "", 8.5)
                 pdf.set_text_color(*color_acento_suave)
                 pdf.cell(

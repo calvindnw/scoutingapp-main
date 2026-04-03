@@ -1058,6 +1058,71 @@ def load_custom_css():
             line-height: 1.35;
         }
 
+        .alab-compare-card {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            padding-bottom: 1.05rem;
+        }
+
+        .alab-compare-card-empty {
+            justify-content: center;
+        }
+
+        .alab-compare-kicker {
+            color: var(--alab-brand);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .alab-compare-name {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.18;
+        }
+
+        .alab-compare-photo-wrap {
+            display: flex;
+            justify-content: center;
+        }
+
+        .alab-compare-photo,
+        .alab-compare-photo-placeholder {
+            width: min(100%, 168px);
+        }
+
+        .alab-compare-stack {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.55rem;
+        }
+
+        .alab-compare-description {
+            margin-top: auto;
+            padding: 0.82rem 0.88rem;
+            border-radius: var(--alab-radius-sm);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--alab-text-2);
+            font-size: 0.88rem;
+            line-height: 1.58;
+        }
+
+        .alab-compare-empty {
+            padding: 1rem 0.95rem;
+            border-radius: var(--alab-radius-sm);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed rgba(255, 255, 255, 0.14);
+            color: var(--alab-text-2);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
         .alab-player-card,
         .player-card {
             display: flex;

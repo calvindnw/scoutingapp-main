@@ -12,6 +12,7 @@
 # 📦 IMPORTS GENERALES
 # ----------------------
 import os
+import html
 import base64
 import re
 import unicodedata
@@ -875,6 +876,358 @@ def preparar_datos_graficos_estadisticas(tabla_estadisticas: pd.DataFrame):
         fila_referencia = filas_liga.sort_values("_anio", ascending=False).iloc[0]
 
     return df_long, fila_referencia, referencia_jugador
+
+
+def escape_html(valor, fallback="-"):
+    if valor is None:
+        return fallback
+    try:
+        if pd.isna(valor):
+            return fallback
+    except TypeError:
+        pass
+
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "nat", "<na>"}:
+        return fallback
+    return html.escape(texto)
+
+
+def formatear_fecha_comparativa(valor):
+    if valor is None:
+        return "-"
+    try:
+        if pd.isna(valor):
+            return "-"
+    except TypeError:
+        pass
+
+    texto = str(valor).strip()
+    if not texto:
+        return "-"
+
+    fecha = pd.to_datetime(texto, errors="coerce", dayfirst=True)
+    if pd.notna(fecha):
+        return fecha.strftime("%d/%m/%Y")
+    return texto
+
+
+def obtener_jugador_por_id(df_players, jugador_id):
+    if not jugador_id:
+        return None
+
+    coincidencias = df_players[df_players["ID_Jugador"].astype(str) == str(jugador_id)]
+    if coincidencias.empty:
+        return None
+    return coincidencias.iloc[0]
+
+
+def construir_opciones_comparativa(df_players, posicion_objetivo=None, ids_excluidos=None, current_id=""):
+    ids_excluidos = {str(valor) for valor in (ids_excluidos or set()) if str(valor).strip()}
+    df_base = df_players.copy()
+    df_base["ID_Jugador"] = df_base["ID_Jugador"].astype(str)
+
+    if posicion_objetivo:
+        df_base = df_base[df_base["Posición"].astype(str).str.strip() == str(posicion_objetivo).strip()]
+
+    if ids_excluidos:
+        df_base = df_base[~df_base["ID_Jugador"].isin(ids_excluidos)]
+
+    if current_id:
+        fila_actual = df_players[df_players["ID_Jugador"].astype(str) == str(current_id)]
+        if not fila_actual.empty:
+            df_base = pd.concat([df_base, fila_actual], ignore_index=True)
+
+    if df_base.empty:
+        return [""], {}
+
+    df_base = df_base.drop_duplicates(subset=["ID_Jugador"]).copy()
+    df_base["_label_comparativa"] = df_base.apply(
+        lambda fila: f"{fila.get('Nombre', 'Sin nombre')} - {fila.get('Club', 'Sin club')}",
+        axis=1,
+    )
+    df_base = df_base.sort_values("_label_comparativa")
+
+    etiquetas = dict(zip(df_base["ID_Jugador"], df_base["_label_comparativa"]))
+    opciones = [""] + df_base["ID_Jugador"].tolist()
+    return opciones, etiquetas
+
+
+def render_tarjeta_jugador_comparativa(jugador, indice_columna):
+    if jugador is None:
+        render_html_block(
+            f"""
+            <div class="alab-player-panel alab-compare-card alab-compare-card-empty">
+                <div class="alab-compare-kicker">Jugador {indice_columna}</div>
+                <div class="alab-compare-empty">Seleccioná un jugador para cargar su ficha y habilitar la comparativa.</div>
+            </div>
+            """
+        )
+        return
+
+    nombre = escape_html(jugador.get("Nombre"), "Jugador")
+    club = escape_html(jugador.get("Club"))
+    liga = escape_html(jugador.get("Liga"))
+    posicion = escape_html(jugador.get("Posición"))
+    pie_habil = escape_html(jugador.get("Pie_Hábil"))
+    fecha_nacimiento = formatear_fecha_comparativa(jugador.get("Fecha_Nac"))
+    edad = calcular_edad(jugador.get("Fecha_Nac"))
+    fecha_edad = f"{fecha_nacimiento} ({edad} años)" if str(edad) != "?" and fecha_nacimiento != "-" else fecha_nacimiento
+    descripcion = str(jugador.get("Descripcion", "") or "").strip()
+    if len(descripcion) > 240:
+        descripcion = f"{descripcion[:237].rstrip()}..."
+    descripcion = escape_html(descripcion, "Sin descripción cargada.")
+
+    foto_url = normalizar_url_foto(jugador.get("URL_Foto", ""))
+    if foto_url:
+        foto_html = (
+            f"<img src='{foto_url}' alt='Foto de {nombre}' class='alab-player-photo alab-compare-photo' "
+            "loading='lazy' referrerpolicy='no-referrer'/>"
+        )
+    else:
+        foto_html = "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin foto</div>"
+
+    render_html_block(
+        f"""
+        <div class="alab-player-panel alab-compare-card">
+            <div class="alab-compare-kicker">Jugador {indice_columna}</div>
+            <div class="alab-compare-name">{nombre}</div>
+            <div class="alab-compare-photo-wrap">{foto_html}</div>
+            <div class="alab-compare-stack">
+                <div class="alab-detail-item">
+                    <span class="alab-detail-label">Equipo</span>
+                    <span class="alab-detail-value">{club}</span>
+                </div>
+                <div class="alab-detail-item">
+                    <span class="alab-detail-label">Liga</span>
+                    <span class="alab-detail-value">{liga}</span>
+                </div>
+                <div class="alab-detail-item">
+                    <span class="alab-detail-label">Posición</span>
+                    <span class="alab-detail-value">{posicion}</span>
+                </div>
+                <div class="alab-detail-item">
+                    <span class="alab-detail-label">Pie</span>
+                    <span class="alab-detail-value">{pie_habil}</span>
+                </div>
+                <div class="alab-detail-item">
+                    <span class="alab-detail-label">Fecha de nacimiento</span>
+                    <span class="alab-detail-value">{escape_html(fecha_edad)}</span>
+                </div>
+            </div>
+            <div class="alab-compare-description">{descripcion}</div>
+        </div>
+        """
+    )
+
+
+def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_jugadores):
+    if not jugadores:
+        return None, ["Seleccioná jugadores para habilitar la comparativa estadística."]
+
+    posicion_objetivo = str(jugadores[0].get("Posición", "")).strip()
+    metricas_posicion = POSICION_ESTADISTICAS_CLAVE.get(posicion_objetivo, [])
+    if not metricas_posicion:
+        return None, ["No hay estadísticas clave configuradas para la posición seleccionada."]
+
+    metricas = [etiqueta for etiqueta, _ in metricas_posicion]
+    mensajes = []
+    dataset = []
+
+    for jugador in jugadores:
+        nombre = str(jugador.get("Nombre", "Jugador")).strip() or "Jugador"
+        tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
+            jugador,
+            df_promedios,
+            df_data_jugadores,
+        )
+
+        if tabla_estadisticas is None or tabla_estadisticas.empty:
+            mensajes_estado = {
+                "jugador_sin_estadisticas": f"{nombre}: sin estadísticas disponibles.",
+                "posicion_no_configurada": f"{nombre}: la posición no tiene métricas configuradas.",
+                "sin_promedios": f"{nombre}: no hay promedios de liga disponibles.",
+            }
+            return None, [mensajes_estado.get(estado_estadisticas, f"{nombre}: no se pudo construir la comparativa estadística.")]
+
+        _, fila_liga_referencia, _ = preparar_datos_graficos_estadisticas(tabla_estadisticas)
+        if estado_estadisticas == "sin_promedios":
+            mensajes.append(f"{nombre}: no hay promedios de liga disponibles para la liga seleccionada.")
+
+        valores_jugador = {
+            metrica: convertir_valor_numerico(tabla_estadisticas.iloc[0].get(metrica))
+            for metrica in metricas
+        }
+        valores_liga = {
+            metrica: convertir_valor_numerico(fila_liga_referencia.get(metrica)) if fila_liga_referencia is not None else None
+            for metrica in metricas
+        }
+
+        dataset.append(
+            {
+                "nombre": nombre,
+                "referencia": f"Prom. {nombre}",
+                "valores_jugador": valores_jugador,
+                "valores_liga": valores_liga,
+            }
+        )
+
+    filas_tabla = []
+    for metrica in metricas:
+        fila = {"Métrica": metrica}
+        for item in dataset:
+            fila[item["nombre"]] = formatear_valor_estadistica(item["valores_jugador"].get(metrica))
+            fila[item["referencia"]] = formatear_valor_estadistica(item["valores_liga"].get(metrica))
+        filas_tabla.append(fila)
+
+    return {
+        "metricas": metricas,
+        "posicion": posicion_objetivo,
+        "tabla": pd.DataFrame(filas_tabla),
+        "series": dataset,
+    }, mensajes
+
+
+def crear_grafico_barras_comparativa(dataset_comparativa):
+    if not dataset_comparativa:
+        return None
+
+    metricas = dataset_comparativa["metricas"]
+    metricas_orden = list(reversed(metricas))
+    filas = []
+    orden_series = []
+    colores_jugador = ["#19e28f", "#2ec4ff", "#f3bf4c"]
+    colores_liga = ["#7ccaa5", "#86d9f9", "#e4c377"]
+    mapa_colores = {}
+
+    for indice, item in enumerate(dataset_comparativa["series"]):
+        nombre = item["nombre"]
+        referencia = item["referencia"]
+        mapa_colores[nombre] = colores_jugador[indice % len(colores_jugador)]
+        mapa_colores[referencia] = colores_liga[indice % len(colores_liga)]
+        orden_series.extend([nombre, referencia])
+
+        for metrica in metricas_orden:
+            valor_jugador = item["valores_jugador"].get(metrica)
+            if valor_jugador is not None:
+                filas.append({"Métrica": metrica, "Valor": valor_jugador, "Serie": nombre})
+
+            valor_liga = item["valores_liga"].get(metrica)
+            if valor_liga is not None:
+                filas.append({"Métrica": metrica, "Valor": valor_liga, "Serie": referencia})
+
+    if not filas:
+        return None
+
+    df_chart = pd.DataFrame(filas)
+    df_chart["Métrica"] = pd.Categorical(df_chart["Métrica"], categories=metricas_orden, ordered=True)
+    df_chart = df_chart.sort_values(["Métrica", "Serie"])
+
+    fig = px.bar(
+        df_chart,
+        x="Valor",
+        y="Métrica",
+        color="Serie",
+        orientation="h",
+        barmode="group",
+        text="Valor",
+        title="Gráfico de barras horizontales",
+        category_orders={"Serie": orden_series},
+        color_discrete_map=mapa_colores,
+    )
+    fig.update_traces(
+        texttemplate="%{text:.2f}",
+        textposition="outside",
+        hovertemplate="<b>%{fullData.name}</b><br>%{y}: %{x:.2f}<extra></extra>",
+    )
+    fig.update_layout(
+        xaxis_title="Valor",
+        yaxis_title="",
+        legend_title_text="Series",
+        bargap=0.32,
+        height=max(420, 78 * len(metricas)),
+    )
+    fig.update_xaxes(showgrid=True, zeroline=False)
+    fig.update_yaxes(categoryorder="array", categoryarray=metricas_orden)
+    apply_glass_plotly(fig)
+    return fig
+
+
+def crear_radar_comparativa(dataset_comparativa):
+    if not dataset_comparativa:
+        return None
+
+    metricas = dataset_comparativa["metricas"]
+    if not metricas:
+        return None
+
+    colores_jugador = [
+        ("#19e28f", "rgba(25,226,143,0.18)"),
+        ("#2ec4ff", "rgba(46,196,255,0.14)"),
+        ("#f3bf4c", "rgba(243,191,76,0.14)"),
+    ]
+    colores_liga = ["#7ccaa5", "#86d9f9", "#e4c377"]
+
+    fig = go.Figure()
+    for indice, item in enumerate(dataset_comparativa["series"]):
+        color_linea, color_fill = colores_jugador[indice % len(colores_jugador)]
+        color_liga = colores_liga[indice % len(colores_liga)]
+
+        valores_jugador = [item["valores_jugador"].get(metrica) or 0 for metrica in metricas]
+        if any(item["valores_jugador"].get(metrica) is not None for metrica in metricas):
+            fig.add_trace(
+                go.Scatterpolar(
+                    r=valores_jugador + valores_jugador[:1],
+                    theta=metricas + metricas[:1],
+                    fill="toself",
+                    name=item["nombre"],
+                    line=dict(color=color_linea, width=3),
+                    fillcolor=color_fill,
+                    hovertemplate="<b>" + item["nombre"] + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                )
+            )
+
+        valores_liga = [item["valores_liga"].get(metrica) or 0 for metrica in metricas]
+        if any(item["valores_liga"].get(metrica) is not None for metrica in metricas):
+            fig.add_trace(
+                go.Scatterpolar(
+                    r=valores_liga + valores_liga[:1],
+                    theta=metricas + metricas[:1],
+                    fill="none",
+                    name=item["referencia"],
+                    line=dict(color=color_liga, width=2, dash="dash"),
+                    hovertemplate="<b>" + item["referencia"] + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                )
+            )
+
+    if not fig.data:
+        return None
+
+    fig.update_layout(
+        title="Radar comparativo",
+        hovermode="closest",
+        hoverlabel=dict(
+            bgcolor="rgba(10,26,20,0.96)",
+            bordercolor="rgba(25,226,143,0.34)",
+            font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
+        ),
+        polar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(
+                showline=False,
+                gridcolor="rgba(255,255,255,0.08)",
+                tickfont=dict(color="rgba(226,236,231,0.74)"),
+            ),
+            angularaxis=dict(
+                gridcolor="rgba(255,255,255,0.06)",
+                tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
+            ),
+        ),
+        showlegend=True,
+        margin=dict(l=30, r=30, t=56, b=24),
+    )
+    apply_glass_plotly(fig)
+    return fig
 
 
 def abreviar_titulo_estadistica_pdf(texto):
@@ -2171,6 +2524,7 @@ menu_options = [
     "Lista corta",
     "Panel Scouts",
     "Estadísticas",
+    "Comparativa",
 ]
 
 if st.session_state.get("menu") not in menu_options:
@@ -3117,6 +3471,123 @@ if st.session_state["menu"] == "Estadísticas":
                     st.plotly_chart(fig_radar, use_container_width=True)
                 else:
                     st.info("No hay suficientes promedios de liga para construir la comparación gráfica.")
+
+
+# =========================================================
+# BLOQUE COMPARATIVA — Tres jugadores de la misma posición
+# =========================================================
+
+if st.session_state["menu"] == "Comparativa":
+
+    df_players = df_players_all.copy()
+    df_players["ID_Jugador"] = df_players["ID_Jugador"].astype(str)
+
+    render_html_block(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Comparativa</div>
+            <h1 class="alab-dashboard-hero-title">Comparativa de jugadores</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Formato</strong> 3 jugadores</span>
+                <span class="alab-dashboard-chip"><strong>Regla</strong> Misma posición</span>
+                <span class="alab-dashboard-chip"><strong>Base</strong> {df_players['ID_Jugador'].nunique()} jugadores</span>
+            </div>
+        </div>
+        """
+    )
+
+    slot_keys = [
+        "comparativa_jugador_1",
+        "comparativa_jugador_2",
+        "comparativa_jugador_3",
+    ]
+    seleccion_actual = [str(st.session_state.get(key, "") or "") for key in slot_keys]
+    jugadores_actuales = [obtener_jugador_por_id(df_players, jugador_id) for jugador_id in seleccion_actual]
+    posicion_objetivo = next(
+        (
+            str(jugador.get("Posición", "")).strip()
+            for jugador in jugadores_actuales
+            if jugador is not None and str(jugador.get("Posición", "")).strip()
+        ),
+        "",
+    )
+
+    if posicion_objetivo:
+        section_note(
+            f"La comparativa quedó anclada a la posición {escape_html(posicion_objetivo)}. Los otros buscadores muestran solo jugadores de ese puesto."
+        )
+
+    columnas_comparativa = st.columns(3)
+    for indice, (columna, key) in enumerate(zip(columnas_comparativa, slot_keys), start=1):
+        current_id = str(st.session_state.get(key, "") or "")
+        ids_excluidos = {
+            str(st.session_state.get(other_key, "") or "")
+            for other_key in slot_keys
+            if other_key != key and str(st.session_state.get(other_key, "") or "").strip()
+        }
+        opciones_ids, etiquetas_ids = construir_opciones_comparativa(
+            df_players,
+            posicion_objetivo=posicion_objetivo,
+            ids_excluidos=ids_excluidos,
+            current_id=current_id,
+        )
+
+        with columna:
+            jugador_id = st.selectbox(
+                f"🔍 Buscar jugador {indice}",
+                opciones_ids,
+                format_func=lambda valor, etiquetas_ids=etiquetas_ids: "Seleccionar jugador" if not valor else etiquetas_ids.get(valor, valor),
+                key=key,
+            )
+            render_tarjeta_jugador_comparativa(obtener_jugador_por_id(df_players, jugador_id), indice)
+
+    jugadores_seleccionados = [
+        obtener_jugador_por_id(df_players, str(st.session_state.get(key, "") or ""))
+        for key in slot_keys
+    ]
+    jugadores_seleccionados = [jugador for jugador in jugadores_seleccionados if jugador is not None]
+
+    st.markdown("---")
+    section_header("Comparativa estadística", centered=True)
+
+    if len(jugadores_seleccionados) < 3:
+        st.info("Seleccioná tres jugadores para habilitar la comparativa estadística completa.")
+    else:
+        posiciones_seleccionadas = {
+            str(jugador.get("Posición", "")).strip()
+            for jugador in jugadores_seleccionados
+            if str(jugador.get("Posición", "")).strip()
+        }
+        if len(posiciones_seleccionadas) > 1:
+            st.warning("La comparativa solo admite jugadores de la misma posición.")
+        else:
+            df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+            dataset_comparativa, mensajes_comparativa = construir_dataset_comparativa_estadistica(
+                jugadores_seleccionados,
+                df_promedios,
+                df_data_jugadores,
+            )
+
+            if dataset_comparativa is None:
+                for mensaje in mensajes_comparativa:
+                    st.warning(mensaje)
+            else:
+                for mensaje in mensajes_comparativa:
+                    st.info(mensaje)
+
+                st.dataframe(
+                    dataset_comparativa["tabla"],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                fig_barras_comparativa = crear_grafico_barras_comparativa(dataset_comparativa)
+                if fig_barras_comparativa is not None:
+                    st.plotly_chart(fig_barras_comparativa, use_container_width=True)
+
+                fig_radar_comparativa = crear_radar_comparativa(dataset_comparativa)
+                if fig_radar_comparativa is not None:
+                    st.plotly_chart(fig_radar_comparativa, use_container_width=True)
 
 
 

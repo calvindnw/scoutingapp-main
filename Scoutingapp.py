@@ -2531,22 +2531,28 @@ if st.session_state["menu"] == "Estadísticas":
                 col_graf_1, col_graf_2 = st.columns(2)
 
                 with col_graf_1:
-                    fig_metricas = px.bar(
+                    fig_metricas = px.scatter(
                         df_long_stats,
-                        x="Métrica",
-                        y="Valor",
+                        x="Valor",
+                        y="Métrica",
                         color=tabla_estadisticas.columns[0],
-                        barmode="group",
-                        text="Valor",
+                        symbol=tabla_estadisticas.columns[0],
                         title="Comparativa por métrica",
                     )
-                    fig_metricas.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+                    fig_metricas.update_traces(
+                        mode="markers+lines",
+                        marker=dict(size=11, line=dict(width=1, color="rgba(255,255,255,0.24)")),
+                        line=dict(width=2),
+                        hovertemplate="<b>%{fullData.name}</b><br>%{y}: %{x:.2f}<extra></extra>",
+                    )
                     fig_metricas.update_layout(
                         xaxis_title="",
-                        yaxis_title="Valor",
+                        yaxis_title="",
                         legend_title_text="Referencia",
+                        hovermode="y unified",
                     )
-                    fig_metricas.update_xaxes(tickangle=-18)
+                    fig_metricas.update_yaxes(categoryorder="array", categoryarray=list(reversed(df_long_stats["Métrica"].drop_duplicates().tolist())))
+                    fig_metricas.update_xaxes(showgrid=True, zeroline=False)
                     apply_glass_plotly(fig_metricas)
                     st.plotly_chart(fig_metricas, use_container_width=True)
 
@@ -2575,6 +2581,7 @@ if st.session_state["menu"] == "Estadísticas":
                                 name=etiqueta_jugador,
                                 line=dict(color="#19e28f", width=3),
                                 fillcolor="rgba(25, 226, 143, 0.22)",
+                                hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
                             )
                         )
                         fig_radar.add_trace(
@@ -2585,10 +2592,17 @@ if st.session_state["menu"] == "Estadísticas":
                                 name=str(fila_liga_referencia[tabla_estadisticas.columns[0]]),
                                 line=dict(color="#8fd3b4", width=2),
                                 fillcolor="rgba(143, 211, 180, 0.12)",
+                                hovertemplate="<b>" + str(fila_liga_referencia[tabla_estadisticas.columns[0]]) + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
                             )
                         )
                         fig_radar.update_layout(
                             title="Radar vs promedio de liga más reciente",
+                            hovermode="closest",
+                            hoverlabel=dict(
+                                bgcolor="rgba(10,26,20,0.96)",
+                                bordercolor="rgba(25,226,143,0.34)",
+                                font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
+                            ),
                             polar=dict(
                                 bgcolor="rgba(0,0,0,0)",
                                 radialaxis=dict(

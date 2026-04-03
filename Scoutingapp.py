@@ -938,6 +938,17 @@ def crear_buffer_figura_pdf(fig, dpi=160):
     return buffer
 
 
+def obtener_alto_imagen_pdf(buffer, ancho_pdf):
+    posicion_actual = buffer.tell()
+    buffer.seek(0)
+    with Image.open(buffer) as imagen:
+        ancho_px, alto_px = imagen.size
+    buffer.seek(posicion_actual)
+    if not ancho_px:
+        return ancho_pdf
+    return ancho_pdf * (alto_px / ancho_px)
+
+
 def crear_radar_valoracion_pdf(promedios_grupos):
     import matplotlib.pyplot as plt
 
@@ -1092,6 +1103,7 @@ def agregar_estadisticas_pdf(
         pdf,
         "Comparativa estadística",
         "Incluye referencia de liga más reciente, radar comparativo y la tabla consolidada del jugador.",
+        espacio_posterior_minimo=40,
     )
 
     resumen_y = pdf.get_y()
@@ -1136,28 +1148,33 @@ def agregar_estadisticas_pdf(
         grafico_radar = crear_radar_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqueta_jugador)
 
     if grafico_barras is not None:
-        asegurar_espacio_pdf(pdf, 74)
+        ancho_barras = pdf.w - pdf.l_margin - pdf.r_margin
+        alto_barras = obtener_alto_imagen_pdf(grafico_barras, ancho_barras)
+        asegurar_espacio_pdf(pdf, alto_barras + 12)
         pdf.set_font("Arial", "B", 10)
-        pdf.set_text_color(239, 245, 241)
+        pdf.set_text_color(255, 255, 255)
         pdf.cell(0, 5, "Jugador vs promedio de liga más reciente", ln=True)
         pdf.ln(1)
-        pdf.image(grafico_barras, x=pdf.l_margin, y=pdf.get_y(), w=pdf.w - pdf.l_margin - pdf.r_margin)
-        pdf.ln(61)
+        y_barras = pdf.get_y()
+        pdf.image(grafico_barras, x=pdf.l_margin, y=y_barras, w=ancho_barras)
+        pdf.set_y(y_barras + alto_barras + 4)
 
     if grafico_radar is not None:
-        asegurar_espacio_pdf(pdf, 66)
+        radar_w = 76
+        radar_h = obtener_alto_imagen_pdf(grafico_radar, radar_w)
+        asegurar_espacio_pdf(pdf, radar_h + 12)
         pdf.set_font("Arial", "B", 10)
-        pdf.set_text_color(239, 245, 241)
+        pdf.set_text_color(255, 255, 255)
         pdf.cell(0, 5, "Radar comparativo", ln=True)
         pdf.ln(1)
-        radar_w = 84
         radar_x = (pdf.w - radar_w) / 2
-        pdf.image(grafico_radar, x=radar_x, y=pdf.get_y(), w=radar_w)
-        pdf.ln(69)
+        y_radar = pdf.get_y()
+        pdf.image(grafico_radar, x=radar_x, y=y_radar, w=radar_w)
+        pdf.set_y(y_radar + radar_h + 4)
 
     asegurar_espacio_pdf(pdf, 24 + (len(tabla_estadisticas) * 7))
     pdf.set_font("Arial", "B", 10)
-    pdf.set_text_color(239, 245, 241)
+    pdf.set_text_color(255, 255, 255)
     pdf.cell(0, 5, "Tabla comparativa", ln=True)
     pdf.ln(2)
 
@@ -1454,12 +1471,9 @@ class FPDF_SEGURO(FPDF):
             self.set_fill_color(17, 27, 32)
             self.rect(0, 0, self.w, self.h, "F")
 
-        self.set_fill_color(10, 16, 20)
-        self.rect(0, 0, self.w, 21, "F")
-
         self.set_draw_color(118, 138, 132)
-        self.set_line_width(0.6)
-        self.line(self.l_margin, 18, self.w - self.r_margin, 18)
+        self.set_line_width(0.3)
+        self.line(self.l_margin, 10, self.w - self.r_margin, 10)
 
     def footer(self):
         self.set_y(-10)
@@ -1536,12 +1550,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
 
         def dibujar_chip_resumen(x_pos, y_pos, ancho, alto, etiqueta, valor):
             ancho_texto = max(ancho - 6, 8)
-            pdf.set_fill_color(*color_panel_alt)
+            pdf.set_fill_color(18, 26, 32)
             pdf.set_draw_color(*color_borde)
             pdf.rect(x_pos, y_pos, ancho, alto, "DF")
             pdf.set_xy(x_pos + 3, y_pos + 2)
             pdf.set_font("Arial", "B", 7.2)
-            pdf.set_text_color(*color_acento_suave)
+            pdf.set_text_color(*color_acento)
             pdf.cell(ancho_texto, 3.5, etiqueta.upper(), ln=True)
             pdf.set_x(x_pos + 3)
             pdf.set_font("Arial", "B", 10)
@@ -1632,18 +1646,25 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             valor for valor in [texto("Club"), texto("Posición"), texto("Liga")] if valor != "-"
         ) or "Perfil sin contexto cargado"
 
-        pdf.set_y(24)
+        hero_y = 16
+        hero_h = 22
+        hero_w = pdf.w - pdf.l_margin - pdf.r_margin
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, hero_y, hero_w, hero_h, "DF")
+
+        pdf.set_y(hero_y + 3)
         pdf.set_font("Arial", "B", 8)
-        pdf.set_text_color(*color_acento_suave)
+        pdf.set_text_color(*color_acento)
         pdf.cell(0, 4, "SCOUTING DOSSIER", ln=True)
-        pdf.ln(1)
+        pdf.ln(0.5)
         pdf.set_font("Arial", "B", 22)
         pdf.set_text_color(*color_texto)
         pdf.multi_cell(0, 9, texto("Nombre", "Jugador"))
         pdf.set_font("Arial", "", 11)
         pdf.set_text_color(*color_texto_muted)
         pdf.multi_cell(0, 5.5, encabezado_contexto)
-        pdf.ln(3)
+        pdf.set_y(hero_y + hero_h + 5)
 
         chips = [
             ("Posición", texto("Posición")),
@@ -1666,7 +1687,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         pdf.set_y(chip_y + 2 * chip_h + chip_gap + 6)
 
         panel_y = pdf.get_y()
-        panel_h = 76
+        panel_h = 72
         total_w = pdf.w - pdf.l_margin - pdf.r_margin
         foto_w = 50
         gap_panel = 6
@@ -1728,18 +1749,18 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         if str(jugador.get("Instagram", "")).startswith("http"):
             enlaces.append(("Instagram", jugador.get("Instagram")))
 
-        enlaces_titulo_y = panel_y + panel_h - 18
+        enlaces_titulo_y = panel_y + panel_h - 17
         pdf.set_xy(info_x + 4, enlaces_titulo_y)
         pdf.set_font("Arial", "B", 7)
         pdf.set_text_color(*color_acento_suave)
         pdf.cell(info_w - 8, 3.5, "ENLACES EXTERNOS")
         dibujar_pildoras_enlaces(info_x + 4, enlaces_titulo_y + 5, info_w - 8, enlaces)
 
-        pdf.set_y(panel_y + panel_h + 6)
+        pdf.set_y(panel_y + panel_h + 4)
 
         descripcion = texto("Descripcion", "Sin descripción cargada.")
         lineas_desc = max(3, min(7, len(descripcion) // 105 + 1))
-        desc_h = 16 + lineas_desc * 5
+        desc_h = 14 + lineas_desc * 4.6
         desc_y = pdf.get_y()
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
@@ -1758,7 +1779,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf,
             "Valoración de aspectos",
             "Radar y promedio de puntuación brindada por el equipo de scouting.",
-            espacio_posterior_minimo=86,
+            espacio_posterior_minimo=98,
         )
 
         asegurar_espacio_pdf(pdf, 82)

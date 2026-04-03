@@ -683,20 +683,27 @@ def load_custom_css():
         .alab-player-media-panel {
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: flex-start;
-            text-align: center;
+            text-align: left;
+        }
+
+        .alab-player-media-row {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            width: 100%;
+            min-height: 150px;
         }
 
         .alab-player-media-wrap {
             display: flex;
-            justify-content: center;
-            width: 100%;
-            margin: 0.2rem 0 0.85rem;
+            justify-content: flex-start;
+            flex: 0 0 auto;
+            margin: 0;
         }
 
         .alab-player-photo {
-            width: min(170px, 72%);
+            width: 136px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
             border-radius: 18px;
@@ -708,7 +715,7 @@ def load_custom_css():
         .alab-player-photo-placeholder {
             display: grid;
             place-items: center;
-            width: min(170px, 72%);
+            width: 136px;
             aspect-ratio: 1 / 1;
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -724,6 +731,13 @@ def load_custom_css():
             justify-content: center;
             gap: 0.5rem;
             margin-top: auto;
+        }
+
+        .alab-player-link-row-inline {
+            flex: 1 1 auto;
+            justify-content: flex-start;
+            align-content: center;
+            margin-top: 0;
         }
 
         .alab-player-link {
@@ -746,6 +760,10 @@ def load_custom_css():
 
         .alab-player-link a:hover {
             color: var(--alab-text-1);
+        }
+
+        .alab-player-cta-gap {
+            height: 1.15rem;
         }
 
         .alab-player-panel-title {

@@ -2035,10 +2035,12 @@ if st.session_state["menu"] == "Jugadores":
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall alab-player-media-panel">
                     <div class="alab-player-panel-title">Perfil</div>
-                    <div class="alab-player-media-wrap">
-                        {foto_html}
+                    <div class="alab-player-media-row">
+                        <div class="alab-player-media-wrap">
+                            {foto_html}
+                        </div>
+                        <div class="alab-player-link-row alab-player-link-row-inline">{links_row}</div>
                     </div>
-                    <div class="alab-player-link-row">{links_row}</div>
                 </div>
                 """
             )
@@ -2124,6 +2126,8 @@ if st.session_state["menu"] == "Jugadores":
                 </div>
                 """
             )
+
+        render_html_block("<div class='alab-player-cta-gap'></div>")
 
         if CURRENT_ROLE in ["admin", "scout"]:
             accion_left, accion_center, accion_right = st.columns([1.2, 1, 1.2])

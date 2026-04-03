@@ -676,6 +676,10 @@ def load_custom_css():
             box-shadow: var(--alab-shadow-md);
         }
 
+        .alab-player-panel-tall {
+            min-height: 222px;
+        }
+
         .alab-player-panel-title {
             margin: 0 0 0.65rem;
             color: var(--alab-text-1);

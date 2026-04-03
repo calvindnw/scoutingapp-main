@@ -1992,11 +1992,13 @@ if st.session_state["menu"] == "Jugadores":
         with resumen_cols[3]:
             st.metric("Contrato", jugador.get("Fecha_Fin_Contrato", "-") or "-")
 
-        col1, col2, col3 = st.columns([1.2, 1.2, 1.6])
+        perfil_col, analisis_col = st.columns([1.02, 1.58])
 
-        with col1:
+        with perfil_col:
             if str(jugador.get("URL_Foto", "")).startswith("http"):
-                st.image(jugador["URL_Foto"], width=160)
+                foto_left, foto_center, foto_right = st.columns([0.14, 0.72, 0.14])
+                with foto_center:
+                    st.image(jugador["URL_Foto"], use_container_width=True)
 
             edad = calcular_edad(jugador.get("Fecha_Nac"))
 
@@ -2120,7 +2122,9 @@ if st.session_state["menu"] == "Jugadores":
                     except Exception as e:
                         st.error(f"Error al agregar a lista corta: {e}")
 
-        with col2:
+        lectura_col, contexto_col = analisis_col.columns(2)
+
+        with lectura_col:
             descripcion_jugador = str(jugador.get("Descripcion", "") or "").strip()
             caracteristicas = [
                 item.strip() for item in str(jugador.get("Caracteristica", "") or "").split(",") if item.strip()
@@ -2133,7 +2137,7 @@ if st.session_state["menu"] == "Jugadores":
 
             render_html_block(
                 f"""
-                <div class="alab-player-panel">
+                <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Lectura rápida</div>
                     <div class="alab-player-panel-copy">{descripcion_jugador or 'Todavía no hay una descripción cargada para este jugador.'}</div>
                     <div class="alab-badge-row" style="margin-top:0.9rem;">{badges_caracteristicas}</div>
@@ -2141,14 +2145,14 @@ if st.session_state["menu"] == "Jugadores":
                 """
             )
 
-        with col3:
+        with contexto_col:
             nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
             scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
             scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
 
             render_html_block(
                 f"""
-                <div class="alab-player-panel">
+                <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Contexto de seguimiento</div>
                     <div class="alab-detail-grid">
                         <div class="alab-detail-item">

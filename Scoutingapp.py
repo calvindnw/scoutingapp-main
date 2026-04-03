@@ -2528,100 +2528,136 @@ if st.session_state["menu"] == "Estadísticas":
                 st.markdown("---")
                 section_header("Visualizaciones comparativas")
 
-                col_graf_1, col_graf_2 = st.columns(2)
+                if fila_liga_referencia is not None:
+                    nombre_referencia = str(fila_liga_referencia[tabla_estadisticas.columns[0]])
+                    metricas_radar = [
+                        columna
+                        for columna in tabla_estadisticas.columns
+                        if columna != tabla_estadisticas.columns[0]
+                    ]
+                    metricas_orden = list(reversed(metricas_radar))
 
-                with col_graf_1:
-                    fig_metricas = px.scatter(
-                        df_long_stats,
+                    df_comparacion_directa = df_long_stats[
+                        df_long_stats[tabla_estadisticas.columns[0]].isin([etiqueta_jugador, nombre_referencia])
+                    ].copy()
+                    df_comparacion_directa["Métrica"] = pd.Categorical(
+                        df_comparacion_directa["Métrica"],
+                        categories=metricas_orden,
+                        ordered=True,
+                    )
+                    df_comparacion_directa = df_comparacion_directa.sort_values("Métrica")
+
+                    fig_metricas = px.bar(
+                        df_comparacion_directa,
                         x="Valor",
                         y="Métrica",
                         color=tabla_estadisticas.columns[0],
-                        symbol=tabla_estadisticas.columns[0],
-                        title="Comparativa por métrica",
+                        orientation="h",
+                        barmode="group",
+                        text="Valor",
+                        title="Jugador vs promedio de liga más reciente",
                     )
                     fig_metricas.update_traces(
-                        mode="markers+lines",
-                        marker=dict(size=11, line=dict(width=1, color="rgba(255,255,255,0.24)")),
-                        line=dict(width=2),
+                        texttemplate="%{text:.2f}",
+                        textposition="outside",
                         hovertemplate="<b>%{fullData.name}</b><br>%{y}: %{x:.2f}<extra></extra>",
                     )
                     fig_metricas.update_layout(
-                        xaxis_title="",
+                        xaxis_title="Valor",
                         yaxis_title="",
                         legend_title_text="Referencia",
-                        hovermode="y unified",
+                        bargap=0.34,
                     )
-                    fig_metricas.update_yaxes(categoryorder="array", categoryarray=list(reversed(df_long_stats["Métrica"].drop_duplicates().tolist())))
                     fig_metricas.update_xaxes(showgrid=True, zeroline=False)
+                    fig_metricas.update_yaxes(categoryorder="array", categoryarray=metricas_orden)
                     apply_glass_plotly(fig_metricas)
                     st.plotly_chart(fig_metricas, use_container_width=True)
 
-                with col_graf_2:
-                    if fila_liga_referencia is not None:
-                        metricas_radar = [
-                            columna
-                            for columna in tabla_estadisticas.columns
-                            if columna != tabla_estadisticas.columns[0]
-                        ]
-                        valores_jugador = [
-                            convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0
-                            for metrica in metricas_radar
-                        ]
-                        valores_liga = [
-                            convertir_valor_numerico(fila_liga_referencia.get(metrica)) or 0
-                            for metrica in metricas_radar
-                        ]
+                    if len(tabla_estadisticas) > 2:
+                        df_liga_historica = df_long_stats[
+                            df_long_stats[tabla_estadisticas.columns[0]] != etiqueta_jugador
+                        ].copy()
+                        if not df_liga_historica.empty:
+                            section_header("Evolución de promedios de liga")
+                            fig_hist = px.line(
+                                df_liga_historica,
+                                x=tabla_estadisticas.columns[0],
+                                y="Valor",
+                                color="Métrica",
+                                markers=True,
+                                title="Tendencia anual de las referencias de liga",
+                            )
+                            fig_hist.update_traces(
+                                hovertemplate="<b>%{fullData.name}</b><br>%{x}: %{y:.2f}<extra></extra>"
+                            )
+                            fig_hist.update_layout(
+                                xaxis_title="Temporada de referencia",
+                                yaxis_title="Valor",
+                                legend_title_text="Métrica",
+                            )
+                            apply_glass_plotly(fig_hist)
+                            st.plotly_chart(fig_hist, use_container_width=True)
 
-                        fig_radar = go.Figure()
-                        fig_radar.add_trace(
-                            go.Scatterpolar(
-                                r=valores_jugador + valores_jugador[:1],
-                                theta=metricas_radar + metricas_radar[:1],
-                                fill="toself",
-                                name=etiqueta_jugador,
-                                line=dict(color="#19e28f", width=3),
-                                fillcolor="rgba(25, 226, 143, 0.22)",
-                                hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
-                            )
+                    section_header("Radar comparativo")
+                    valores_jugador = [
+                        convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0
+                        for metrica in metricas_radar
+                    ]
+                    valores_liga = [
+                        convertir_valor_numerico(fila_liga_referencia.get(metrica)) or 0
+                        for metrica in metricas_radar
+                    ]
+
+                    fig_radar = go.Figure()
+                    fig_radar.add_trace(
+                        go.Scatterpolar(
+                            r=valores_jugador + valores_jugador[:1],
+                            theta=metricas_radar + metricas_radar[:1],
+                            fill="toself",
+                            name=etiqueta_jugador,
+                            line=dict(color="#19e28f", width=3),
+                            fillcolor="rgba(25, 226, 143, 0.22)",
+                            hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
                         )
-                        fig_radar.add_trace(
-                            go.Scatterpolar(
-                                r=valores_liga + valores_liga[:1],
-                                theta=metricas_radar + metricas_radar[:1],
-                                fill="toself",
-                                name=str(fila_liga_referencia[tabla_estadisticas.columns[0]]),
-                                line=dict(color="#8fd3b4", width=2),
-                                fillcolor="rgba(143, 211, 180, 0.12)",
-                                hovertemplate="<b>" + str(fila_liga_referencia[tabla_estadisticas.columns[0]]) + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
-                            )
+                    )
+                    fig_radar.add_trace(
+                        go.Scatterpolar(
+                            r=valores_liga + valores_liga[:1],
+                            theta=metricas_radar + metricas_radar[:1],
+                            fill="toself",
+                            name=nombre_referencia,
+                            line=dict(color="#8fd3b4", width=2),
+                            fillcolor="rgba(143, 211, 180, 0.12)",
+                            hovertemplate="<b>" + nombre_referencia + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
                         )
-                        fig_radar.update_layout(
-                            title="Radar vs promedio de liga más reciente",
-                            hovermode="closest",
-                            hoverlabel=dict(
-                                bgcolor="rgba(10,26,20,0.96)",
-                                bordercolor="rgba(25,226,143,0.34)",
-                                font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
+                    )
+                    fig_radar.update_layout(
+                        title="Radar vs promedio de liga más reciente",
+                        hovermode="closest",
+                        hoverlabel=dict(
+                            bgcolor="rgba(10,26,20,0.96)",
+                            bordercolor="rgba(25,226,143,0.34)",
+                            font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
+                        ),
+                        polar=dict(
+                            bgcolor="rgba(0,0,0,0)",
+                            radialaxis=dict(
+                                showline=False,
+                                gridcolor="rgba(255,255,255,0.08)",
+                                tickfont=dict(color="rgba(226,236,231,0.74)"),
                             ),
-                            polar=dict(
-                                bgcolor="rgba(0,0,0,0)",
-                                radialaxis=dict(
-                                    showline=False,
-                                    gridcolor="rgba(255,255,255,0.08)",
-                                    tickfont=dict(color="rgba(226,236,231,0.74)"),
-                                ),
-                                angularaxis=dict(
-                                    gridcolor="rgba(255,255,255,0.06)",
-                                    tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
-                                ),
+                            angularaxis=dict(
+                                gridcolor="rgba(255,255,255,0.06)",
+                                tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
                             ),
-                            showlegend=True,
-                            margin=dict(l=30, r=30, t=56, b=24),
-                        )
-                        apply_glass_plotly(fig_radar)
-                        st.plotly_chart(fig_radar, use_container_width=True)
-                    else:
-                        st.info("No hay suficientes promedios de liga para construir el radar comparativo.")
+                        ),
+                        showlegend=True,
+                        margin=dict(l=30, r=30, t=56, b=24),
+                    )
+                    apply_glass_plotly(fig_radar)
+                    st.plotly_chart(fig_radar, use_container_width=True)
+                else:
+                    st.info("No hay suficientes promedios de liga para construir la comparación gráfica.")
 
 
 

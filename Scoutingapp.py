@@ -1050,42 +1050,66 @@ def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_j
             }
             return None, [mensajes_estado.get(estado_estadisticas, f"{nombre}: no se pudo construir la comparativa estadística.")]
 
-        _, fila_liga_referencia, _ = preparar_datos_graficos_estadisticas(tabla_estadisticas)
-        if estado_estadisticas == "sin_promedios":
-            mensajes.append(f"{nombre}: no hay promedios de liga disponibles para la liga seleccionada.")
-
         valores_jugador = {
             metrica: convertir_valor_numerico(tabla_estadisticas.iloc[0].get(metrica))
-            for metrica in metricas
-        }
-        valores_liga = {
-            metrica: convertir_valor_numerico(fila_liga_referencia.get(metrica)) if fila_liga_referencia is not None else None
             for metrica in metricas
         }
 
         dataset.append(
             {
                 "nombre": nombre,
-                "referencia": f"Prom. {nombre}",
                 "valores_jugador": valores_jugador,
-                "valores_liga": valores_liga,
             }
         )
 
     filas_tabla = []
+    filas_tabla_raw = []
     for metrica in metricas:
         fila = {"Métrica": metrica}
+        fila_raw = {"Métrica": metrica}
         for item in dataset:
-            fila[item["nombre"]] = formatear_valor_estadistica(item["valores_jugador"].get(metrica))
-            fila[item["referencia"]] = formatear_valor_estadistica(item["valores_liga"].get(metrica))
+            valor = item["valores_jugador"].get(metrica)
+            fila[item["nombre"]] = formatear_valor_estadistica(valor)
+            fila_raw[item["nombre"]] = valor
         filas_tabla.append(fila)
+        filas_tabla_raw.append(fila_raw)
 
     return {
         "metricas": metricas,
         "posicion": posicion_objetivo,
         "tabla": pd.DataFrame(filas_tabla),
+        "tabla_raw": pd.DataFrame(filas_tabla_raw),
+        "player_names": [item["nombre"] for item in dataset],
         "series": dataset,
     }, mensajes
+
+
+def estilizar_tabla_comparativa(dataset_comparativa):
+    tabla = dataset_comparativa["tabla"].copy()
+    tabla_raw = dataset_comparativa["tabla_raw"].copy()
+    player_names = dataset_comparativa["player_names"]
+
+    def resaltar_mejor_valor(fila):
+        estilos = [""] * len(fila)
+        valores = [tabla_raw.iloc[fila.name][columna] for columna in player_names]
+        valores_validos = [valor for valor in valores if valor is not None and not pd.isna(valor)]
+        if not valores_validos:
+            return estilos
+
+        mejor_valor = max(valores_validos)
+        for indice, columna in enumerate(tabla.columns):
+            if columna == "Métrica":
+                estilos[indice] = "text-align:center; font-weight:700; color:#f2f8f4;"
+                continue
+
+            valor = tabla_raw.iloc[fila.name].get(columna)
+            if valor is not None and not pd.isna(valor) and valor == mejor_valor:
+                estilos[indice] = "background-color:#19e28f; color:#04100b; font-weight:800; text-align:center;"
+            else:
+                estilos[indice] = "text-align:center;"
+        return estilos
+
+    return tabla.style.apply(resaltar_mejor_valor, axis=1).set_properties(**{"text-align": "center"})
 
 
 def crear_grafico_barras_comparativa(dataset_comparativa):
@@ -1093,62 +1117,53 @@ def crear_grafico_barras_comparativa(dataset_comparativa):
         return None
 
     metricas = dataset_comparativa["metricas"]
-    metricas_orden = list(reversed(metricas))
     filas = []
     orden_series = []
     colores_jugador = ["#19e28f", "#2ec4ff", "#f3bf4c"]
-    colores_liga = ["#7ccaa5", "#86d9f9", "#e4c377"]
     mapa_colores = {}
 
     for indice, item in enumerate(dataset_comparativa["series"]):
         nombre = item["nombre"]
-        referencia = item["referencia"]
         mapa_colores[nombre] = colores_jugador[indice % len(colores_jugador)]
-        mapa_colores[referencia] = colores_liga[indice % len(colores_liga)]
-        orden_series.extend([nombre, referencia])
+        orden_series.append(nombre)
 
-        for metrica in metricas_orden:
+        for metrica in metricas:
             valor_jugador = item["valores_jugador"].get(metrica)
             if valor_jugador is not None:
                 filas.append({"Métrica": metrica, "Valor": valor_jugador, "Serie": nombre})
-
-            valor_liga = item["valores_liga"].get(metrica)
-            if valor_liga is not None:
-                filas.append({"Métrica": metrica, "Valor": valor_liga, "Serie": referencia})
 
     if not filas:
         return None
 
     df_chart = pd.DataFrame(filas)
-    df_chart["Métrica"] = pd.Categorical(df_chart["Métrica"], categories=metricas_orden, ordered=True)
+    df_chart["Métrica"] = pd.Categorical(df_chart["Métrica"], categories=metricas, ordered=True)
     df_chart = df_chart.sort_values(["Métrica", "Serie"])
 
     fig = px.bar(
         df_chart,
-        x="Valor",
-        y="Métrica",
+        x="Métrica",
+        y="Valor",
         color="Serie",
-        orientation="h",
         barmode="group",
         text="Valor",
-        title="Gráfico de barras horizontales",
+        title="Comparativa entre los tres jugadores",
         category_orders={"Serie": orden_series},
         color_discrete_map=mapa_colores,
     )
     fig.update_traces(
         texttemplate="%{text:.2f}",
         textposition="outside",
-        hovertemplate="<b>%{fullData.name}</b><br>%{y}: %{x:.2f}<extra></extra>",
+        hovertemplate="<b>%{fullData.name}</b><br>%{x}: %{y:.2f}<extra></extra>",
     )
     fig.update_layout(
-        xaxis_title="Valor",
-        yaxis_title="",
-        legend_title_text="Series",
-        bargap=0.32,
-        height=max(420, 78 * len(metricas)),
+        xaxis_title="",
+        yaxis_title="Valor",
+        legend_title_text="Jugadores",
+        bargap=0.26,
+        height=520,
     )
-    fig.update_xaxes(showgrid=True, zeroline=False)
-    fig.update_yaxes(categoryorder="array", categoryarray=metricas_orden)
+    fig.update_xaxes(showgrid=False, tickangle=-18)
+    fig.update_yaxes(showgrid=True, zeroline=False)
     apply_glass_plotly(fig)
     return fig
 
@@ -1166,12 +1181,9 @@ def crear_radar_comparativa(dataset_comparativa):
         ("#2ec4ff", "rgba(46,196,255,0.14)"),
         ("#f3bf4c", "rgba(243,191,76,0.14)"),
     ]
-    colores_liga = ["#7ccaa5", "#86d9f9", "#e4c377"]
-
     fig = go.Figure()
     for indice, item in enumerate(dataset_comparativa["series"]):
         color_linea, color_fill = colores_jugador[indice % len(colores_jugador)]
-        color_liga = colores_liga[indice % len(colores_liga)]
 
         valores_jugador = [item["valores_jugador"].get(metrica) or 0 for metrica in metricas]
         if any(item["valores_jugador"].get(metrica) is not None for metrica in metricas):
@@ -1184,19 +1196,6 @@ def crear_radar_comparativa(dataset_comparativa):
                     line=dict(color=color_linea, width=3),
                     fillcolor=color_fill,
                     hovertemplate="<b>" + item["nombre"] + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
-                )
-            )
-
-        valores_liga = [item["valores_liga"].get(metrica) or 0 for metrica in metricas]
-        if any(item["valores_liga"].get(metrica) is not None for metrica in metricas):
-            fig.add_trace(
-                go.Scatterpolar(
-                    r=valores_liga + valores_liga[:1],
-                    theta=metricas + metricas[:1],
-                    fill="none",
-                    name=item["referencia"],
-                    line=dict(color=color_liga, width=2, dash="dash"),
-                    hovertemplate="<b>" + item["referencia"] + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
                 )
             )
 
@@ -3576,7 +3575,7 @@ if st.session_state["menu"] == "Comparativa":
                     st.info(mensaje)
 
                 st.dataframe(
-                    dataset_comparativa["tabla"],
+                    estilizar_tabla_comparativa(dataset_comparativa),
                     use_container_width=True,
                     hide_index=True,
                 )

@@ -1062,8 +1062,10 @@ def load_custom_css():
             min-height: 100%;
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 0.85rem;
             padding-bottom: 1.05rem;
+            text-align: center;
         }
 
         .alab-compare-card-empty {
@@ -1084,6 +1086,7 @@ def load_custom_css():
             font-size: 1.15rem;
             font-weight: 700;
             line-height: 1.18;
+            text-align: center;
         }
 
         .alab-compare-photo-wrap {
@@ -1100,6 +1103,13 @@ def load_custom_css():
             display: grid;
             grid-template-columns: 1fr;
             gap: 0.55rem;
+            width: 100%;
+        }
+
+        .alab-compare-card .alab-detail-item,
+        .alab-compare-card .alab-detail-label,
+        .alab-compare-card .alab-detail-value {
+            text-align: center;
         }
 
         .alab-compare-description {
@@ -1111,6 +1121,7 @@ def load_custom_css():
             color: var(--alab-text-2);
             font-size: 0.88rem;
             line-height: 1.58;
+            text-align: center;
         }
 
         .alab-compare-empty {

@@ -29,6 +29,7 @@ def load_custom_css():
         }
 
         .stApp {
+            position: relative;
             background:
                 radial-gradient(circle at 14% 10%, rgba(25, 226, 143, 0.08), transparent 28%),
                 radial-gradient(circle at 82% 20%, rgba(26, 86, 63, 0.2), transparent 26%),
@@ -37,9 +38,39 @@ def load_custom_css():
             color: var(--alab-text-1);
         }
 
+        .stApp::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(255, 255, 255, 0.018) 0,
+                    rgba(255, 255, 255, 0.018) 1px,
+                    transparent 1px,
+                    transparent 34px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0.014) 0,
+                    rgba(255, 255, 255, 0.014) 1px,
+                    transparent 1px,
+                    transparent 34px
+                ),
+                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.025), transparent 1px),
+                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.04), transparent 1px);
+            background-size: 34px 34px, 34px 34px, 18px 18px, 24px 24px;
+            opacity: 0.28;
+            mix-blend-mode: soft-light;
+            z-index: 0;
+        }
+
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"] {
             background: transparent;
+            position: relative;
+            z-index: 1;
         }
 
         [data-testid="stHeader"] {

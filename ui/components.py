@@ -7,16 +7,15 @@ def render_html_block(content):
 
 
 def section_header(title, eyebrow=None, caption=None, centered=False):
-    align_class = " alab-block-header-center" if centered else ""
-    eyebrow_html = f"<div class='alab-block-eyebrow'>{eyebrow}</div>" if eyebrow else ""
-    render_html_block(
-        f"""
-        <div class="alab-block-header{align_class}">
-            {eyebrow_html}
-            <div class="alab-block-title">{title}</div>
-        </div>
-        """
-    )
+    target = st
+    if centered:
+        left, middle, right = st.columns([1, 2.4, 1])
+        target = middle
+
+    if eyebrow:
+        target.caption(str(eyebrow).upper())
+
+    target.subheader(title)
 
 
 def section_note(text):

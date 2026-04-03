@@ -38,6 +38,18 @@ from ui.components import section_header, section_note
 def render_html_block(content: str):
     st.markdown(dedent(content).strip(), unsafe_allow_html=True)
 
+
+def section_header(title, eyebrow=None, caption=None, centered=False):
+    target = st
+    if centered:
+        left, middle, right = st.columns([1, 2.4, 1])
+        target = middle
+
+    if eyebrow:
+        target.caption(str(eyebrow).upper())
+
+    target.subheader(title)
+
 st.set_page_config(
     page_title="ScoutingApp Profesional",
     layout="wide",

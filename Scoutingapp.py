@@ -1992,74 +1992,46 @@ if st.session_state["menu"] == "Jugadores":
         with resumen_cols[3]:
             st.metric("Contrato", jugador.get("Fecha_Fin_Contrato", "-") or "-")
 
-        perfil_col, analisis_col = st.columns([1.02, 1.58])
+        edad = calcular_edad(jugador.get("Fecha_Nac"))
+        nac1 = jugador.get("Nacionalidad", "-")
+        nac2 = jugador.get("Segunda_Nacionalidad", "")
+        nacionalidades = nac1 if not nac2 else f"{nac1}, {nac2}"
+        fin_contrato = jugador.get("Fecha_Fin_Contrato", "-") or "-"
+        descripcion_jugador = str(jugador.get("Descripcion", "") or "").strip()
+        caracteristicas = [
+            item.strip() for item in str(jugador.get("Caracteristica", "") or "").split(",") if item.strip()
+        ]
+        badges_caracteristicas = "".join(
+            f"<span class='alab-badge alab-badge-muted'>{item}</span>" for item in caracteristicas
+        )
+        if not badges_caracteristicas:
+            badges_caracteristicas = "<span class='alab-player-panel-copy'>Sin rasgos destacados cargados.</span>"
 
-        with perfil_col:
+        nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
+        scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
+        scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
+
+        top_left, top_right = st.columns(2)
+        bottom_left, bottom_right = st.columns(2)
+
+        with top_left:
+            section_header("Perfil")
+            foto_left, foto_center, foto_right = st.columns([0.2, 0.6, 0.2])
             if str(jugador.get("URL_Foto", "")).startswith("http"):
-                foto_left, foto_center, foto_right = st.columns([0.14, 0.72, 0.14])
                 with foto_center:
-                    st.image(jugador["URL_Foto"], use_container_width=True)
+                    st.image(jugador["URL_Foto"], width=240)
 
-            edad = calcular_edad(jugador.get("Fecha_Nac"))
-
-            nac1 = jugador.get("Nacionalidad", "-")
-            nac2 = jugador.get("Segunda_Nacionalidad", "")
-            nacionalidades = nac1 if not nac2 else f"{nac1}, {nac2}"
-            fin_contrato = jugador.get("Fecha_Fin_Contrato", "-") or "-"
-            st.markdown(
-                f"""
-                <div class="alab-player-panel">
-                    <div class="alab-player-panel-title">Ficha rápida</div>
-                    <div class="alab-badge-row">
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Posición', '-')}</span>
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Club', '-')}</span>
-                        <span class="alab-badge alab-badge-muted">{jugador.get('Liga', '-')}</span>
-                    </div>
-                    <div class="alab-detail-grid">
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Nacimiento</span>
-                            <span class="alab-detail-value">{jugador.get('Fecha_Nac', '')} ({edad} años)</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Nacionalidad</span>
-                            <span class="alab-detail-value">{nacionalidades}</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Altura</span>
-                            <span class="alab-detail-value">{jugador.get('Altura', '-')} cm</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Pie hábil</span>
-                            <span class="alab-detail-value">{jugador.get('Pie_Hábil', '-')}</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Fin de contrato</span>
-                            <span class="alab-detail-value">{fin_contrato}</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Contacto</span>
-                            <span class="alab-detail-value">{jugador.get('telefono', '-')}</span>
-                        </div>
-                        <div class="alab-detail-item">
-                            <span class="alab-detail-label">Representante</span>
-                            <span class="alab-detail-value">{jugador.get('representante', '-')}</span>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
+            enlaces = []
             if str(jugador.get("URL_Perfil", "")).startswith("http"):
-                st.markdown(f"[🌐 Perfil externo]({jugador['URL_Perfil']})")
-
+                enlaces.append(f"[🌐 Perfil externo]({jugador['URL_Perfil']})")
             if str(jugador.get("video_url", "")).startswith("http"):
-                st.markdown(f"[🎬 Ver video]({jugador['video_url']})")
-
+                enlaces.append(f"[🎬 Ver video]({jugador['video_url']})")
             if str(jugador.get("Instagram", "")).startswith("http"):
-                st.markdown(f"[📸 Instagram]({jugador['Instagram']})")
+                enlaces.append(f"[📸 Instagram]({jugador['Instagram']})")
 
-            # ⭐ AGREGAR A LISTA CORTA (POR SEMESTRE)
+            if enlaces:
+                st.markdown("  ".join(enlaces))
+
             if CURRENT_ROLE in ["admin", "scout"]:
                 if st.button("⭐ Agregar a lista corta"):
                     try:
@@ -2108,7 +2080,6 @@ if st.session_state["menu"] == "Jugadores":
                                 CURRENT_USER,
                                 hoy.strftime("%d/%m/%Y")
                             ]
-                            # Convertir todos los valores a tipos nativos de Python
                             nueva_fila = [
                                 int(x) if isinstance(x, (np.integer,)) else
                                 float(x) if isinstance(x, (np.floating,)) else
@@ -2122,19 +2093,7 @@ if st.session_state["menu"] == "Jugadores":
                     except Exception as e:
                         st.error(f"Error al agregar a lista corta: {e}")
 
-        lectura_col, contexto_col = analisis_col.columns(2)
-
-        with lectura_col:
-            descripcion_jugador = str(jugador.get("Descripcion", "") or "").strip()
-            caracteristicas = [
-                item.strip() for item in str(jugador.get("Caracteristica", "") or "").split(",") if item.strip()
-            ]
-            badges_caracteristicas = "".join(
-                f"<span class='alab-badge alab-badge-muted'>{item}</span>" for item in caracteristicas
-            )
-            if not badges_caracteristicas:
-                badges_caracteristicas = "<span class='alab-player-panel-copy'>Sin rasgos destacados cargados.</span>"
-
+        with top_right:
             render_html_block(
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall">
@@ -2145,11 +2104,51 @@ if st.session_state["menu"] == "Jugadores":
                 """
             )
 
-        with contexto_col:
-            nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
-            scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
-            scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
+        with bottom_left:
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall">
+                    <div class="alab-player-panel-title">Ficha rápida</div>
+                    <div class="alab-badge-row">
+                        <span class="alab-badge alab-badge-muted">{jugador.get('Posición', '-')}</span>
+                        <span class="alab-badge alab-badge-muted">{jugador.get('Club', '-')}</span>
+                        <span class="alab-badge alab-badge-muted">{jugador.get('Liga', '-')}</span>
+                    </div>
+                    <div class="alab-detail-grid">
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Nacimiento</span>
+                            <span class="alab-detail-value">{jugador.get('Fecha_Nac', '')} ({edad} años)</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Nacionalidad</span>
+                            <span class="alab-detail-value">{nacionalidades}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Altura</span>
+                            <span class="alab-detail-value">{jugador.get('Altura', '-')} cm</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Pie hábil</span>
+                            <span class="alab-detail-value">{jugador.get('Pie_Hábil', '-')}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Fin de contrato</span>
+                            <span class="alab-detail-value">{fin_contrato}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Contacto</span>
+                            <span class="alab-detail-value">{jugador.get('telefono', '-')}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Representante</span>
+                            <span class="alab-detail-value">{jugador.get('representante', '-')}</span>
+                        </div>
+                    </div>
+                </div>
+                """
+            )
 
+        with bottom_right:
             render_html_block(
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall">

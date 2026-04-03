@@ -66,6 +66,10 @@ def apply_glass_plotly(fig):
     glass/futurista de la app.
     Elimina el fondo negro/blanco por defecto de Plotly.
     """
+    titulo_actual = ""
+    if getattr(fig.layout, "title", None) and getattr(fig.layout.title, "text", None):
+        titulo_actual = fig.layout.title.text
+
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -75,6 +79,7 @@ def apply_glass_plotly(fig):
             family="Manrope, sans-serif"
         ),
         title=dict(
+            text=titulo_actual,
             font=dict(size=18, color="#ffffff", family="Sora, sans-serif"),
             x=0,
             xanchor="left"
@@ -4537,7 +4542,7 @@ if st.session_state["menu"] == "Panel Scouts":
     col1, col2 = st.columns(2)
 
     with col1:
-        section_header("Evolución mensual total", eyebrow="Gráfico")
+        section_header("Evolución mensual total")
 
         total_mes = (
             df_f.groupby("Mes")
@@ -4550,7 +4555,7 @@ if st.session_state["menu"] == "Panel Scouts":
         fig = apply_glass_plotly(fig)
         st.plotly_chart(fig, use_container_width=True)
 
-        section_header("Observaciones por posición", eyebrow="Gráfico")
+        section_header("Observaciones por posición")
 
         pos_df = df_f["Posición"].value_counts().reset_index()
         pos_df.columns = ["Posición", "Cantidad"]
@@ -4566,7 +4571,7 @@ if st.session_state["menu"] == "Panel Scouts":
         st.plotly_chart(fig, use_container_width=True)
 
     with col2:
-        section_header("Evolución mensual por scout", eyebrow="Gráfico")
+        section_header("Evolución mensual por scout")
 
         scout_mes = (
             df_f.groupby(["Mes", "Scout"])
@@ -4585,7 +4590,7 @@ if st.session_state["menu"] == "Panel Scouts":
         fig = apply_glass_plotly(fig)
         st.plotly_chart(fig, use_container_width=True)
 
-        section_header("Informes por scout", eyebrow="Gráfico")
+        section_header("Informes por scout")
 
         bar_df = (
             df_f.groupby("Scout")

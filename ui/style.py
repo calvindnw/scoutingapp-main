@@ -130,7 +130,7 @@ def load_custom_css():
         .alab-dashboard-hero {
             position: relative;
             overflow: hidden;
-            margin: 0.35rem 0 1.4rem;
+            margin: 0.9rem 0 1.4rem;
             padding: 1.45rem 1.5rem 1.3rem;
             border-radius: 26px;
             border: 1px solid rgba(255, 255, 255, 0.09);
@@ -409,7 +409,7 @@ def load_custom_css():
 
         [data-testid="stAppViewContainer"] .block-container {
             max-width: 1280px;
-            padding-top: 0.85rem;
+            padding-top: 1.05rem;
         }
 
         .stApp [data-testid="stExpander"] {

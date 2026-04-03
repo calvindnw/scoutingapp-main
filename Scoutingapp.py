@@ -2042,12 +2042,11 @@ if st.session_state["menu"] == "Jugadores":
             render_html_block(
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall alab-player-media-panel">
-                    <div class="alab-player-panel-title">Perfil</div>
                     <div class="alab-player-media-row">
                         <div class="alab-player-media-wrap">
                             {foto_html}
                         </div>
-                        <div class="alab-player-summary">
+                        <div class="alab-player-summary alab-player-summary-focused">
                             <div class="alab-player-identity-block alab-player-identity-block-compact">
                                 <div class="alab-player-subtitle">{perfil_subtitulo}</div>
                                 <div class="alab-player-context">{perfil_contexto}</div>

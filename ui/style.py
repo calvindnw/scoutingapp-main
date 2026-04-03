@@ -683,26 +683,32 @@ def load_custom_css():
         .alab-player-media-panel {
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
+            justify-content: center;
             text-align: left;
+            padding-top: 1.1rem;
+            padding-bottom: 1.1rem;
         }
 
         .alab-player-media-row {
             display: flex;
             align-items: center;
-            gap: 1.1rem;
+            gap: 1.35rem;
             width: 100%;
-            min-height: 150px;
+            min-height: 176px;
         }
 
         .alab-player-summary {
             display: flex;
             flex: 1 1 auto;
             min-width: 0;
-            min-height: 150px;
+            min-height: 176px;
             flex-direction: column;
             justify-content: center;
-            gap: 1.15rem;
+            gap: 0.8rem;
+        }
+
+        .alab-player-summary-focused {
+            padding-left: 0.1rem;
         }
 
         .alab-player-identity-block {
@@ -712,7 +718,7 @@ def load_custom_css():
         }
 
         .alab-player-identity-block-compact {
-            gap: 0.18rem;
+            gap: 0.1rem;
         }
 
         .alab-player-name {
@@ -725,16 +731,16 @@ def load_custom_css():
 
         .alab-player-subtitle {
             color: var(--alab-text-2);
-            font-size: 1rem;
-            font-weight: 600;
-            line-height: 1.35;
+            font-size: 1.02rem;
+            font-weight: 700;
+            line-height: 1.28;
         }
 
         .alab-player-context {
             color: var(--alab-text-3);
             font-size: 0.9rem;
             font-weight: 600;
-            line-height: 1.35;
+            line-height: 1.28;
         }
 
         .alab-player-meta-row {
@@ -765,7 +771,7 @@ def load_custom_css():
         }
 
         .alab-player-photo {
-            width: 188px;
+            width: 212px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
             border-radius: 18px;
@@ -777,7 +783,7 @@ def load_custom_css():
         .alab-player-photo-placeholder {
             display: grid;
             place-items: center;
-            width: 188px;
+            width: 212px;
             aspect-ratio: 1 / 1;
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -801,6 +807,7 @@ def load_custom_css():
             align-content: center;
             margin-top: 0;
             row-gap: 0.5rem;
+            column-gap: 0.6rem;
         }
 
         .alab-player-link {

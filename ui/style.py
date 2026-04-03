@@ -31,9 +31,9 @@ def load_custom_css():
         .stApp {
             position: relative;
             background:
-                radial-gradient(circle at 14% 10%, rgba(25, 226, 143, 0.08), transparent 28%),
-                radial-gradient(circle at 82% 20%, rgba(26, 86, 63, 0.2), transparent 26%),
-                linear-gradient(180deg, #132720 0%, #0d1b18 38%, #081310 100%);
+                radial-gradient(circle at 14% 10%, rgba(25, 226, 143, 0.1), transparent 30%),
+                radial-gradient(circle at 82% 20%, rgba(39, 110, 82, 0.24), transparent 28%),
+                linear-gradient(180deg, #264b3f 0%, #19372e 34%, #10231d 68%, #091511 100%);
             background-attachment: fixed;
             color: var(--alab-text-1);
         }
@@ -46,23 +46,30 @@ def load_custom_css():
             background:
                 repeating-linear-gradient(
                     0deg,
-                    rgba(255, 255, 255, 0.018) 0,
-                    rgba(255, 255, 255, 0.018) 1px,
+                    rgba(255, 255, 255, 0.028) 0,
+                    rgba(255, 255, 255, 0.028) 1px,
                     transparent 1px,
-                    transparent 34px
+                    transparent 30px
                 ),
                 repeating-linear-gradient(
                     90deg,
-                    rgba(255, 255, 255, 0.014) 0,
-                    rgba(255, 255, 255, 0.014) 1px,
+                    rgba(255, 255, 255, 0.022) 0,
+                    rgba(255, 255, 255, 0.022) 1px,
                     transparent 1px,
-                    transparent 34px
+                    transparent 30px
                 ),
-                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.025), transparent 1px),
-                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.04), transparent 1px);
-            background-size: 34px 34px, 34px 34px, 18px 18px, 24px 24px;
-            opacity: 0.28;
-            mix-blend-mode: soft-light;
+                repeating-linear-gradient(
+                    135deg,
+                    rgba(255, 255, 255, 0.014) 0,
+                    rgba(255, 255, 255, 0.014) 2px,
+                    transparent 2px,
+                    transparent 44px
+                ),
+                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.04), transparent 1px),
+                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.05), transparent 1px);
+            background-size: 30px 30px, 30px 30px, 44px 44px, 18px 18px, 24px 24px;
+            opacity: 0.42;
+            mix-blend-mode: screen;
             z-index: 0;
         }
 

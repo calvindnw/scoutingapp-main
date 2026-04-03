@@ -695,6 +695,57 @@ def load_custom_css():
             min-height: 150px;
         }
 
+        .alab-player-summary {
+            display: flex;
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 150px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.85rem;
+        }
+
+        .alab-player-identity-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.28rem;
+        }
+
+        .alab-player-name {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 1.18rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .alab-player-subtitle {
+            color: var(--alab-text-2);
+            font-size: 0.86rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .alab-player-meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .alab-player-meta-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 26px;
+            padding: 0.24rem 0.58rem;
+            border-radius: 999px;
+            background: rgba(158, 240, 199, 0.09);
+            border: 1px solid rgba(158, 240, 199, 0.14);
+            color: #dff8eb;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
         .alab-player-media-wrap {
             display: flex;
             justify-content: flex-start;
@@ -738,6 +789,7 @@ def load_custom_css():
             justify-content: flex-start;
             align-content: center;
             margin-top: 0;
+            row-gap: 0.5rem;
         }
 
         .alab-player-link {

@@ -2011,6 +2011,21 @@ if st.session_state["menu"] == "Jugadores":
         scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
         scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
         foto_url = str(jugador.get("URL_Foto", "") or "").strip()
+        nombre_jugador = jugador.get("Nombre", "-") or "-"
+        club_actual = jugador.get("Club", "-") or "-"
+        posicion_actual = jugador.get("Posición", "-") or "-"
+        pie_habil = jugador.get("Pie_Hábil", "-") or "-"
+        perfil_subtitulo = " · ".join(
+            valor for valor in [club_actual, posicion_actual] if str(valor).strip() and str(valor).strip() != "-"
+        ) or "Perfil principal"
+        perfil_meta_items = []
+        if edad not in [None, ""]:
+            perfil_meta_items.append(f"<span class='alab-player-meta-pill'>{edad} años</span>")
+        if nac1 and str(nac1).strip() != "-":
+            perfil_meta_items.append(f"<span class='alab-player-meta-pill'>{nac1}</span>")
+        if pie_habil and str(pie_habil).strip() != "-":
+            perfil_meta_items.append(f"<span class='alab-player-meta-pill'>Pie {pie_habil}</span>")
+        perfil_meta_html = "".join(perfil_meta_items)
 
         links_html = []
         if str(jugador.get("URL_Perfil", "")).startswith("http"):
@@ -2039,7 +2054,14 @@ if st.session_state["menu"] == "Jugadores":
                         <div class="alab-player-media-wrap">
                             {foto_html}
                         </div>
-                        <div class="alab-player-link-row alab-player-link-row-inline">{links_row}</div>
+                        <div class="alab-player-summary">
+                            <div class="alab-player-identity-block">
+                                <div class="alab-player-name">{nombre_jugador}</div>
+                                <div class="alab-player-subtitle">{perfil_subtitulo}</div>
+                            </div>
+                            <div class="alab-player-meta-row">{perfil_meta_html}</div>
+                            <div class="alab-player-link-row alab-player-link-row-inline">{links_row}</div>
+                        </div>
                     </div>
                 </div>
                 """

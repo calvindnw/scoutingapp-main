@@ -1427,6 +1427,23 @@ def sanitizar_texto_pdf(texto):
 class FPDF_SEGURO(FPDF):
     """Extensión de FPDF que sanitiza automáticamente todos los strings."""
 
+    def _normalizar_ancho_texto(self, width):
+        if width == 0:
+            disponible = self.w - self.r_margin - self.get_x()
+            if disponible <= (self.c_margin * 2 + 0.5):
+                self.set_x(self.l_margin)
+                disponible = self.w - self.r_margin - self.get_x()
+            return max(disponible, self.c_margin * 2 + 0.5)
+        if width is None:
+            return 0
+        if width < 0:
+            disponible = self.w - self.r_margin - self.get_x() + width
+            if disponible <= (self.c_margin * 2 + 0.5):
+                self.set_x(self.l_margin)
+                disponible = self.w - self.r_margin - self.get_x()
+            return max(disponible, self.c_margin * 2 + 0.5)
+        return width
+
     def header(self):
         self.set_fill_color(8, 21, 16)
         self.rect(0, 0, self.w, self.h, "F")
@@ -1456,10 +1473,12 @@ class FPDF_SEGURO(FPDF):
         self.cell(0, 4, f"ScoutingApp Profesional  |  Página {self.page_no()}", align="R")
 
     def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
+        w = self._normalizar_ancho_texto(w)
         text = sanitizar_texto_pdf(str(text)) if text else ""
         return super().cell(w, h, text, border, ln, align, fill, link)
 
     def multi_cell(self, w=0, h=0, text="", border=0, align="", fill=False):
+        w = self._normalizar_ancho_texto(w)
         text = sanitizar_texto_pdf(str(text)) if text else ""
         return super().multi_cell(w, h, text, border, align, fill)
 
@@ -1517,17 +1536,18 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             return sanitizar_texto_pdf(texto_valor)
 
         def dibujar_chip_resumen(x_pos, y_pos, ancho, alto, etiqueta, valor):
+            ancho_texto = max(ancho - 6, 8)
             pdf.set_fill_color(*color_panel_alt)
             pdf.set_draw_color(*color_borde)
             pdf.rect(x_pos, y_pos, ancho, alto, "DF")
             pdf.set_xy(x_pos + 3, y_pos + 2)
             pdf.set_font("Arial", "B", 7.2)
             pdf.set_text_color(*color_acento_suave)
-            pdf.cell(ancho - 6, 3.5, etiqueta.upper(), ln=True)
+            pdf.cell(ancho_texto, 3.5, etiqueta.upper(), ln=True)
             pdf.set_x(x_pos + 3)
             pdf.set_font("Arial", "B", 10)
             pdf.set_text_color(*color_texto)
-            pdf.multi_cell(ancho - 6, 4.2, valor)
+            pdf.multi_cell(ancho_texto, 4.2, valor)
 
         def descargar_foto(url_foto):
             if not str(url_foto).startswith("http"):
@@ -1665,7 +1685,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             ("Instagram", "Disponible" if str(jugador.get("Instagram", "")).startswith("http") else "No cargado"),
         ]
 
-        col_w = (info_w - 14) / 2
+        col_w = max((info_w - 14) / 2, 24)
         inicio_datos_y = panel_y + 14
         for indice, (etiqueta, valor) in enumerate(datos_jugador):
             fila = indice // 2
@@ -1821,11 +1841,13 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pdf.set_xy(card_x + 4, card_y + 3)
                 pdf.set_font("Arial", "B", 11)
                 pdf.set_text_color(*color_texto)
-                pdf.cell(card_w * 0.42, 4.5, f"Informe {indice:02d}")
+                ancho_titulo = card_w * 0.3
+                ancho_fecha = card_w - 8 - ancho_titulo
+                pdf.cell(ancho_titulo, 4.5, f"Informe {indice:02d}")
                 pdf.set_font("Arial", "", 8.5)
                 pdf.set_text_color(*color_acento_suave)
                 pdf.cell(
-                    card_w * 0.5,
+                    ancho_fecha,
                     4.5,
                     f"Fecha partido: {fecha_legible(informe.get('Fecha_Partido'))}   |   Fecha carga: {fecha_legible(informe.get('Fecha_Informe'))}",
                     ln=True,

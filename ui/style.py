@@ -204,7 +204,7 @@ def load_custom_css():
         .alab-login-hero {
             position: relative;
             overflow: hidden;
-            margin: 1.1rem auto 1.35rem;
+            margin: 0 auto 1.6rem;
             padding: 1.7rem 1.8rem 1.55rem;
             max-width: 1180px;
             border-radius: 28px;
@@ -213,6 +213,14 @@ def load_custom_css():
                 radial-gradient(circle at top right, rgba(25, 226, 143, 0.16), transparent 30%),
                 linear-gradient(145deg, rgba(20, 32, 29, 0.98), rgba(8, 19, 16, 0.98));
             box-shadow: var(--alab-shadow-lg);
+        }
+
+        .alab-login-top-spacer {
+            height: 1.65rem;
+        }
+
+        .alab-login-section-gap {
+            height: 0.55rem;
         }
 
         .alab-login-hero::before {
@@ -259,7 +267,7 @@ def load_custom_css():
 
         .alab-login-sidecard {
             min-height: 100%;
-            padding: 1.35rem 1.35rem 1.2rem;
+            padding: 1.5rem 1.45rem 1.35rem;
             border-radius: 22px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             background:
@@ -285,8 +293,8 @@ def load_custom_css():
         .alab-login-bullet-list {
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
-            margin-top: 1rem;
+            gap: 0.72rem;
+            margin-top: 1.15rem;
         }
 
         .alab-login-bullet {
@@ -309,7 +317,7 @@ def load_custom_css():
         }
 
         .alab-login-form-head {
-            margin: 0 0 0.8rem;
+            margin: 0 0 1.05rem;
             padding: 0.15rem 0.1rem;
         }
 
@@ -401,7 +409,7 @@ def load_custom_css():
 
         [data-testid="stAppViewContainer"] .block-container {
             max-width: 1280px;
-            padding-top: 1.6rem;
+            padding-top: 1.9rem;
         }
 
         .stApp [data-testid="stExpander"] {

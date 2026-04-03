@@ -367,6 +367,8 @@ def login_ui():
     if st.session_state["user"]:
         return True
 
+    render_html_block("<div class='alab-login-top-spacer'></div>")
+
     render_html_block(
         """
         <div class="alab-login-hero">
@@ -384,6 +386,8 @@ def login_ui():
         </div>
         """
     )
+
+    render_html_block("<div class='alab-login-section-gap'></div>")
 
     info_col, form_col = st.columns([1.05, 0.95], gap="large")
 

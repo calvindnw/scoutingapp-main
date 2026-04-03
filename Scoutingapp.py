@@ -2653,31 +2653,6 @@ if st.session_state["menu"] == "Estadísticas":
                     apply_glass_plotly(fig_metricas)
                     st.plotly_chart(fig_metricas, use_container_width=True)
 
-                    if len(tabla_estadisticas) > 2:
-                        df_liga_historica = df_long_stats[
-                            df_long_stats[tabla_estadisticas.columns[0]] != etiqueta_jugador
-                        ].copy()
-                        if not df_liga_historica.empty:
-                            section_header("Evolución de promedios de liga")
-                            fig_hist = px.line(
-                                df_liga_historica,
-                                x=tabla_estadisticas.columns[0],
-                                y="Valor",
-                                color="Métrica",
-                                markers=True,
-                                title="Tendencia anual de las referencias de liga",
-                            )
-                            fig_hist.update_traces(
-                                hovertemplate="<b>%{fullData.name}</b><br>%{x}: %{y:.2f}<extra></extra>"
-                            )
-                            fig_hist.update_layout(
-                                xaxis_title="Temporada de referencia",
-                                yaxis_title="Valor",
-                                legend_title_text="Métrica",
-                            )
-                            apply_glass_plotly(fig_hist)
-                            st.plotly_chart(fig_hist, use_container_width=True)
-
                     section_header("Radar comparativo")
                     valores_jugador = [
                         convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0

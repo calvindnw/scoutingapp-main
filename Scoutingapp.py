@@ -954,6 +954,58 @@ def formatear_formacion_pdf(valor):
     return sanitizar_texto_pdf(texto)
 
 
+def normalizar_url_foto(url_foto):
+    if url_foto is None or (isinstance(url_foto, float) and pd.isna(url_foto)):
+        return ""
+
+    url = str(url_foto).strip()
+    if not url or url.lower() in {"nan", "none", "nat", "<na>"}:
+        return ""
+
+    url = url.replace(" ", "%20")
+    if not url.startswith(("http://", "https://")):
+        return ""
+
+    if "drive.google.com" in url or "docs.google.com" in url:
+        coincidencia = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
+        if coincidencia is None:
+            coincidencia = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", url)
+        if coincidencia:
+            return f"https://drive.google.com/thumbnail?id={coincidencia.group(1)}&sz=w1000"
+
+    if "dropbox.com" in url:
+        if "raw=1" in url:
+            return url
+        if "dl=0" in url:
+            return url.replace("dl=0", "raw=1")
+        if "dl=1" in url:
+            return url.replace("dl=1", "raw=1")
+        return f"{url}{'&' if '?' in url else '?'}raw=1"
+
+    return url
+
+
+def construir_html_foto_jugador(url_foto, nombre_jugador="jugador"):
+    nombre_seguro = sanitizar_texto_pdf(str(nombre_jugador or "jugador")).replace('"', "&quot;")
+    url_normalizada = normalizar_url_foto(url_foto)
+    placeholder_html = (
+        '<div class="player-photo alab-player-photo" '
+        'style="display:grid;place-items:center;flex:0 0 56px;background:rgba(255,255,255,0.05);'
+        'color:rgba(226,236,231,0.72);font-size:10px;font-weight:700;">Sin foto</div>'
+    )
+    placeholder_html_attr = placeholder_html.replace('"', '&quot;')
+
+    if not url_normalizada:
+        return placeholder_html
+
+    url_segura = url_normalizada.replace('"', '&quot;')
+    return (
+        f'<img src="{url_segura}" alt="Foto de {nombre_seguro}" class="player-photo alab-player-photo" '
+        f'loading="lazy" referrerpolicy="no-referrer" '
+        f'onerror="this.onerror=null;this.outerHTML=\'{placeholder_html_attr}\'"/>'
+    )
+
+
 def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo="", espacio_posterior_minimo=26):
     asegurar_espacio_pdf(pdf, (11 if not subtitulo else 15) + espacio_posterior_minimo)
 
@@ -1676,7 +1728,8 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             return cursor_y + alto
 
         def descargar_foto(url_foto):
-            if not str(url_foto).startswith("http"):
+            url_foto = normalizar_url_foto(url_foto)
+            if not url_foto:
                 return None
             try:
                 response = requests.get(url_foto, timeout=8)
@@ -2400,7 +2453,7 @@ if st.session_state["menu"] == "Jugadores":
         nacionalidad_secundaria = jugador.get("Segunda_Nacionalidad", "") or "No informada"
         scouts_shortlist = sorted(shortlists_jugador["Agregado_Por"].dropna().astype(str).unique().tolist()) if not shortlists_jugador.empty else []
         scouts_texto = ", ".join(scouts_shortlist[:4]) if scouts_shortlist else "Todavía no aparece en lista corta"
-        foto_url = str(jugador.get("URL_Foto", "") or "").strip()
+        foto_url = normalizar_url_foto(jugador.get("URL_Foto", ""))
         club_actual = jugador.get("Club", "-") or "-"
         posicion_actual = jugador.get("Posición", "-") or "-"
         perfil_subtitulo = " · ".join(
@@ -2420,8 +2473,8 @@ if st.session_state["menu"] == "Jugadores":
             links_row = "<span class='alab-player-link alab-player-link-disabled'>Sin enlaces externos</span>"
 
         foto_html = (
-            f"<img src='{foto_url}' alt='Foto de {jugador.get('Nombre', 'jugador')}' class='alab-player-photo'/>"
-            if foto_url.startswith("http")
+            f"<img src='{foto_url}' alt='Foto de {jugador.get('Nombre', 'jugador')}' class='alab-player-photo' loading='lazy' referrerpolicy='no-referrer'/>"
+            if foto_url
             else "<div class='alab-player-photo-placeholder'>Sin foto</div>"
         )
 
@@ -3351,8 +3404,8 @@ if st.session_state["menu"] == "Ver informes":
                 col1, col2 = st.columns([1.1, 1.9])
 
                 with col1:
-                    foto_url = str(j.get("URL_Foto", "") or "")
-                    if foto_url.startswith("http"):
+                    foto_url = normalizar_url_foto(j.get("URL_Foto", ""))
+                    if foto_url:
                         st.image(foto_url, width=150)
 
                     instagram_url = str(j.get("Instagram", "") or "")
@@ -3815,9 +3868,10 @@ if st.session_state["menu"] == "Lista corta":
                     fila_cols = st.columns(len(fila_jugadores))
                     for fcol, (_, row) in zip(fila_cols, fila_jugadores):
                         with fcol:
-                            url_foto = str(row.get("URL_Foto", "")).strip()
-                            if not url_foto.startswith("http"):
-                                url_foto = "https://via.placeholder.com/60"
+                            foto_html = construir_html_foto_jugador(
+                                row.get("URL_Foto", ""),
+                                row.get("Nombre", "jugador"),
+                            )
 
                             partes = str(row.get("Nombre", "")).split()
                             nombre = partes[0] if partes else "Sin nombre"
@@ -3836,7 +3890,7 @@ if st.session_state["menu"] == "Lista corta":
                             st.markdown(
                                 f"""
                                 <div class="player-card alab-player-card">
-                                    <img src="{url_foto}" class="player-photo alab-player-photo"/>
+                                    {foto_html}
                                     <div class="player-info">
                                         <h5 class="alab-player-name">{nombre} {apellido}</h5>
                                         <p class="alab-player-copy">{club}</p>
@@ -3873,9 +3927,10 @@ if st.session_state["menu"] == "Lista corta":
                             fila_cols = st.columns(len(fila_jugadores))
                             for fcol, (_, row) in zip(fila_cols, fila_jugadores):
                                 with fcol:
-                                    url_foto = str(row.get("URL_Foto", "")).strip()
-                                    if not url_foto.startswith("http"):
-                                        url_foto = "https://via.placeholder.com/60"
+                                    foto_html = construir_html_foto_jugador(
+                                        row.get("URL_Foto", ""),
+                                        row.get("Nombre", "jugador"),
+                                    )
 
                                     partes = str(row.get("Nombre", "")).split()
                                     nombre = partes[0] if partes else "Sin nombre"
@@ -3894,7 +3949,7 @@ if st.session_state["menu"] == "Lista corta":
                                     st.markdown(
                                         f"""
                                         <div class="player-card alab-player-card">
-                                            <img src="{url_foto}" class="player-photo alab-player-photo"/>
+                                            {foto_html}
                                             <div class="player-info">
                                                 <h5 class="alab-player-name">{nombre} {apellido}</h5>
                                                 <p class="alab-player-copy">{club}</p>

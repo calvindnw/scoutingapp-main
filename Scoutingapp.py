@@ -1387,13 +1387,40 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
                 return texto
             return f"{texto[:limite - 3].rstrip()}..."
 
+        def ajustar_texto_a_bloque(valor, ancho, alto_linea, alto_maximo):
+            texto = valor_campo_pdf(valor, "")
+            if not texto:
+                return ""
+
+            texto_ajustado = texto
+            while texto_ajustado:
+                altura = medir_altura_texto_pdf(pdf, texto_ajustado, ancho, alto_linea)
+                if altura <= alto_maximo:
+                    return texto_ajustado
+
+                if len(texto_ajustado) <= 4:
+                    break
+
+                texto_ajustado = f"{texto_ajustado[:-4].rstrip()}..."
+
+            return texto_corto(texto, 12)
+
+        def escribir_bloque_centrado(x, y, ancho, alto, texto, fuente, estilo, tamano, color, alto_linea):
+            contenido = ajustar_texto_a_bloque(texto, ancho, alto_linea, alto)
+            altura_texto = medir_altura_texto_pdf(pdf, contenido, ancho, alto_linea)
+            inicio_y = y + max((alto - altura_texto) / 2, 0)
+            pdf.set_xy(x, inicio_y)
+            pdf.set_font(fuente, estilo, tamano)
+            pdf.set_text_color(*color)
+            pdf.multi_cell(ancho, alto_linea, contenido, align="C")
+
         titulo_y = 14
-        titulo_h = 16
+        titulo_h = 17
         titulo_w = pdf.w - pdf.l_margin - pdf.r_margin
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
         pdf.rect(pdf.l_margin, titulo_y, titulo_w, titulo_h, "DF")
-        pdf.set_xy(pdf.l_margin + 5, titulo_y + 3)
+        pdf.set_xy(pdf.l_margin + 5, titulo_y + 2.8)
         pdf.set_font("Arial", "B", 8)
         pdf.set_text_color(*color_acento)
         pdf.cell(0, 4, "SCOUTING DOSSIER", ln=True)
@@ -1412,9 +1439,9 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
         )
 
         cards_y = titulo_y + titulo_h + 5
-        card_gap = 3
+        card_gap = 4
         card_w = (titulo_w - (card_gap * 2)) / 3
-        card_h = 35
+        card_h = 44
 
         for indice, jugador in enumerate(jugadores):
             card_x = pdf.l_margin + indice * (card_w + card_gap)
@@ -1424,46 +1451,83 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
             pdf.set_fill_color(*colores_jugador[indice % len(colores_jugador)])
             pdf.rect(card_x, cards_y, 2.5, card_h, "F")
 
+            interior_x = card_x + 4.2
+            interior_w = card_w - 8.4
+
             foto_buffer = descargar_foto_para_pdf(jugador.get("URL_Foto", ""))
-            foto_w = 13
+            foto_w = 16
             foto_x = card_x + (card_w - foto_w) / 2
-            foto_y = cards_y + 3
+            foto_y = cards_y + 3.2
+            pdf.set_fill_color(15, 24, 29)
+            pdf.set_draw_color(53, 81, 71)
+            pdf.rect(foto_x - 0.7, foto_y - 0.7, foto_w + 1.4, foto_w + 1.4, "DF")
             if foto_buffer is not None:
                 pdf.image(foto_buffer, x=foto_x, y=foto_y, w=foto_w, h=foto_w)
             else:
                 pdf.set_fill_color(25, 37, 33)
                 pdf.rect(foto_x, foto_y, foto_w, foto_w, "F")
-                pdf.set_xy(foto_x, foto_y + 4.2)
-                pdf.set_font("Arial", "B", 5.8)
+                pdf.set_xy(foto_x, foto_y + 5.8)
+                pdf.set_font("Arial", "B", 6)
                 pdf.set_text_color(*color_texto_muted)
                 pdf.cell(foto_w, 4, "Sin foto", align="C")
 
-            cursor_y = cards_y + 17.5
-            pdf.set_xy(card_x + 3, cursor_y)
-            pdf.set_font("Arial", "B", 7.8)
-            pdf.set_text_color(*color_texto)
-            pdf.multi_cell(card_w - 6, 3.5, texto_corto(jugador.get("Nombre", "Jugador"), 28), align="C")
+            nombre_y = cards_y + 20.2
+            nombre_h = 7.2
+            escribir_bloque_centrado(
+                interior_x,
+                nombre_y,
+                interior_w,
+                nombre_h,
+                jugador.get("Nombre", "Jugador"),
+                "Arial",
+                "B",
+                7.6,
+                color_texto,
+                3.35,
+            )
 
             edad = calcular_edad(jugador.get("Fecha_Nac"))
             nacimiento = formatear_fecha_comparativa(jugador.get("Fecha_Nac"))
-            meta_1 = f"{texto_corto(jugador.get('Club'), 18)}"
-            meta_2 = f"{texto_corto(jugador.get('Liga'), 18)}"
-            meta_3 = f"{texto_corto(jugador.get('Pie_Hábil'), 10)} | {nacimiento}"
+            meta_1 = jugador.get("Club")
+            meta_2 = jugador.get("Liga")
+            meta_3 = f"{valor_campo_pdf(jugador.get('Pie_Hábil'))} | {nacimiento}"
             if str(edad) != "?":
                 meta_3 = f"{meta_3} ({edad})"
 
-            pdf.set_x(card_x + 3)
-            pdf.set_font("Arial", "", 6.1)
-            pdf.set_text_color(*color_texto_muted)
-            pdf.multi_cell(card_w - 6, 2.9, texto_corto(meta_1, 24), align="C")
-            pdf.set_x(card_x + 3)
-            pdf.multi_cell(card_w - 6, 2.9, texto_corto(meta_2, 24), align="C")
-            pdf.set_x(card_x + 3)
-            pdf.multi_cell(card_w - 6, 2.9, texto_corto(meta_3, 24), align="C")
-            pdf.set_x(card_x + 3)
-            pdf.set_text_color(231, 239, 234)
-            descripcion = texto_corto(jugador.get("Descripcion", "Sin descripción cargada."), 52)
-            pdf.multi_cell(card_w - 6, 2.8, descripcion, align="C")
+            meta_y = cards_y + 28.0
+            meta_h = 7.8
+            meta_bloque = "\n".join([valor_campo_pdf(meta_1), valor_campo_pdf(meta_2), valor_campo_pdf(meta_3)])
+            escribir_bloque_centrado(
+                interior_x,
+                meta_y,
+                interior_w,
+                meta_h,
+                meta_bloque,
+                "Arial",
+                "",
+                5.85,
+                color_texto_muted,
+                2.55,
+            )
+
+            separador_y = cards_y + 36.3
+            pdf.set_draw_color(53, 81, 71)
+            pdf.line(card_x + 4.5, separador_y, card_x + card_w - 4.5, separador_y)
+
+            descripcion_y = separador_y + 1.2
+            descripcion_h = cards_y + card_h - 2.8 - descripcion_y
+            escribir_bloque_centrado(
+                interior_x,
+                descripcion_y,
+                interior_w,
+                descripcion_h,
+                jugador.get("Descripcion", "Sin descripción cargada."),
+                "Arial",
+                "",
+                5.35,
+                (231, 239, 234),
+                2.35,
+            )
 
         tabla_y = cards_y + card_h + 5
         pdf.set_xy(pdf.l_margin, tabla_y)
@@ -1528,8 +1592,8 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
         grafico_barras = crear_barras_comparativa_pdf(dataset_comparativa)
         grafico_radar = crear_radar_comparativa_pdf(dataset_comparativa)
         panel_w = ancho_total
-        barras_h = 60
-        radar_h = 66
+        barras_h = 56
+        radar_h = 60
         barras_y = charts_y + 6
         radar_y = barras_y + barras_h + 5
 
@@ -1548,7 +1612,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
         if grafico_barras is not None:
             pdf.image(grafico_barras, x=pdf.l_margin + 4, y=barras_y + 8, w=panel_w - 8)
         if grafico_radar is not None:
-            radar_w = 88
+            radar_w = 82
             radar_x = pdf.l_margin + (panel_w - radar_w) / 2
             pdf.image(grafico_radar, x=radar_x, y=radar_y + 8, w=radar_w)
 

@@ -20,6 +20,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import plotly.express as px
+import plotly.graph_objects as go
 
 from io import BytesIO
 from datetime import date, datetime, timedelta
@@ -770,6 +771,45 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
         filas.append(fila_anual)
 
     return pd.DataFrame(filas), "ok"
+
+
+def preparar_datos_graficos_estadisticas(tabla_estadisticas: pd.DataFrame):
+    if tabla_estadisticas is None or tabla_estadisticas.empty or len(tabla_estadisticas.columns) < 2:
+        return None, None, None
+
+    etiqueta_columna = tabla_estadisticas.columns[0]
+    metricas = [columna for columna in tabla_estadisticas.columns if columna != etiqueta_columna]
+
+    df_chart = tabla_estadisticas.copy()
+    for metrica in metricas:
+        df_chart[metrica] = df_chart[metrica].apply(convertir_valor_numerico)
+
+    df_chart = df_chart.dropna(how="all", subset=metricas)
+    if df_chart.empty:
+        return None, None, None
+
+    df_long = df_chart.melt(
+        id_vars=[etiqueta_columna],
+        value_vars=metricas,
+        var_name="Métrica",
+        value_name="Valor",
+    ).dropna(subset=["Valor"])
+
+    if df_long.empty:
+        return None, None, None
+
+    def extraer_anio(etiqueta):
+        match = re.search(r"(20\d{2})", str(etiqueta))
+        return int(match.group(1)) if match else -1
+
+    referencia_jugador = str(df_chart.iloc[0][etiqueta_columna])
+    filas_liga = df_chart[df_chart[etiqueta_columna] != referencia_jugador].copy()
+    fila_referencia = None
+    if not filas_liga.empty:
+        filas_liga["_anio"] = filas_liga[etiqueta_columna].apply(extraer_anio)
+        fila_referencia = filas_liga.sort_values("_anio", ascending=False).iloc[0]
+
+    return df_long, fila_referencia, referencia_jugador
 
 
 def abreviar_titulo_estadistica_pdf(texto):
@@ -2479,6 +2519,95 @@ if st.session_state["menu"] == "Estadísticas":
                 use_container_width=True,
                 hide_index=True,
             )
+
+            df_long_stats, fila_liga_referencia, etiqueta_jugador = preparar_datos_graficos_estadisticas(
+                tabla_estadisticas
+            )
+
+            if df_long_stats is not None:
+                st.markdown("---")
+                section_header("Visualizaciones comparativas")
+
+                col_graf_1, col_graf_2 = st.columns(2)
+
+                with col_graf_1:
+                    fig_metricas = px.bar(
+                        df_long_stats,
+                        x="Métrica",
+                        y="Valor",
+                        color=tabla_estadisticas.columns[0],
+                        barmode="group",
+                        text="Valor",
+                        title="Comparativa por métrica",
+                    )
+                    fig_metricas.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+                    fig_metricas.update_layout(
+                        xaxis_title="",
+                        yaxis_title="Valor",
+                        legend_title_text="Referencia",
+                    )
+                    fig_metricas.update_xaxes(tickangle=-18)
+                    apply_glass_plotly(fig_metricas)
+                    st.plotly_chart(fig_metricas, use_container_width=True)
+
+                with col_graf_2:
+                    if fila_liga_referencia is not None:
+                        metricas_radar = [
+                            columna
+                            for columna in tabla_estadisticas.columns
+                            if columna != tabla_estadisticas.columns[0]
+                        ]
+                        valores_jugador = [
+                            convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0
+                            for metrica in metricas_radar
+                        ]
+                        valores_liga = [
+                            convertir_valor_numerico(fila_liga_referencia.get(metrica)) or 0
+                            for metrica in metricas_radar
+                        ]
+
+                        fig_radar = go.Figure()
+                        fig_radar.add_trace(
+                            go.Scatterpolar(
+                                r=valores_jugador + valores_jugador[:1],
+                                theta=metricas_radar + metricas_radar[:1],
+                                fill="toself",
+                                name=etiqueta_jugador,
+                                line=dict(color="#19e28f", width=3),
+                                fillcolor="rgba(25, 226, 143, 0.22)",
+                            )
+                        )
+                        fig_radar.add_trace(
+                            go.Scatterpolar(
+                                r=valores_liga + valores_liga[:1],
+                                theta=metricas_radar + metricas_radar[:1],
+                                fill="toself",
+                                name=str(fila_liga_referencia[tabla_estadisticas.columns[0]]),
+                                line=dict(color="#8fd3b4", width=2),
+                                fillcolor="rgba(143, 211, 180, 0.12)",
+                            )
+                        )
+                        fig_radar.update_layout(
+                            title="Radar vs promedio de liga más reciente",
+                            polar=dict(
+                                bgcolor="rgba(0,0,0,0)",
+                                radialaxis=dict(
+                                    showline=False,
+                                    gridcolor="rgba(255,255,255,0.08)",
+                                    tickfont=dict(color="rgba(226,236,231,0.74)"),
+                                ),
+                                angularaxis=dict(
+                                    gridcolor="rgba(255,255,255,0.06)",
+                                    tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
+                                ),
+                            ),
+                            showlegend=True,
+                            margin=dict(l=30, r=30, t=56, b=24),
+                        )
+                        apply_glass_plotly(fig_radar)
+                        st.plotly_chart(fig_radar, use_container_width=True)
+                    else:
+                        st.info("No hay suficientes promedios de liga para construir el radar comparativo.")
 
 
 

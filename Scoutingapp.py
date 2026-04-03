@@ -901,26 +901,28 @@ def valor_campo_pdf(valor, fallback="-"):
     return sanitizar_texto_pdf(texto)
 
 
-def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo=""):
+def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo="", espacio_posterior_minimo=26):
+    asegurar_espacio_pdf(pdf, (11 if not subtitulo else 15) + espacio_posterior_minimo)
+
     bloque_x = pdf.l_margin
     bloque_y = pdf.get_y()
     bloque_w = pdf.w - pdf.l_margin - pdf.r_margin
     bloque_h = 11 if not subtitulo else 15
 
-    pdf.set_fill_color(10, 32, 24)
-    pdf.set_draw_color(34, 82, 61)
+    pdf.set_fill_color(15, 22, 28)
+    pdf.set_draw_color(110, 132, 128)
     pdf.set_line_width(0.5)
     pdf.rect(bloque_x, bloque_y, bloque_w, bloque_h, "DF")
 
     pdf.set_xy(bloque_x + 4, bloque_y + 2.2)
     pdf.set_font("Arial", "B", 12)
-    pdf.set_text_color(244, 249, 246)
+    pdf.set_text_color(245, 247, 248)
     pdf.cell(bloque_w - 8, 5, titulo, ln=True)
 
     if subtitulo:
         pdf.set_x(bloque_x + 4)
         pdf.set_font("Arial", "", 8.5)
-        pdf.set_text_color(172, 191, 181)
+        pdf.set_text_color(198, 207, 209)
         pdf.multi_cell(bloque_w - 8, 4, subtitulo)
 
     pdf.set_y(bloque_y + bloque_h + 4)
@@ -1096,12 +1098,12 @@ def agregar_estadisticas_pdf(
     resumen_x = pdf.l_margin
     resumen_w = pdf.w - pdf.l_margin - pdf.r_margin
     resumen_h = 16
-    pdf.set_fill_color(12, 32, 25)
-    pdf.set_draw_color(34, 82, 61)
+    pdf.set_fill_color(11, 18, 24)
+    pdf.set_draw_color(118, 138, 132)
     pdf.rect(resumen_x, resumen_y, resumen_w, resumen_h, "DF")
     pdf.set_xy(resumen_x + 4, resumen_y + 3)
     pdf.set_font("Arial", "B", 9)
-    pdf.set_text_color(151, 201, 177)
+    pdf.set_text_color(210, 220, 222)
     pdf.cell(0, 4, "RESUMEN DE COMPETICIÓN", ln=True)
     pdf.set_x(resumen_x + 4)
     pdf.set_font("Arial", "", 10)
@@ -1165,9 +1167,9 @@ def agregar_estadisticas_pdf(
     ancho_resto = (ancho_total - ancho_primera) / max(1, len(columnas) - 1)
     anchos = [ancho_primera] + [ancho_resto] * (len(columnas) - 1)
 
-    pdf.set_fill_color(24, 67, 51)
+    pdf.set_fill_color(23, 32, 38)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_draw_color(45, 92, 72)
+    pdf.set_draw_color(118, 138, 132)
     pdf.set_font("Arial", "B", 6.2)
 
     for columna, ancho in zip(columnas, anchos):
@@ -1178,11 +1180,11 @@ def agregar_estadisticas_pdf(
     for indice, (_, fila) in enumerate(tabla_estadisticas.iterrows()):
         es_jugador = indice == 0
         if es_jugador:
-            pdf.set_fill_color(21, 54, 41)
+            pdf.set_fill_color(19, 28, 34)
             pdf.set_text_color(246, 251, 248)
             pdf.set_font("Arial", "B", 7.8)
         else:
-            fill_color = (12, 32, 25) if indice % 2 else (15, 39, 31)
+            fill_color = (11, 18, 24) if indice % 2 else (17, 25, 31)
             pdf.set_fill_color(*fill_color)
             pdf.set_text_color(225, 235, 229)
             pdf.set_font("Arial", "", 7)
@@ -1445,31 +1447,28 @@ class FPDF_SEGURO(FPDF):
         return width
 
     def header(self):
-        self.set_fill_color(8, 21, 16)
-        self.rect(0, 0, self.w, self.h, "F")
+        fondo_path = "fondo informe cancha.png"
+        if os.path.exists(fondo_path):
+            self.image(fondo_path, x=0, y=0, w=self.w, h=self.h)
+        else:
+            self.set_fill_color(17, 27, 32)
+            self.rect(0, 0, self.w, self.h, "F")
 
-        self.set_fill_color(10, 32, 24)
-        self.rect(0, 0, self.w, 22, "F")
+        self.set_fill_color(10, 16, 20)
+        self.rect(0, 0, self.w, 21, "F")
 
-        self.set_draw_color(18, 45, 34)
-        self.set_line_width(0.1)
-        for x_pos in range(12, int(self.w), 22):
-            self.line(x_pos, 0, x_pos, self.h)
-        for y_pos in range(18, int(self.h), 22):
-            self.line(0, y_pos, self.w, y_pos)
-
-        self.set_draw_color(90, 154, 124)
+        self.set_draw_color(118, 138, 132)
         self.set_line_width(0.6)
         self.line(self.l_margin, 18, self.w - self.r_margin, 18)
 
     def footer(self):
         self.set_y(-10)
-        self.set_draw_color(34, 82, 61)
+        self.set_draw_color(118, 138, 132)
         self.set_line_width(0.25)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.set_y(-8)
         self.set_font("Arial", "", 7)
-        self.set_text_color(144, 171, 157)
+        self.set_text_color(218, 224, 225)
         self.cell(0, 4, f"ScoutingApp Profesional  |  Página {self.page_no()}", align="R")
 
     def cell(self, w=0, h=0, text="", border=0, ln=False, align="", fill=False, link=""):
@@ -1497,14 +1496,14 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         import requests
         from PIL import Image
         
-        color_fondo = (8, 21, 16)
-        color_panel = (12, 32, 25)
-        color_panel_alt = (15, 39, 31)
-        color_acento = (90, 154, 124)
-        color_acento_suave = (150, 201, 177)
-        color_texto = (241, 247, 243)
-        color_texto_muted = (171, 188, 179)
-        color_borde = (34, 82, 61)
+        color_fondo = (17, 27, 32)
+        color_panel = (11, 18, 24)
+        color_panel_alt = (17, 25, 31)
+        color_acento = (102, 140, 128)
+        color_acento_suave = (210, 220, 222)
+        color_texto = (246, 247, 248)
+        color_texto_muted = (213, 219, 221)
+        color_borde = (118, 138, 132)
 
         pdf = FPDF_SEGURO()
         pdf.set_margins(left=14, top=16, right=14)
@@ -1548,6 +1547,30 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf.set_font("Arial", "B", 10)
             pdf.set_text_color(*color_texto)
             pdf.multi_cell(ancho_texto, 4.2, valor)
+
+        def dibujar_pildoras_enlaces(x_pos, y_pos, ancho_disponible, enlaces):
+            if not enlaces:
+                return y_pos
+
+            cursor_x = x_pos
+            cursor_y = y_pos
+            alto = 7
+            for etiqueta, url in enlaces:
+                ancho_pildora = max(24, min(pdf.get_string_width(etiqueta) + 8, ancho_disponible))
+                if cursor_x + ancho_pildora > x_pos + ancho_disponible:
+                    cursor_x = x_pos
+                    cursor_y += alto + 2
+
+                pdf.set_fill_color(22, 31, 38)
+                pdf.set_draw_color(*color_borde)
+                pdf.rect(cursor_x, cursor_y, ancho_pildora, alto, "DF")
+                pdf.set_xy(cursor_x, cursor_y + 1.5)
+                pdf.set_font("Arial", "B", 7.8)
+                pdf.set_text_color(*color_acento_suave)
+                pdf.cell(ancho_pildora, 3.5, etiqueta, align="C", link=str(url))
+                cursor_x += ancho_pildora + 3
+
+            return cursor_y + alto
 
         def descargar_foto(url_foto):
             if not str(url_foto).startswith("http"):
@@ -1676,13 +1699,9 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             ("Nacionalidades", nacionalidades),
             ("Altura", f"{texto('Altura')} cm" if texto("Altura") != "-" else "-"),
             ("Pie hábil", texto("Pie_Hábil")),
-            ("Sexo", texto("Sexo")),
             ("Representante", texto("representante")),
-            ("Contacto", texto("telefono")),
-            ("Wyscout", texto("nombre_wyscout")),
-            ("Perfil externo", "Disponible" if str(jugador.get("URL_Perfil", "")).startswith("http") else "No cargado"),
-            ("Video", "Disponible" if str(jugador.get("video_url", "")).startswith("http") else "No cargado"),
-            ("Instagram", "Disponible" if str(jugador.get("Instagram", "")).startswith("http") else "No cargado"),
+            ("Segunda nacionalidad", texto("Segunda_Nacionalidad")),
+            ("Fin de contrato", fecha_legible(jugador.get("Fecha_Fin_Contrato"))),
         ]
 
         col_w = max((info_w - 14) / 2, 24)
@@ -1709,14 +1728,12 @@ def generar_pdf_reporte_completo(jugador, df_reports):
         if str(jugador.get("Instagram", "")).startswith("http"):
             enlaces.append(("Instagram", jugador.get("Instagram")))
 
-        enlace_y = panel_y + panel_h - 10
-        enlace_x = info_x + 4
-        for etiqueta, url in enlaces:
-            pdf.set_xy(enlace_x, enlace_y)
-            pdf.set_font("Arial", "U", 8.5)
-            pdf.set_text_color(*color_acento)
-            pdf.cell(30, 4, etiqueta, link=str(url))
-            enlace_x += 34
+        enlaces_titulo_y = panel_y + panel_h - 18
+        pdf.set_xy(info_x + 4, enlaces_titulo_y)
+        pdf.set_font("Arial", "B", 7)
+        pdf.set_text_color(*color_acento_suave)
+        pdf.cell(info_w - 8, 3.5, "ENLACES EXTERNOS")
+        dibujar_pildoras_enlaces(info_x + 4, enlaces_titulo_y + 5, info_w - 8, enlaces)
 
         pdf.set_y(panel_y + panel_h + 6)
 
@@ -1741,6 +1758,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf,
             "Valoración de aspectos",
             "Radar y promedio de puntuación brindada por el equipo de scouting.",
+            espacio_posterior_minimo=86,
         )
 
         asegurar_espacio_pdf(pdf, 82)
@@ -1797,6 +1815,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
             pdf,
             "Secuencia de informes",
             "Listado consecutivo en el orden actual de visualización, con contexto operativo y observaciones completas.",
+            espacio_posterior_minimo=34,
         )
 
         informes_export = informes_jugador.copy()
@@ -1835,7 +1854,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 pdf.set_fill_color(*color_panel)
                 pdf.set_draw_color(*color_borde)
                 pdf.rect(card_x, card_y, card_w, card_h, "DF")
-                pdf.set_fill_color(21, 54, 41)
+                pdf.set_fill_color(19, 28, 34)
                 pdf.rect(card_x, card_y, card_w, 11, "F")
 
                 pdf.set_xy(card_x + 4, card_y + 3)
@@ -1855,16 +1874,14 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 )
 
                 meta_1 = f"Partido: {valor_campo_pdf(informe.get('Equipos_Resultados'))}"
-                meta_2 = f"Scout: {valor_campo_pdf(informe.get('Scout'))}"
-                meta_3 = f"Línea: {valor_campo_pdf(informe.get('Línea'))}"
-                meta_4 = f"Formación: {valor_campo_pdf(informe.get('Formación'))}"
+                meta_2 = f"Formación: {valor_campo_pdf(informe.get('Formación'))}"
 
                 pdf.set_xy(card_x + 4, card_y + 15)
                 pdf.set_font("Arial", "", 9)
                 pdf.set_text_color(*color_texto_muted)
                 pdf.multi_cell(card_w - 8, 4.8, meta_1)
                 pdf.set_x(card_x + 4)
-                pdf.multi_cell(card_w - 8, 4.8, f"{meta_2}   |   {meta_3}   |   {meta_4}")
+                pdf.multi_cell(card_w - 8, 4.8, meta_2)
 
                 pdf.set_x(card_x + 4)
                 pdf.set_font("Arial", "B", 8.2)

@@ -702,13 +702,25 @@ def load_custom_css():
             min-height: 150px;
             flex-direction: column;
             justify-content: center;
-            gap: 0.85rem;
+            gap: 1rem;
         }
 
         .alab-player-identity-block {
             display: flex;
             flex-direction: column;
             gap: 0.28rem;
+        }
+
+        .alab-player-identity-block-compact {
+            gap: 0.18rem;
+        }
+
+        .alab-player-access-label {
+            color: var(--alab-text-3);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
         }
 
         .alab-player-name {
@@ -721,7 +733,14 @@ def load_custom_css():
 
         .alab-player-subtitle {
             color: var(--alab-text-2);
-            font-size: 0.86rem;
+            font-size: 0.96rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .alab-player-context {
+            color: var(--alab-text-3);
+            font-size: 0.82rem;
             font-weight: 600;
             line-height: 1.35;
         }
@@ -754,7 +773,7 @@ def load_custom_css():
         }
 
         .alab-player-photo {
-            width: 136px;
+            width: 164px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
             border-radius: 18px;
@@ -766,7 +785,7 @@ def load_custom_css():
         .alab-player-photo-placeholder {
             display: grid;
             place-items: center;
-            width: 136px;
+            width: 164px;
             aspect-ratio: 1 / 1;
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -795,13 +814,18 @@ def load_custom_css():
         .alab-player-link {
             display: inline-flex;
             align-items: center;
-            min-height: 28px;
-            padding: 0.3rem 0.65rem;
+            min-height: 38px;
+            padding: 0.48rem 0.95rem;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             background: rgba(255, 255, 255, 0.04);
-            font-size: 0.74rem;
+            font-size: 0.84rem;
             font-weight: 700;
+        }
+
+        .alab-player-link-disabled {
+            color: var(--alab-text-3);
+            background: rgba(255, 255, 255, 0.025);
         }
 
         .alab-player-link a,

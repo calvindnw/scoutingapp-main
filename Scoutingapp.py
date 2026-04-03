@@ -926,6 +926,34 @@ def medir_altura_texto_pdf(pdf, texto, ancho, alto_linea):
     return max(cantidad_lineas, 1) * alto_linea
 
 
+def abreviar_leyenda_grafico_pdf(texto, limite=28):
+    texto = valor_campo_pdf(texto, "-")
+    return texto if len(texto) <= limite else f"{texto[:limite - 1].rstrip()}…"
+
+
+def formatear_formacion_pdf(valor):
+    if valor is None or (isinstance(valor, float) and pd.isna(valor)):
+        return "-"
+
+    if isinstance(valor, pd.Timestamp) and pd.notna(valor):
+        return f"{valor.day}-{valor.month}-{valor.year % 100}"
+
+    if isinstance(valor, (datetime, date)):
+        return f"{valor.day}-{valor.month}-{valor.year % 100}"
+
+    texto = str(valor).strip()
+    if not texto:
+        return "-"
+
+    fecha = pd.to_datetime(texto, errors="coerce", dayfirst=True)
+    if pd.notna(fecha):
+        partes_numericas = re.findall(r"\d+", texto)
+        if len(partes_numericas) >= 3 and int(fecha.year) >= 2000:
+            return f"{int(fecha.day)}-{int(fecha.month)}-{int(fecha.year) % 100}"
+
+    return sanitizar_texto_pdf(texto)
+
+
 def dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo="", espacio_posterior_minimo=26):
     asegurar_espacio_pdf(pdf, (11 if not subtitulo else 15) + espacio_posterior_minimo)
 
@@ -1029,7 +1057,7 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     posiciones = np.arange(len(etiquetas_validas))
     alto_barra = 0.34
 
-    fig, ax = plt.subplots(figsize=(7.8, 3.55))
+    fig, ax = plt.subplots(figsize=(7.8, 3.7))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
     barras_jugador = ax.barh(
@@ -1037,14 +1065,14 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
         valores_jugador,
         height=alto_barra,
         color="#19e28f",
-        label=valor_campo_pdf(etiqueta_jugador, "Jugador"),
+        label=abreviar_leyenda_grafico_pdf(etiqueta_jugador, 24),
     )
     barras_liga = ax.barh(
         posiciones - alto_barra / 2,
         valores_liga,
         height=alto_barra,
         color="#8fd3b4",
-        label=nombre_referencia,
+        label=abreviar_leyenda_grafico_pdf(nombre_referencia, 24),
     )
 
     ax.set_yticks(posiciones)
@@ -1057,7 +1085,17 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
     ax.set_xlabel("Valor", color="#d6e4dc", fontsize=9)
-    ax.legend(loc="lower right", frameon=False, labelcolor="#edf5f0", fontsize=8)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.12),
+        ncol=2,
+        frameon=False,
+        labelcolor="#edf5f0",
+        fontsize=7.5,
+        handlelength=1.6,
+        columnspacing=1.2,
+    )
+    plt.subplots_adjust(top=0.84, bottom=0.17, left=0.25, right=0.96)
 
     for barra in list(barras_jugador) + list(barras_liga):
         ancho = barra.get_width()
@@ -1093,16 +1131,26 @@ def crear_radar_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqu
     fig, ax = plt.subplots(figsize=(5.3, 5.0), subplot_kw=dict(polar=True))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
-    ax.plot(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", linewidth=2.2, label=valor_campo_pdf(etiqueta_jugador, "Jugador"))
+    ax.plot(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", linewidth=2.2, label=abreviar_leyenda_grafico_pdf(etiqueta_jugador, 22))
     ax.fill(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", alpha=0.18)
-    ax.plot(angulos, valores_liga + valores_liga[:1], color="#8fd3b4", linewidth=2, label=valor_campo_pdf(fila_liga_referencia.get(etiqueta_columna), "Promedio de liga"))
+    ax.plot(angulos, valores_liga + valores_liga[:1], color="#8fd3b4", linewidth=2, label=abreviar_leyenda_grafico_pdf(fila_liga_referencia.get(etiqueta_columna), 22))
     ax.fill(angulos, valores_liga + valores_liga[:1], color="#8fd3b4", alpha=0.12)
     ax.set_xticks(angulos[:-1])
     ax.set_xticklabels(metricas, color="#edf5f0", fontsize=8)
     ax.tick_params(axis="y", colors="#a8c0b3", labelsize=7)
     ax.grid(color="#254637", alpha=0.65)
     ax.spines["polar"].set_color("#3f7d60")
-    ax.legend(loc="upper right", bbox_to_anchor=(1.24, 1.12), frameon=False, labelcolor="#edf5f0", fontsize=8)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.18),
+        ncol=2,
+        frameon=False,
+        labelcolor="#edf5f0",
+        fontsize=7.5,
+        handlelength=1.8,
+        columnspacing=1.1,
+    )
+    plt.subplots_adjust(top=0.78, bottom=0.08)
     return crear_buffer_figura_pdf(fig)
 
 
@@ -1939,7 +1987,7 @@ def generar_pdf_reporte_completo(jugador, df_reports):
                 )
 
                 meta_1 = f"Partido: {valor_campo_pdf(informe.get('Equipos_Resultados'))}"
-                meta_2 = f"Formación: {valor_campo_pdf(informe.get('Formación'))}"
+                meta_2 = f"Formación: {formatear_formacion_pdf(informe.get('Formación'))}"
 
                 pdf.set_xy(card_x + 4, card_y + 15)
                 pdf.set_font("Arial", "", 9)

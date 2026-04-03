@@ -31,11 +31,25 @@ def load_custom_css():
         .stApp {
             position: relative;
             background:
-                radial-gradient(circle at 14% 10%, rgba(25, 226, 143, 0.1), transparent 30%),
-                radial-gradient(circle at 82% 20%, rgba(39, 110, 82, 0.24), transparent 28%),
-                linear-gradient(180deg, #264b3f 0%, #19372e 34%, #10231d 68%, #091511 100%);
+                radial-gradient(circle at 12% 10%, rgba(198, 245, 223, 0.14), transparent 24%),
+                radial-gradient(circle at 86% 16%, rgba(125, 194, 163, 0.18), transparent 24%),
+                radial-gradient(circle at 50% 100%, rgba(40, 84, 69, 0.34), transparent 34%),
+                linear-gradient(180deg, #5a8071 0%, #41685b 20%, #27483d 48%, #142f28 76%, #091410 100%);
             background-attachment: fixed;
             color: var(--alab-text-1);
+        }
+
+        .stApp::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.08), transparent 20%),
+                radial-gradient(circle at 78% 12%, rgba(25, 226, 143, 0.08), transparent 18%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 38%, rgba(0, 0, 0, 0.18) 100%);
+            opacity: 0.9;
+            z-index: 0;
         }
 
         .stApp::before {
@@ -46,29 +60,29 @@ def load_custom_css():
             background:
                 repeating-linear-gradient(
                     0deg,
-                    rgba(255, 255, 255, 0.028) 0,
-                    rgba(255, 255, 255, 0.028) 1px,
+                    rgba(255, 255, 255, 0.04) 0,
+                    rgba(255, 255, 255, 0.04) 1px,
                     transparent 1px,
-                    transparent 30px
+                    transparent 28px
                 ),
                 repeating-linear-gradient(
                     90deg,
-                    rgba(255, 255, 255, 0.022) 0,
-                    rgba(255, 255, 255, 0.022) 1px,
+                    rgba(255, 255, 255, 0.028) 0,
+                    rgba(255, 255, 255, 0.028) 1px,
                     transparent 1px,
-                    transparent 30px
+                    transparent 28px
                 ),
                 repeating-linear-gradient(
                     135deg,
-                    rgba(255, 255, 255, 0.014) 0,
-                    rgba(255, 255, 255, 0.014) 2px,
+                    rgba(206, 243, 227, 0.018) 0,
+                    rgba(206, 243, 227, 0.018) 2px,
                     transparent 2px,
-                    transparent 44px
+                    transparent 42px
                 ),
-                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.04), transparent 1px),
-                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.05), transparent 1px);
-            background-size: 30px 30px, 30px 30px, 44px 44px, 18px 18px, 24px 24px;
-            opacity: 0.42;
+                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.05), transparent 1px),
+                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.06), transparent 1px);
+            background-size: 28px 28px, 28px 28px, 42px 42px, 18px 18px, 24px 24px;
+            opacity: 0.58;
             mix-blend-mode: screen;
             z-index: 0;
         }

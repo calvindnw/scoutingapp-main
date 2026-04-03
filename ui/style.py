@@ -201,6 +201,133 @@ def load_custom_css():
             font-weight: 800;
         }
 
+        .alab-login-hero {
+            position: relative;
+            overflow: hidden;
+            margin: 1.1rem auto 1.35rem;
+            padding: 1.7rem 1.8rem 1.55rem;
+            max-width: 1180px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                radial-gradient(circle at top right, rgba(25, 226, 143, 0.16), transparent 30%),
+                linear-gradient(145deg, rgba(20, 32, 29, 0.98), rgba(8, 19, 16, 0.98));
+            box-shadow: var(--alab-shadow-lg);
+        }
+
+        .alab-login-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 180px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(25, 226, 143, 0.95), rgba(25, 226, 143, 0));
+        }
+
+        .alab-login-kicker {
+            color: var(--alab-brand);
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .alab-login-title {
+            margin: 0;
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(2rem, 3.3vw, 3rem);
+            font-weight: 800;
+            line-height: 1.02;
+        }
+
+        .alab-login-copy {
+            max-width: 760px;
+            margin: 0.65rem 0 0;
+            color: var(--alab-text-2);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        .alab-login-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            margin-top: 1rem;
+        }
+
+        .alab-login-sidecard {
+            min-height: 100%;
+            padding: 1.35rem 1.35rem 1.2rem;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                linear-gradient(155deg, rgba(22, 42, 35, 0.92), rgba(10, 26, 20, 0.94));
+            box-shadow: var(--alab-shadow-md);
+        }
+
+        .alab-login-sidecard-title {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .alab-login-sidecard-copy {
+            margin: 0.7rem 0 0;
+            color: var(--alab-text-2);
+            font-size: 0.94rem;
+            line-height: 1.58;
+        }
+
+        .alab-login-bullet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .alab-login-bullet {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: var(--alab-text-1);
+            font-size: 0.86rem;
+            font-weight: 700;
+        }
+
+        .alab-login-bullet::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--alab-brand);
+            box-shadow: 0 0 0 6px rgba(25, 226, 143, 0.08);
+            flex: 0 0 auto;
+        }
+
+        .alab-login-form-head {
+            margin: 0 0 0.8rem;
+            padding: 0.15rem 0.1rem;
+        }
+
+        .alab-login-form-title {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 1.22rem;
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .alab-login-form-copy {
+            margin: 0.45rem 0 0;
+            color: var(--alab-text-2);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
         .stApp p,
         .stApp li,
         .stApp label,
@@ -270,6 +397,11 @@ def load_custom_css():
             border-radius: var(--alab-radius-lg);
             border: 1px solid rgba(255, 255, 255, 0.08);
             background: linear-gradient(145deg, rgba(21, 40, 33, 0.55), rgba(10, 26, 20, 0.42));
+        }
+
+        [data-testid="stAppViewContainer"] .block-container {
+            max-width: 1280px;
+            padding-top: 1.6rem;
         }
 
         .stApp [data-testid="stExpander"] {

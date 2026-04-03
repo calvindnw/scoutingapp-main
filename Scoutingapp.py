@@ -367,16 +367,60 @@ def login_ui():
     if st.session_state["user"]:
         return True
 
-    st.title("ScoutingApp Profesional")
-    st.subheader("Acceso a la plataforma")
-    st.write(
-        "Ingresá con tu usuario y contraseña para acceder a jugadores, informes, shortlist y paneles de análisis."
+    render_html_block(
+        """
+        <div class="alab-login-hero">
+            <div class="alab-login-kicker">Plataforma de scouting</div>
+            <h1 class="alab-login-title">ScoutingApp Profesional</h1>
+            <p class="alab-login-copy">
+                Ingresá al entorno de seguimiento, shortlist e informes con la misma identidad visual
+                que ya vive dentro de la app.
+            </p>
+            <div class="alab-login-chip-row">
+                <span class="alab-dashboard-chip"><strong>Base</strong> Jugadores + informes</span>
+                <span class="alab-dashboard-chip"><strong>Acceso</strong> Roles por usuario</span>
+                <span class="alab-dashboard-chip"><strong>Flujo</strong> Scouting operativo</span>
+            </div>
+        </div>
+        """
     )
 
-    with st.form("login_form_main"):
-        usuario = st.text_input("Usuario", key="login_usuario_main")
-        clave = st.text_input("Contraseña", type="password", key="login_clave_main")
-        enviar = st.form_submit_button("Ingresar")
+    info_col, form_col = st.columns([1.05, 0.95], gap="large")
+
+    with info_col:
+        render_html_block(
+            """
+            <div class="alab-login-sidecard">
+                <div class="alab-login-sidecard-title">Acceso centralizado</div>
+                <p class="alab-login-sidecard-copy">
+                    Consultá jugadores, revisá informes, seguí prioridades y mové decisiones de shortlist
+                    sin salir del mismo entorno.
+                </p>
+                <div class="alab-login-bullet-list">
+                    <span class="alab-login-bullet">Seguimiento por roles</span>
+                    <span class="alab-login-bullet">Paneles y métricas unificadas</span>
+                    <span class="alab-login-bullet">Carga y consulta sobre Google Sheets</span>
+                </div>
+            </div>
+            """
+        )
+
+    with form_col:
+        render_html_block(
+            """
+            <div class="alab-login-form-head">
+                <div class="alab-login-form-title">Acceso a la plataforma</div>
+                <p class="alab-login-form-copy">
+                    Ingresá con tu usuario y contraseña para entrar al entorno de trabajo.
+                </p>
+            </div>
+            """
+        )
+
+        with st.form("login_form_main"):
+            usuario = st.text_input("Usuario", key="login_usuario_main", placeholder="Tu usuario")
+            clave = st.text_input("Contraseña", type="password", key="login_clave_main", placeholder="Tu contraseña")
+            enviar = st.form_submit_button("Ingresar", use_container_width=True)
 
     if enviar:
         usuario_validado = autenticar_usuario(usuario, clave)
@@ -391,11 +435,10 @@ def login_ui():
 # =========================================================
 
 # Siempre mostrar el bloque de login/acceso de usuario en la barra lateral
+load_custom_css()
 login_success = login_ui()
 if not login_success:
     st.stop()
-
-load_custom_css()
 
 CURRENT_USER = st.session_state["user"]
 CURRENT_ROLE = st.session_state["role"]

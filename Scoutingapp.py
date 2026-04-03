@@ -1033,6 +1033,7 @@ def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_j
     metricas = [etiqueta for etiqueta, _ in metricas_posicion]
     mensajes = []
     dataset = []
+    jugadores_sin_estadisticas = []
 
     for jugador in jugadores:
         nombre = str(jugador.get("Nombre", "Jugador")).strip() or "Jugador"
@@ -1044,11 +1045,16 @@ def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_j
 
         if tabla_estadisticas is None or tabla_estadisticas.empty:
             mensajes_estado = {
-                "jugador_sin_estadisticas": f"{nombre}: sin estadísticas disponibles.",
+                "jugador_sin_estadisticas": f"{nombre} no dispone de estadísticas disponibles.",
                 "posicion_no_configurada": f"{nombre}: la posición no tiene métricas configuradas.",
                 "sin_promedios": f"{nombre}: no hay promedios de liga disponibles.",
             }
-            return None, [mensajes_estado.get(estado_estadisticas, f"{nombre}: no se pudo construir la comparativa estadística.")]
+            mensaje = mensajes_estado.get(estado_estadisticas, f"{nombre}: no se pudo construir la comparativa estadística.")
+            if estado_estadisticas == "jugador_sin_estadisticas":
+                jugadores_sin_estadisticas.append(nombre)
+                mensajes.append(mensaje)
+                continue
+            return None, [mensaje]
 
         valores_jugador = {
             metrica: convertir_valor_numerico(tabla_estadisticas.iloc[0].get(metrica))
@@ -1074,6 +1080,9 @@ def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_j
         filas_tabla.append(fila)
         filas_tabla_raw.append(fila_raw)
 
+    if not dataset:
+        return None, mensajes or ["Ninguno de los jugadores seleccionados tiene estadísticas disponibles."]
+
     return {
         "metricas": metricas,
         "posicion": posicion_objetivo,
@@ -1081,6 +1090,7 @@ def construir_dataset_comparativa_estadistica(jugadores, df_promedios, df_data_j
         "tabla_raw": pd.DataFrame(filas_tabla_raw),
         "player_names": [item["nombre"] for item in dataset],
         "series": dataset,
+        "players_without_stats": jugadores_sin_estadisticas,
     }, mensajes
 
 
@@ -1448,7 +1458,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
         cards_y = titulo_y + titulo_h + 5
         card_gap = 4
         card_w = (titulo_w - (card_gap * 2)) / 3
-        card_h = 47
+        card_h = 54
 
         for indice, jugador in enumerate(jugadores):
             card_x = pdf.l_margin + indice * (card_w + card_gap)
@@ -1469,7 +1479,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
             pdf.cell(card_w - 10, 2.8, f"Jugador {indice + 1}", align="L")
 
             foto_buffer = descargar_foto_para_pdf(jugador.get("URL_Foto", ""))
-            foto_w = 13.5
+            foto_w = 12.2
             foto_x = card_x + (card_w - foto_w) / 2
             foto_y = cards_y + 8.8
             pdf.set_fill_color(15, 24, 29)
@@ -1485,7 +1495,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
                 pdf.set_text_color(*color_texto_muted)
                 pdf.cell(foto_w, 4, "Sin foto", align="C")
 
-            nombre_y = cards_y + 22.7
+            nombre_y = cards_y + 20.8
             nombre_h = 6.6
             escribir_bloque(
                 interior_x,
@@ -1516,7 +1526,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
                 ("Perfil", meta_perfil),
                 ("Nac.", meta_nacimiento),
             ]
-            fila_y = cards_y + 29.0
+            fila_y = cards_y + 26.6
             valor_x = card_x + 18.5
             valor_w = card_x + card_w - 4.4 - valor_x
             for etiqueta, valor in detalles:
@@ -1537,9 +1547,9 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
                     2.2,
                     "L",
                 )
-                fila_y += 2.9
+                fila_y += 3.0
 
-            separador_y = cards_y + 40.9
+            separador_y = cards_y + 40.0
             pdf.set_draw_color(53, 81, 71)
             pdf.line(card_x + 4.5, separador_y, card_x + card_w - 4.5, separador_y)
 
@@ -1553,9 +1563,9 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
                 jugador.get("Descripcion", "Sin descripción cargada."),
                 "Arial",
                 "",
-                4.95,
+                4.8,
                 (231, 239, 234),
-                2.1,
+                2.15,
                 "L",
             )
 
@@ -1631,24 +1641,24 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
 
         barras_fin_y = barras_y + 2
         if grafico_barras is not None:
-            barras_w, barras_h = ajustar_imagen_a_limites(grafico_barras, panel_w - 8, 43)
+            barras_w, barras_h = ajustar_imagen_a_limites(grafico_barras, panel_w - 2, 51)
             barras_x = pdf.l_margin + (panel_w - barras_w) / 2
-            barras_img_y = barras_y + 5
+            barras_img_y = barras_y + 4.5
             pdf.set_draw_color(*color_borde)
             pdf.rect(barras_x - 1.5, barras_img_y - 1.5, barras_w + 3, barras_h + 3)
             pdf.image(grafico_barras, x=barras_x, y=barras_img_y, w=barras_w)
             barras_fin_y = barras_img_y + barras_h
 
-        radar_titulo_y = barras_fin_y + 3
+        radar_titulo_y = barras_fin_y + 2.2
         pdf.set_xy(pdf.l_margin, radar_titulo_y)
         pdf.set_font("Arial", "B", 8.5)
         pdf.set_text_color(*color_texto)
         pdf.cell(panel_w, 4, "Radar", ln=True)
 
         if grafico_radar is not None:
-            radar_w, radar_h = ajustar_imagen_a_limites(grafico_radar, 80, 46)
+            radar_w, radar_h = ajustar_imagen_a_limites(grafico_radar, 100, 58)
             radar_x = pdf.l_margin + (panel_w - radar_w) / 2
-            radar_y = radar_titulo_y + 4.2
+            radar_y = radar_titulo_y + 3.6
             pdf.set_draw_color(*color_borde)
             pdf.rect(radar_x - 1.5, radar_y - 1.5, radar_w + 3, radar_h + 3)
             pdf.image(grafico_radar, x=radar_x, y=radar_y, w=radar_w)
@@ -4005,21 +4015,24 @@ if st.session_state["menu"] == "Comparativa":
                     st.warning(mensaje)
             else:
                 for mensaje in mensajes_comparativa:
-                    st.info(mensaje)
+                    st.warning(mensaje)
 
-                st.dataframe(
-                    estilizar_tabla_comparativa(dataset_comparativa),
-                    use_container_width=True,
-                    hide_index=True,
-                )
+                if len(dataset_comparativa["player_names"]) < 2:
+                    st.info("Solo un jugador tiene estadísticas disponibles. Se muestran las fichas completas y el aviso correspondiente, pero la comparativa requiere al menos dos jugadores con datos.")
+                else:
+                    st.dataframe(
+                        estilizar_tabla_comparativa(dataset_comparativa),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
 
-                fig_barras_comparativa = crear_grafico_barras_comparativa(dataset_comparativa)
-                if fig_barras_comparativa is not None:
-                    st.plotly_chart(fig_barras_comparativa, use_container_width=True)
+                    fig_barras_comparativa = crear_grafico_barras_comparativa(dataset_comparativa)
+                    if fig_barras_comparativa is not None:
+                        st.plotly_chart(fig_barras_comparativa, use_container_width=True)
 
-                fig_radar_comparativa = crear_radar_comparativa(dataset_comparativa)
-                if fig_radar_comparativa is not None:
-                    st.plotly_chart(fig_radar_comparativa, use_container_width=True)
+                    fig_radar_comparativa = crear_radar_comparativa(dataset_comparativa)
+                    if fig_radar_comparativa is not None:
+                        st.plotly_chart(fig_radar_comparativa, use_container_width=True)
 
                 st.markdown("---")
                 if st.button("📝 Generar informe comparativo", key="comparativa_pdf_generar"):

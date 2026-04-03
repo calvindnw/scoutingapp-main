@@ -1229,6 +1229,331 @@ def crear_radar_comparativa(dataset_comparativa):
     return fig
 
 
+def descargar_foto_para_pdf(url_foto, max_size=(360, 360)):
+    url_foto = normalizar_url_foto(url_foto)
+    if not url_foto:
+        return None
+
+    try:
+        respuesta = requests.get(url_foto, timeout=10)
+        respuesta.raise_for_status()
+        with Image.open(BytesIO(respuesta.content)) as imagen_origen:
+            imagen = imagen_origen.convert("RGB")
+            imagen.thumbnail(max_size)
+            buffer = BytesIO()
+            imagen.save(buffer, format="PNG", optimize=True)
+            buffer.seek(0)
+            return buffer
+    except Exception:
+        return None
+
+
+def crear_barras_comparativa_pdf(dataset_comparativa):
+    import matplotlib.pyplot as plt
+
+    if not dataset_comparativa:
+        return None
+
+    metricas = dataset_comparativa["metricas"]
+    series = dataset_comparativa["series"]
+    if not metricas or not series:
+        return None
+
+    etiquetas = [abreviar_titulo_estadistica_pdf(metrica) for metrica in metricas]
+    posiciones = np.arange(len(metricas))
+    ancho = 0.22
+    colores = ["#19e28f", "#2ec4ff", "#f3bf4c"]
+
+    fig, ax = plt.subplots(figsize=(6.6, 2.8))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+
+    for indice, item in enumerate(series):
+        valores = [item["valores_jugador"].get(metrica) or 0 for metrica in metricas]
+        offset = (indice - (len(series) - 1) / 2) * ancho
+        barras = ax.bar(
+            posiciones + offset,
+            valores,
+            width=ancho,
+            color=colores[indice % len(colores)],
+            label=abreviar_leyenda_grafico_pdf(item["nombre"], 18),
+        )
+        for barra, valor in zip(barras, valores):
+            ax.text(
+                barra.get_x() + barra.get_width() / 2,
+                barra.get_height() + 0.05,
+                f"{valor:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=6.5,
+                color="#edf5f0",
+            )
+
+    ax.set_xticks(posiciones)
+    ax.set_xticklabels(etiquetas, rotation=18, ha="right", color="#edf5f0", fontsize=7.4)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    ax.set_ylabel("Valor", color="#d6e4dc", fontsize=8.2)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.16),
+        ncol=3,
+        frameon=False,
+        labelcolor="#edf5f0",
+        fontsize=6.8,
+        handlelength=1.4,
+        columnspacing=0.9,
+    )
+    plt.subplots_adjust(top=0.74, bottom=0.28, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
+def crear_radar_comparativa_pdf(dataset_comparativa):
+    import matplotlib.pyplot as plt
+
+    if not dataset_comparativa:
+        return None
+
+    metricas = dataset_comparativa["metricas"]
+    series = dataset_comparativa["series"]
+    if not metricas or not series:
+        return None
+
+    angulos = np.linspace(0, 2 * np.pi, len(metricas), endpoint=False).tolist()
+    angulos += angulos[:1]
+    colores = [
+        ("#19e28f", 0.16),
+        ("#2ec4ff", 0.12),
+        ("#f3bf4c", 0.12),
+    ]
+
+    fig, ax = plt.subplots(figsize=(4.2, 3.4), subplot_kw=dict(polar=True))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+
+    for indice, item in enumerate(series):
+        color, alpha = colores[indice % len(colores)]
+        valores = [item["valores_jugador"].get(metrica) or 0 for metrica in metricas]
+        valores += valores[:1]
+        ax.plot(angulos, valores, color=color, linewidth=2, label=abreviar_leyenda_grafico_pdf(item["nombre"], 18))
+        ax.fill(angulos, valores, color=color, alpha=alpha)
+
+    ax.set_xticks(angulos[:-1])
+    ax.set_xticklabels([abreviar_titulo_estadistica_pdf(metrica) for metrica in metricas], color="#edf5f0", fontsize=6.8)
+    ax.tick_params(axis="y", colors="#a8c0b3", labelsize=6.2)
+    ax.grid(color="#254637", alpha=0.65)
+    ax.spines["polar"].set_color("#3f7d60")
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.18),
+        ncol=3,
+        frameon=False,
+        labelcolor="#edf5f0",
+        fontsize=6.5,
+        handlelength=1.4,
+        columnspacing=0.9,
+    )
+    plt.subplots_adjust(top=0.75, bottom=0.06)
+    return crear_buffer_figura_pdf(fig)
+
+
+def generar_pdf_comparativa(jugadores, dataset_comparativa):
+    if not jugadores or not dataset_comparativa:
+        return None
+
+    try:
+        pdf = FPDF_SEGURO("L", "mm", "A4")
+        pdf.set_margins(left=10, top=12, right=10)
+        pdf.set_auto_page_break(auto=False)
+        pdf.alias_nb_pages()
+        pdf.add_page()
+
+        color_panel = (11, 18, 24)
+        color_panel_alt = (17, 25, 31)
+        color_acento = (102, 140, 128)
+        color_texto = (246, 247, 248)
+        color_texto_muted = (213, 219, 221)
+        color_borde = (118, 138, 132)
+        color_destacado = (25, 226, 143)
+        colores_jugador = [(25, 226, 143), (46, 196, 255), (243, 191, 76)]
+
+        def texto_corto(valor, limite):
+            texto = valor_campo_pdf(valor)
+            if len(texto) <= limite:
+                return texto
+            return f"{texto[:limite - 3].rstrip()}..."
+
+        titulo_y = 14
+        titulo_h = 18
+        titulo_w = pdf.w - pdf.l_margin - pdf.r_margin
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, titulo_y, titulo_w, titulo_h, "DF")
+        pdf.set_xy(pdf.l_margin + 5, titulo_y + 3)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(*color_acento)
+        pdf.cell(0, 4, "SCOUTING DOSSIER", ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "B", 18)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(0, 7, "Informe comparativo", ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.cell(
+            0,
+            4,
+            f"Posición: {valor_campo_pdf(dataset_comparativa['posicion'])}  |  Fecha: {datetime.today().strftime('%d/%m/%Y')}  |  Formato: 3 jugadores",
+            ln=True,
+        )
+
+        cards_y = titulo_y + titulo_h + 5
+        card_gap = 4
+        card_w = (titulo_w - (card_gap * 2)) / 3
+        card_h = 43
+
+        for indice, jugador in enumerate(jugadores):
+            card_x = pdf.l_margin + indice * (card_w + card_gap)
+            pdf.set_fill_color(*color_panel_alt)
+            pdf.set_draw_color(*color_borde)
+            pdf.rect(card_x, cards_y, card_w, card_h, "DF")
+            pdf.set_fill_color(*colores_jugador[indice % len(colores_jugador)])
+            pdf.rect(card_x, cards_y, 2.5, card_h, "F")
+
+            foto_buffer = descargar_foto_para_pdf(jugador.get("URL_Foto", ""))
+            foto_w = 18
+            foto_x = card_x + (card_w - foto_w) / 2
+            foto_y = cards_y + 3
+            if foto_buffer is not None:
+                pdf.image(foto_buffer, x=foto_x, y=foto_y, w=foto_w, h=foto_w)
+            else:
+                pdf.set_fill_color(25, 37, 33)
+                pdf.rect(foto_x, foto_y, foto_w, foto_w, "F")
+                pdf.set_xy(foto_x, foto_y + 6.5)
+                pdf.set_font("Arial", "B", 7)
+                pdf.set_text_color(*color_texto_muted)
+                pdf.cell(foto_w, 4, "Sin foto", align="C")
+
+            cursor_y = cards_y + 23
+            pdf.set_xy(card_x + 3, cursor_y)
+            pdf.set_font("Arial", "B", 9.5)
+            pdf.set_text_color(*color_texto)
+            pdf.multi_cell(card_w - 6, 4.2, texto_corto(jugador.get("Nombre", "Jugador"), 34), align="C")
+
+            edad = calcular_edad(jugador.get("Fecha_Nac"))
+            nacimiento = formatear_fecha_comparativa(jugador.get("Fecha_Nac"))
+            meta_1 = f"{texto_corto(jugador.get('Club'), 26)} | {texto_corto(jugador.get('Liga'), 24)}"
+            meta_2 = f"{texto_corto(jugador.get('Pie_Hábil'), 14)} | {nacimiento}"
+            if str(edad) != "?":
+                meta_2 = f"{meta_2} ({edad})"
+
+            pdf.set_x(card_x + 3)
+            pdf.set_font("Arial", "", 7.3)
+            pdf.set_text_color(*color_texto_muted)
+            pdf.multi_cell(card_w - 6, 3.6, texto_corto(meta_1, 44), align="C")
+            pdf.set_x(card_x + 3)
+            pdf.multi_cell(card_w - 6, 3.6, texto_corto(meta_2, 42), align="C")
+            pdf.set_x(card_x + 3)
+            pdf.set_text_color(231, 239, 234)
+            descripcion = texto_corto(jugador.get("Descripcion", "Sin descripción cargada."), 96)
+            pdf.multi_cell(card_w - 6, 3.4, descripcion, align="C")
+
+        tabla_y = cards_y + card_h + 5
+        pdf.set_xy(pdf.l_margin, tabla_y)
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(0, 5, "Tabla comparativa", ln=True)
+
+        tabla = dataset_comparativa["tabla"]
+        tabla_raw = dataset_comparativa["tabla_raw"]
+        columnas = ["Métrica"] + dataset_comparativa["player_names"]
+        ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
+        ancho_primera = 60
+        ancho_resto = (ancho_total - ancho_primera) / 3
+        anchos = [ancho_primera] + [ancho_resto] * 3
+
+        pdf.set_fill_color(23, 32, 38)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_draw_color(*color_borde)
+        pdf.set_font("Arial", "B", 7.4)
+        for columna, ancho in zip(columnas, anchos):
+            titulo = abreviar_titulo_estadistica_pdf(columna)
+            pdf.cell(ancho, 6, titulo, border=1, align="C", fill=True)
+        pdf.ln()
+
+        for indice_fila, (_, fila) in enumerate(tabla.iterrows()):
+            valores_validos = []
+            for columna in dataset_comparativa["player_names"]:
+                valor = tabla_raw.iloc[indice_fila].get(columna)
+                if valor is not None and not pd.isna(valor):
+                    valores_validos.append(valor)
+            mejor_valor = max(valores_validos) if valores_validos else None
+
+            for indice_columna, (columna, ancho) in enumerate(zip(columnas, anchos)):
+                if indice_columna == 0:
+                    pdf.set_fill_color(17, 25, 31)
+                    pdf.set_text_color(245, 247, 248)
+                    pdf.set_font("Arial", "B", 7.1)
+                    valor = abreviar_titulo_estadistica_pdf(str(fila.get(columna, "-")))
+                    pdf.cell(ancho, 5.8, valor, border=1, align="L", fill=True)
+                    continue
+
+                valor_num = tabla_raw.iloc[indice_fila].get(columna)
+                es_mejor = mejor_valor is not None and valor_num is not None and not pd.isna(valor_num) and valor_num == mejor_valor
+                if es_mejor:
+                    pdf.set_fill_color(*color_destacado)
+                    pdf.set_text_color(4, 16, 11)
+                    pdf.set_font("Arial", "B", 7.3)
+                else:
+                    pdf.set_fill_color(11, 18, 24)
+                    pdf.set_text_color(225, 235, 229)
+                    pdf.set_font("Arial", "", 7)
+
+                pdf.cell(ancho, 5.8, str(fila.get(columna, "-")), border=1, align="C", fill=True)
+            pdf.ln()
+
+        charts_y = tabla_y + 42
+        pdf.set_xy(pdf.l_margin, charts_y)
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(0, 5, "Visualización comparativa", ln=True)
+
+        grafico_barras = crear_barras_comparativa_pdf(dataset_comparativa)
+        grafico_radar = crear_radar_comparativa_pdf(dataset_comparativa)
+        panel_gap = 6
+        panel_w = (ancho_total - panel_gap) / 2
+        panel_h = 52
+        panel_y = charts_y + 6
+        left_x = pdf.l_margin
+        right_x = pdf.l_margin + panel_w + panel_gap
+
+        for panel_x, titulo in [(left_x, "Barras"), (right_x, "Radar")]:
+            pdf.set_fill_color(*color_panel)
+            pdf.set_draw_color(*color_borde)
+            pdf.rect(panel_x, panel_y, panel_w, panel_h, "DF")
+            pdf.set_xy(panel_x + 4, panel_y + 2.5)
+            pdf.set_font("Arial", "B", 8.8)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(panel_w - 8, 4, titulo, ln=True)
+
+        if grafico_barras is not None:
+            pdf.image(grafico_barras, x=left_x + 3, y=panel_y + 8, w=panel_w - 6)
+        if grafico_radar is not None:
+            pdf.image(grafico_radar, x=right_x + 12, y=panel_y + 8, w=panel_w - 24)
+
+        buffer = BytesIO()
+        pdf.output(buffer)
+        buffer.seek(0)
+        return buffer
+    except Exception as e:
+        st.error(f"⚠️ Error al generar PDF comparativo: {e}")
+        return None
+
+
 def abreviar_titulo_estadistica_pdf(texto):
     equivalencias = {
         "Jugador / Promedio de liga": "Jugador / Prom. liga",
@@ -3587,6 +3912,22 @@ if st.session_state["menu"] == "Comparativa":
                 fig_radar_comparativa = crear_radar_comparativa(dataset_comparativa)
                 if fig_radar_comparativa is not None:
                     st.plotly_chart(fig_radar_comparativa, use_container_width=True)
+
+                st.markdown("---")
+                if st.button("📝 Generar informe comparativo", key="comparativa_pdf_generar"):
+                    buffer_pdf_comparativa = generar_pdf_comparativa(jugadores_seleccionados, dataset_comparativa)
+                    if buffer_pdf_comparativa:
+                        nombres_pdf = "_vs_".join(
+                            str(jugador.get("Nombre", f"Jugador_{indice + 1}")).replace(" ", "_")
+                            for indice, jugador in enumerate(jugadores_seleccionados)
+                        )
+                        st.download_button(
+                            "⬇️ Descargar PDF comparativo",
+                            buffer_pdf_comparativa,
+                            file_name=f"Comparativa_{nombres_pdf}.pdf",
+                            mime="application/pdf",
+                            key="comparativa_pdf_descargar",
+                        )
 
 
 

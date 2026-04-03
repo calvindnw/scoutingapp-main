@@ -282,6 +282,7 @@ def actualizar_hoja(nombre_hoja: str, df: pd.DataFrame):
 
         # Subir a Sheets
         ws.update([df_fusion.columns.values.tolist()] + df_fusion.values.tolist())
+        refrescar_datasets_sesion()
         st.toast(f"💾 '{nombre_hoja}' actualizada correctamente (sin borrar datos).", icon="✅")
 
     except Exception as e:
@@ -304,6 +305,7 @@ def eliminar_por_id(nombre_hoja: str, id_col: str, id_valor):
             return
         df = df[df[id_col].astype(str) != str(id_valor)]
         ws.update([df.columns.values.tolist()] + df.values.tolist())
+        refrescar_datasets_sesion()
         st.success(f"🗑️ Registro con {id_col}={id_valor} eliminado correctamente.")
     except Exception as e:
         st.error(f"⚠️ Error al eliminar en '{nombre_hoja}': {e}")
@@ -320,7 +322,7 @@ def agregar_fila(nombre_hoja: str, fila: list):
         fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
         ws.append_row(fila, value_input_option="USER_ENTERED")
         st.toast(f"🟢 Nueva fila agregada en '{nombre_hoja}'.", icon="🟢")
-        st.cache_data.clear()
+        refrescar_datasets_sesion()
     except Exception as e:
         st.error(f"⚠️ Error al agregar fila en '{nombre_hoja}': {e}")
 
@@ -471,6 +473,17 @@ def inicializar_datasets_sesion():
     ):
         return
 
+    df_players, df_reports, df_short = cargar_datos()
+    if "nombre_wyscout" not in df_players.columns:
+        df_players["nombre_wyscout"] = ""
+
+    st.session_state["df_players"] = df_players.copy()
+    st.session_state["df_reports"] = df_reports.copy()
+    st.session_state["df_short"] = df_short.copy()
+
+
+def refrescar_datasets_sesion():
+    st.cache_data.clear()
     df_players, df_reports, df_short = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
@@ -2387,7 +2400,7 @@ if st.session_state["menu"] == "Jugadores":
                         import numpy as np
                         fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
                         ws.append_row(fila, value_input_option="USER_ENTERED")
-                        st.cache_data.clear()
+                        refrescar_datasets_sesion()
                         st.session_state["toast_guardado_jugador"] = True
                         st.rerun()
                     except Exception as e:
@@ -2638,7 +2651,7 @@ if st.session_state["menu"] == "Jugadores":
                             ]
                             ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
                             st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
-                            st.cache_data.clear()
+                            refrescar_datasets_sesion()
 
                     except Exception as e:
                         st.error(f"Error al agregar a lista corta: {e}")
@@ -2765,7 +2778,7 @@ if st.session_state["menu"] == "Jugadores":
                             last_col = col_letter(len(valores))
                             ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
 
-                            st.cache_data.clear()
+                            refrescar_datasets_sesion()
                             st.session_state["toast_guardado_jugador"] = True
                             st.rerun()
                         else:
@@ -2911,7 +2924,7 @@ if st.session_state["menu"] == "Jugadores":
                         nuevo = [int(x) if isinstance(x, np.integer) else x for x in nuevo]
                         ws_inf.append_row(nuevo, value_input_option="USER_ENTERED")
 
-                        st.cache_data.clear()
+                        refrescar_datasets_sesion()
                         st.session_state["toast_guardado_informe"] = jugador["Nombre"]
                         st.rerun()
                     except Exception as e:
@@ -3561,7 +3574,7 @@ if st.session_state["menu"] == "Ver informes":
                                             [fila_actual.values.tolist()[0]]
                                         )
 
-                                        st.cache_data.clear()
+                                        refrescar_datasets_sesion()
                                         st.toast("✓ Informe actualizado correctamente", icon="✅")
                                         st.rerun()
                                     else:
@@ -3589,7 +3602,6 @@ if st.session_state["menu"] == "Ver informes":
                                         id_col="ID_Informe",
                                         id_valor=inf.ID_Informe
                                     )
-                                    st.cache_data.clear()
                                     st.session_state["toast_eliminado_informe"] = True
                                     st.rerun()
                                 except Exception as e:
@@ -4018,7 +4030,7 @@ if st.session_state["menu"] == "Lista corta":
                             f"🗑️ Jugador {jugador_sel} eliminado correctamente de TU lista.",
                             icon="🗑️"
                         )
-                        st.cache_data.clear()
+                        refrescar_datasets_sesion()
                         st.rerun()
                     else:
                         st.warning("⚠️ No se encontró el jugador en tu lista corta.")
@@ -4121,7 +4133,7 @@ if st.session_state["menu"] == "Agenda":
         try:
             ws.update([df_tmp.columns.values.tolist()] + df_tmp.fillna("").values.tolist())
             st.toast(f"✅ {nombre} marcado como visto.", icon="✅")
-            st.cache_data.clear()
+            refrescar_datasets_sesion()
             st.rerun()
         except Exception as e:
             st.error(f"⚠️ Error al actualizar seguimiento: {e}")
@@ -4143,7 +4155,7 @@ if st.session_state["menu"] == "Agenda":
             }])], ignore_index=True)
             backup_local(df_local)
             st.success(f"✅ Seguimiento agendado para {nombre} el {fecha.strftime('%d/%m/%Y')}")
-            st.cache_data.clear()
+            refrescar_datasets_sesion()
             st.rerun()
         except Exception as e:
             st.error(f"⚠️ Error al guardar seguimiento: {e}")

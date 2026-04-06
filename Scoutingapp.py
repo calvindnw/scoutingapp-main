@@ -26,6 +26,7 @@ import plotly.graph_objects as go
 from io import BytesIO
 from datetime import date, datetime, timedelta
 from textwrap import dedent
+from zoneinfo import ZoneInfo
 from fpdf import FPDF
 from st_aggrid import AgGrid, GridOptionsBuilder
 import matplotlib.patches as patches
@@ -118,6 +119,10 @@ def apply_glass_plotly(fig):
         margin=dict(l=20, r=20, t=56, b=20)
     )
     return fig
+
+
+def obtener_fecha_buenos_aires() -> datetime:
+    return datetime.now(ZoneInfo("America/Argentina/Buenos_Aires"))
 
 
 # =========================================================
@@ -5484,8 +5489,9 @@ if st.session_state["menu"] == "Panel General":
     df_reports = df_reports_user.copy()
     df_short = df_short_user.copy()
 
+    ahora_bsas = obtener_fecha_buenos_aires()
     alcance_panel = "Vista total" if CURRENT_ROLE == "admin" else "Vista de scout"
-    periodo_panel = f"Temporada {datetime.today().year}/{str(datetime.today().year + 1)[-2:]}"
+    periodo_panel = f"Temporada {ahora_bsas.year}/{str(ahora_bsas.year + 1)[-2:]}"
 
     render_html_block(
         f"""
@@ -5512,7 +5518,7 @@ if st.session_state["menu"] == "Panel General":
         df_reports["Fecha_Informe"], errors="coerce", dayfirst=True
     )
 
-    hoy = datetime.today()
+    hoy = ahora_bsas
     hace_30 = hoy - timedelta(days=30)
 
     # =========================
@@ -5591,9 +5597,34 @@ if st.session_state["menu"] == "Panel General":
     )
 
     section_header("Cumpleaños")
-    cumpleaneros_hoy = obtener_cumpleaneros_hoy(df_players, hoy.date())
+    if "cumpleanios_desplazamiento" not in st.session_state:
+        st.session_state["cumpleanios_desplazamiento"] = 0
+
+    col_cumple_1, col_cumple_2, col_cumple_3, col_cumple_4 = st.columns([1, 1, 1, 3])
+    with col_cumple_1:
+        if st.button("Ayer", key="cumpleanios_ayer", use_container_width=True):
+            st.session_state["cumpleanios_desplazamiento"] = -1
+    with col_cumple_2:
+        if st.button("Hoy", key="cumpleanios_hoy", use_container_width=True):
+            st.session_state["cumpleanios_desplazamiento"] = 0
+    with col_cumple_3:
+        if st.button("Mañana", key="cumpleanios_maniana", use_container_width=True):
+            st.session_state["cumpleanios_desplazamiento"] = 1
+    with col_cumple_4:
+        fecha_cumple_referencia = hoy.date() + timedelta(days=st.session_state["cumpleanios_desplazamiento"])
+        if st.session_state["cumpleanios_desplazamiento"] == 0:
+            etiqueta_cumple = "Hoy"
+        elif st.session_state["cumpleanios_desplazamiento"] < 0:
+            etiqueta_cumple = "Ayer"
+        else:
+            etiqueta_cumple = "Mañana"
+        st.caption(
+            f"Zona horaria: Buenos Aires | {etiqueta_cumple}: {fecha_cumple_referencia.strftime('%d/%m/%Y')}"
+        )
+
+    cumpleaneros_hoy = obtener_cumpleaneros_hoy(df_players, fecha_cumple_referencia)
     if cumpleaneros_hoy.empty:
-        st.info("Hoy no hay jugadores cumpliendo años dentro de la base visible.")
+        st.info("No hay jugadores cumpliendo años en la fecha seleccionada dentro de la base visible.")
     else:
         columnas_cumple = [
             columna for columna in ["Nombre", "Club", "Posición", "Fecha_Nac_fmt", "Edad"]

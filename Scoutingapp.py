@@ -5490,6 +5490,7 @@ if st.session_state["menu"] == "Panel General":
     df_short = df_short_user.copy()
 
     ahora_bsas = obtener_fecha_buenos_aires()
+    fecha_panel_bsas = ahora_bsas.date()
     alcance_panel = "Vista total" if CURRENT_ROLE == "admin" else "Vista de scout"
     periodo_panel = f"Temporada {ahora_bsas.year}/{str(ahora_bsas.year + 1)[-2:]}"
 
@@ -5518,7 +5519,7 @@ if st.session_state["menu"] == "Panel General":
         df_reports["Fecha_Informe"], errors="coerce", dayfirst=True
     )
 
-    hoy = ahora_bsas
+    hoy = datetime.combine(fecha_panel_bsas, datetime.min.time())
     hace_30 = hoy - timedelta(days=30)
 
     # =========================

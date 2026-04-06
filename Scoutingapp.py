@@ -878,6 +878,258 @@ def preparar_datos_graficos_estadisticas(tabla_estadisticas: pd.DataFrame):
     return df_long, fila_referencia, referencia_jugador
 
 
+ANALYST_SCORE_METRICS = [
+    "Controles", "Perfiles", "Pase_corto", "Pase_largo", "Pase_filtrado",
+    "1v1_defensivo", "Recuperacion", "Intercepciones", "Duelos_aereos",
+    "Regate", "Velocidad", "Duelos_ofensivos",
+    "Resiliencia", "Liderazgo", "Inteligencia_tactica",
+    "Inteligencia_emocional", "Posicionamiento",
+    "Vision_de_juego", "Movimientos_sin_pelota",
+]
+
+
+def contar_unicos_validos(valores) -> int:
+    serie = pd.Series(valores, dtype="object").astype(str).str.strip()
+    serie = serie[~serie.isin(["", "nan", "None", "NaT", "<NA>", "-", "—"])]
+    return int(serie.nunique())
+
+
+def normalizar_dataframe_scores(df_reports: pd.DataFrame, metricas: list = None) -> pd.DataFrame:
+    metricas = metricas or ANALYST_SCORE_METRICS
+    if df_reports is None:
+        return pd.DataFrame(columns=metricas)
+
+    df = df_reports.copy()
+    for metrica in metricas:
+        if metrica in df.columns:
+            serie = (
+                df[metrica]
+                .astype(str)
+                .str.replace(",", ".", regex=False)
+                .replace(["", "nan", "None", "NaT", "<NA>", "-", "—"], 0)
+            )
+            df[metrica] = pd.to_numeric(serie, errors="coerce").fillna(0.0)
+        else:
+            df[metrica] = 0.0
+    return df
+
+
+def construir_resumen_actividad_informes(df_reports, df_players):
+    if df_reports.empty:
+        return {
+            "partidos_observados": 0,
+            "ligas_observadas": 0,
+            "equipos_analizados": 0,
+        }
+
+    df_r = df_reports.copy()
+    df_r["ID_Jugador"] = df_r["ID_Jugador"].astype(str)
+
+    partidos_observados = 0
+    if "Equipos_Resultados" in df_r.columns:
+        partidos_observados = contar_unicos_validos(df_r["Equipos_Resultados"])
+    if partidos_observados == 0:
+        partidos_observados = len(df_r)
+
+    ligas_observadas = 0
+    equipos_analizados = 0
+    if not df_players.empty and "ID_Jugador" in df_players.columns:
+        columnas_merge = ["ID_Jugador"] + [
+            columna for columna in ["Liga", "Club"] if columna in df_players.columns
+        ]
+        df_p = df_players[columnas_merge].copy()
+        df_p["ID_Jugador"] = df_p["ID_Jugador"].astype(str)
+        df_merge = df_r[["ID_Jugador"]].merge(df_p, on="ID_Jugador", how="left")
+
+        if "Liga" in df_merge.columns:
+            ligas_observadas = contar_unicos_validos(df_merge["Liga"])
+        if "Club" in df_merge.columns:
+            equipos_analizados = contar_unicos_validos(df_merge["Club"])
+
+    return {
+        "partidos_observados": partidos_observados,
+        "ligas_observadas": ligas_observadas,
+        "equipos_analizados": equipos_analizados,
+    }
+
+
+def obtener_cumpleaneros_hoy(df_players, referencia=None):
+    if df_players.empty or "Fecha_Nac" not in df_players.columns:
+        return pd.DataFrame()
+
+    referencia = referencia or date.today()
+    fechas_nacimiento = pd.to_datetime(df_players["Fecha_Nac"], errors="coerce", dayfirst=True)
+    mascara = (
+        fechas_nacimiento.dt.day.eq(referencia.day)
+        & fechas_nacimiento.dt.month.eq(referencia.month)
+    )
+
+    cumpleaneros = df_players.loc[mascara].copy()
+    if cumpleaneros.empty:
+        return cumpleaneros
+
+    fechas_filtradas = fechas_nacimiento.loc[mascara]
+    cumpleaneros["Fecha_Nac_fmt"] = fechas_filtradas.dt.strftime("%d/%m/%Y")
+    cumpleaneros["Edad"] = fechas_filtradas.apply(
+        lambda fecha_nac: referencia.year - fecha_nac.year
+        if pd.notna(fecha_nac) else None
+    )
+    return cumpleaneros.sort_values("Nombre")
+
+
+def construir_dataset_scores_jugador(df_reports, id_jugador):
+    if df_reports.empty:
+        return None
+
+    df = normalizar_dataframe_scores(df_reports, ANALYST_SCORE_METRICS)
+    df["ID_Jugador"] = df["ID_Jugador"].astype(str)
+    informes = df[df["ID_Jugador"] == str(id_jugador)].copy()
+    if informes.empty:
+        return None
+
+    informes = informes.reset_index(drop=True)
+    informes["_orden_informe"] = informes.index + 1
+    if "Fecha_Informe" in informes.columns:
+        informes["Fecha_Informe_dt"] = pd.to_datetime(
+            informes["Fecha_Informe"],
+            errors="coerce",
+            dayfirst=True,
+        )
+    else:
+        informes["Fecha_Informe"] = ""
+        informes["Fecha_Informe_dt"] = pd.NaT
+
+    informes["Score"] = informes[ANALYST_SCORE_METRICS].mean(axis=1).round(2)
+    informes = informes.sort_values(["Fecha_Informe_dt", "_orden_informe"], na_position="last")
+    informes["Informe"] = informes.apply(
+        lambda fila: fila["Fecha_Informe_dt"].strftime("%d/%m/%Y")
+        if pd.notna(fila["Fecha_Informe_dt"])
+        else f"Informe {int(fila['_orden_informe'])}",
+        axis=1,
+    )
+
+    ultimo_registro = informes.iloc[-1]
+    tabla = informes[["Informe", "Scout", "Línea", "Score"]].copy()
+    tabla = tabla.rename(columns={"Línea": "Linea"})
+
+    return {
+        "tabla": tabla,
+        "historial": informes[["Informe", "Score"]].copy(),
+        "resumen": {
+            "informes": int(len(informes)),
+            "score_promedio": round(float(informes["Score"].mean()), 2),
+            "score_maximo": round(float(informes["Score"].max()), 2),
+            "ultimo_score": round(float(ultimo_registro["Score"]), 2),
+        },
+    }
+
+
+def crear_grafico_scores_jugador(dataset_scores, nombre_jugador):
+    if not dataset_scores or dataset_scores["historial"].empty:
+        return None
+
+    df_chart = dataset_scores["historial"].copy()
+    fig = px.line(
+        df_chart,
+        x="Informe",
+        y="Score",
+        markers=True,
+        title=f"Evolución del score de analistas - {nombre_jugador}",
+    )
+    fig.update_traces(
+        line=dict(color="#19e28f", width=3),
+        marker=dict(size=9, color="#19e28f"),
+        hovertemplate="<b>%{x}</b><br>Score: %{y:.2f}<extra></extra>",
+    )
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Score",
+        showlegend=False,
+        height=400,
+    )
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def construir_dataset_scores_comparativa(jugadores, df_reports):
+    if not jugadores:
+        return None, ["Seleccioná jugadores para comparar sus scores."]
+
+    df = normalizar_dataframe_scores(df_reports, ANALYST_SCORE_METRICS)
+    df["ID_Jugador"] = df["ID_Jugador"].astype(str)
+    if "Fecha_Informe" in df.columns:
+        df["Fecha_Informe_dt"] = pd.to_datetime(df["Fecha_Informe"], errors="coerce", dayfirst=True)
+    else:
+        df["Fecha_Informe"] = ""
+        df["Fecha_Informe_dt"] = pd.NaT
+
+    filas_resumen = []
+    mensajes = []
+    for jugador in jugadores:
+        jugador_id = str(jugador.get("ID_Jugador", "") or "")
+        nombre = str(jugador.get("Nombre", "Jugador") or "Jugador").strip()
+        informes = df[df["ID_Jugador"] == jugador_id].copy()
+
+        if informes.empty:
+            mensajes.append(f"{nombre} no tiene informes cargados para calcular score.")
+            continue
+
+        informes["Score"] = informes[ANALYST_SCORE_METRICS].mean(axis=1).round(2)
+        informes = informes.sort_values(["Fecha_Informe_dt"], na_position="last")
+        ultimo_registro = informes.iloc[-1]
+        ultimo_informe = (
+            ultimo_registro["Fecha_Informe_dt"].strftime("%d/%m/%Y")
+            if pd.notna(ultimo_registro["Fecha_Informe_dt"])
+            else str(ultimo_registro.get("Fecha_Informe", "") or "-")
+        )
+
+        filas_resumen.append(
+            {
+                "Jugador": nombre,
+                "Informes": int(len(informes)),
+                "Score promedio": round(float(informes["Score"].mean()), 2),
+                "Ultimo score": round(float(ultimo_registro["Score"]), 2),
+                "Mejor score": round(float(informes["Score"].max()), 2),
+                "Ultimo informe": ultimo_informe,
+            }
+        )
+
+    if not filas_resumen:
+        return None, mensajes or ["No hay informes disponibles para comparar los scores."]
+
+    return {"tabla": pd.DataFrame(filas_resumen)}, mensajes
+
+
+def crear_grafico_scores_comparativa(dataset_scores):
+    if not dataset_scores or dataset_scores["tabla"].empty:
+        return None
+
+    fig = px.bar(
+        dataset_scores["tabla"],
+        x="Jugador",
+        y="Score promedio",
+        color="Jugador",
+        text="Score promedio",
+        title="Comparativa de score promedio del equipo de analistas",
+        color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
+    )
+    fig.update_traces(
+        texttemplate="%{text:.2f}",
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Score promedio: %{y:.2f}<extra></extra>",
+    )
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Score promedio",
+        showlegend=False,
+        height=420,
+    )
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
 def escape_html(valor, fallback="-"):
     if valor is None:
         return fallback
@@ -3751,6 +4003,7 @@ if st.session_state["menu"] == "Estadísticas":
     )
 
     df_players = df_players_all.copy()
+    df_reports_estadisticas = df_reports_all.copy() if CURRENT_ROLE == "admin" else df_reports_user.copy()
 
     opciones = {
         f"{row['Nombre']} - {row['Club']}": row["ID_Jugador"]
@@ -3914,6 +4167,35 @@ if st.session_state["menu"] == "Estadísticas":
                 else:
                     st.info("No hay suficientes promedios de liga para construir la comparación gráfica.")
 
+        st.markdown("---")
+        section_header("Scores del equipo de analistas")
+        dataset_scores_jugador = construir_dataset_scores_jugador(df_reports_estadisticas, id_jugador)
+
+        if dataset_scores_jugador is None:
+            st.info("No hay informes cargados para mostrar scores del equipo de analistas.")
+        else:
+            resumen_scores = dataset_scores_jugador["resumen"]
+            col_score_1, col_score_2, col_score_3 = st.columns(3)
+            with col_score_1:
+                st.metric("Informes evaluados", resumen_scores["informes"])
+            with col_score_2:
+                st.metric("Score promedio", resumen_scores["score_promedio"])
+            with col_score_3:
+                st.metric("Último score", resumen_scores["ultimo_score"])
+
+            fig_scores_jugador = crear_grafico_scores_jugador(
+                dataset_scores_jugador,
+                jugador.get("Nombre", "Jugador"),
+            )
+            if fig_scores_jugador is not None:
+                st.plotly_chart(fig_scores_jugador, use_container_width=True)
+
+            st.dataframe(
+                dataset_scores_jugador["tabla"],
+                use_container_width=True,
+                hide_index=True,
+            )
+
 
 # =========================================================
 # BLOQUE COMPARATIVA — Tres jugadores de la misma posición
@@ -3923,6 +4205,7 @@ if st.session_state["menu"] == "Comparativa":
 
     df_players = df_players_all.copy()
     df_players["ID_Jugador"] = df_players["ID_Jugador"].astype(str)
+    df_reports_comparativa = df_reports_all.copy() if CURRENT_ROLE == "admin" else df_reports_user.copy()
 
     render_html_block(
         f"""
@@ -4033,6 +4316,29 @@ if st.session_state["menu"] == "Comparativa":
                     fig_radar_comparativa = crear_radar_comparativa(dataset_comparativa)
                     if fig_radar_comparativa is not None:
                         st.plotly_chart(fig_radar_comparativa, use_container_width=True)
+
+                st.markdown("---")
+                section_header("Scores del equipo de analistas", centered=True)
+                dataset_scores_comparativa, mensajes_scores = construir_dataset_scores_comparativa(
+                    jugadores_seleccionados,
+                    df_reports_comparativa,
+                )
+
+                for mensaje in mensajes_scores:
+                    st.warning(mensaje)
+
+                if dataset_scores_comparativa is None:
+                    st.info("No hay informes suficientes para comparar scores entre los jugadores seleccionados.")
+                else:
+                    st.dataframe(
+                        dataset_scores_comparativa["tabla"],
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+
+                    fig_scores_comparativa = crear_grafico_scores_comparativa(dataset_scores_comparativa)
+                    if fig_scores_comparativa is not None:
+                        st.plotly_chart(fig_scores_comparativa, use_container_width=True)
 
                 st.markdown("---")
                 if st.button("📝 Generar informe comparativo", key="comparativa_pdf_generar"):
@@ -5251,6 +5557,7 @@ if st.session_state["menu"] == "Panel General":
     inicio_semestre = datetime(hoy.year, 1, 1) if hoy.month <= 6 else datetime(hoy.year, 7, 1)
     jugadores_sem = df_reports[df_reports["Fecha_Informe_dt"] >= inicio_semestre]["ID_Jugador"].nunique()
     informes_30 = df_reports[df_reports["Fecha_Informe_dt"] >= hace_30].shape[0]
+    resumen_actividad = construir_resumen_actividad_informes(df_reports, df_players)
 
     st.markdown(f"""
     <div class="kpi-container alab-kpi-grid">
@@ -5260,6 +5567,43 @@ if st.session_state["menu"] == "Panel General":
         <div class="kpi-card alab-kpi"><div class="kpi-title alab-kpi-label">Informes últimos 30 días</div><div class="kpi-value alab-kpi-value">{informes_30}</div></div>
     </div>
     """, unsafe_allow_html=True)
+
+    render_html_block(
+        f"""
+        <div class="alab-mini-grid">
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Partidos observados</span>
+                <span class="alab-mini-value">{resumen_actividad['partidos_observados']}</span>
+                <span class="alab-mini-copy">Partidos distintos registrados dentro de los informes actualmente visibles.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Ligas observadas</span>
+                <span class="alab-mini-value">{resumen_actividad['ligas_observadas']}</span>
+                <span class="alab-mini-copy">Competiciones representadas por los jugadores que tienen informes cargados.</span>
+            </div>
+            <div class="alab-mini-stat">
+                <span class="alab-mini-label">Equipos analizados</span>
+                <span class="alab-mini-value">{resumen_actividad['equipos_analizados']}</span>
+                <span class="alab-mini-copy">Clubes distintos presentes en la base reportada del período visible.</span>
+            </div>
+        </div>
+        """
+    )
+
+    section_header("Cumpleaños")
+    cumpleaneros_hoy = obtener_cumpleaneros_hoy(df_players, hoy.date())
+    if cumpleaneros_hoy.empty:
+        st.info("Hoy no hay jugadores cumpliendo años dentro de la base visible.")
+    else:
+        columnas_cumple = [
+            columna for columna in ["Nombre", "Club", "Posición", "Fecha_Nac_fmt", "Edad"]
+            if columna in cumpleaneros_hoy.columns
+        ]
+        st.dataframe(
+            cumpleaneros_hoy[columnas_cumple],
+            use_container_width=True,
+            hide_index=True,
+        )
 
     # =====================================================
     # ⭐ CONSENSO — LISTA CORTA
@@ -5563,129 +5907,6 @@ if st.session_state["menu"] == "Panel General":
     for i, (pos, titulo) in enumerate(posiciones):
         with cols[i % 4]:
             render_top(df_scores[df_scores["Posición"] == pos], titulo)
-
-    # =========================
-    # COMPARADOR DE JUGADORES
-    # =========================
-    section_header("Comparador de jugadores")
-
-    col_f1, col_f2, col_f3 = st.columns(3)
-
-    opciones_pos = sorted(df_players["Posición"].dropna().astype(str).unique().tolist())
-    opciones_pie = sorted(df_players["Pie_Hábil"].dropna().astype(str).unique().tolist())
-
-    with col_f1:
-        filtro_pos = st.selectbox("Posición", ["Todas"] + opciones_pos)
-    with col_f2:
-        filtro_pie = st.selectbox("Pie hábil", ["Todos"] + opciones_pie)
-    with col_f3:
-        edad_min, edad_max = st.slider("Edad", 15, 45, (18, 35))
-
-    df_base = df_players.copy()
-    if filtro_pos != "Todas":
-        df_base = df_base[df_base["Posición"] == filtro_pos]
-    if filtro_pie != "Todos":
-        df_base = df_base[df_base["Pie_Hábil"] == filtro_pie]
-
-    df_base = df_base[(df_base["Edad"] >= edad_min) & (df_base["Edad"] <= edad_max)]
-
-    render_html_block(
-        f"""
-        <div class="alab-mini-grid">
-            <div class="alab-mini-stat">
-                <span class="alab-mini-label">Base comparable</span>
-                <span class="alab-mini-value">{df_base['ID_Jugador'].nunique()}</span>
-                <span class="alab-mini-copy">Jugadores disponibles según posición, pie hábil y franja etaria.</span>
-            </div>
-            <div class="alab-mini-stat">
-                <span class="alab-mini-label">Selección recomendada</span>
-                <span class="alab-mini-value">2 a 6</span>
-                <span class="alab-mini-copy">Rango óptimo para comparar métricas sin perder legibilidad.</span>
-            </div>
-        </div>
-        """
-    )
-
-    opciones_cmp = {f"{r.Nombre} ({r.Club})": r.ID_Jugador for r in df_base.itertuples()}
-
-    seleccionados = st.multiselect(
-        "Seleccioná de 2 a 6 jugadores",
-        list(opciones_cmp.keys()),
-        max_selections=6
-    )
-
-    if 2 <= len(seleccionados) <= 6:
-        ids = [opciones_cmp[n] for n in seleccionados]
-
-        df_cmp = (
-            df_reports[df_reports["ID_Jugador"].isin(ids)]
-            .groupby("ID_Jugador")[metricas]
-            .mean()
-            .reset_index()
-            .merge(
-                df_players[["ID_Jugador","Nombre","Posición","Edad","Club","Pie_Hábil"]],
-                on="ID_Jugador",
-                how="left"
-            )
-        )
-
-        df_cmp["Score"] = df_cmp[metricas].mean(axis=1).round(2)
-        df_cmp = df_cmp.sort_values("Score", ascending=False)
-
-        mejor_perfil = df_cmp.iloc[0]["Nombre"] if not df_cmp.empty else "-"
-        score_medio_cmp = round(df_cmp["Score"].mean(), 2) if not df_cmp.empty else 0
-        clubes_cmp = df_cmp["Club"].nunique() if not df_cmp.empty else 0
-        edad_media_cmp = int(round(df_cmp["Edad"].mean())) if df_cmp["Edad"].notna().any() else 0
-
-        render_html_block(
-            f"""
-            <div class="alab-mini-grid">
-                <div class="alab-mini-stat">
-                    <span class="alab-mini-label">Perfiles comparados</span>
-                    <span class="alab-mini-value">{len(df_cmp)}</span>
-                    <span class="alab-mini-copy">Selección activa dentro del universo filtrado.</span>
-                </div>
-                <div class="alab-mini-stat">
-                    <span class="alab-mini-label">Score medio</span>
-                    <span class="alab-mini-value">{score_medio_cmp}</span>
-                    <span class="alab-mini-copy">Promedio general de la muestra comparada.</span>
-                </div>
-                <div class="alab-mini-stat">
-                    <span class="alab-mini-label">Perfil líder</span>
-                    <span class="alab-mini-value">{mejor_perfil}</span>
-                    <span class="alab-mini-copy">Jugador con mayor score sintético entre los seleccionados.</span>
-                </div>
-                <div class="alab-mini-stat">
-                    <span class="alab-mini-label">Contexto</span>
-                    <span class="alab-mini-value">{clubes_cmp} clubes · {edad_media_cmp} años</span>
-                    <span class="alab-mini-copy">Diversidad de origen y edad promedio del grupo analizado.</span>
-                </div>
-            </div>
-            """
-        )
-
-        fig_cmp = px.bar(
-            df_cmp,
-            x="Nombre",
-            y="Score",
-            color="Posición",
-            text="Score",
-            title="Comparación sintética de perfiles",
-        )
-        fig_cmp.update_traces(textposition="outside")
-        fig_cmp.update_layout(showlegend=False, yaxis_title="Score", xaxis_title="")
-        apply_glass_plotly(fig_cmp)
-        st.plotly_chart(fig_cmp, use_container_width=True)
-
-        st.dataframe(
-            df_cmp[["Nombre","Club","Posición","Pie_Hábil","Edad","Score"] + metricas],
-            use_container_width=True,
-            hide_index=True
-        )
-    elif len(seleccionados) == 1:
-        st.info("Seleccioná al menos 2 jugadores para habilitar la comparación.")
-    else:
-        st.info("Elegí entre 2 y 6 jugadores para ver el comparador completo.")
 
 # =========================================================
 # 🧭 PANEL SCOUTS — BLOQUE ESTABLE Y COHERENTE

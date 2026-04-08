@@ -1055,6 +1055,73 @@ def crear_grafico_clubes_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
     return fig
 
 
+def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    df_long = df_chart[["Etiqueta_corta", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido"]].melt(
+        id_vars=["Etiqueta_corta"],
+        var_name="Metrica",
+        value_name="Valor",
+    ).dropna(subset=["Valor"])
+    if df_long.empty:
+        return None
+
+    fig = px.line(
+        df_long,
+        x="Etiqueta_corta",
+        y="Valor",
+        color="Metrica",
+        markers=True,
+        title=f"Produccion de gol por periodo - {nombre_tecnico}",
+        color_discrete_map={
+            "Goles por partido": "#19e28f",
+            "Goles recibidos por partido": "#ff7f50",
+            "Diferencia por partido": "#2ec4ff",
+        },
+    )
+    fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}<extra></extra>")
+    fig.update_layout(xaxis_title="", yaxis_title="Valor por partido", height=390)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    df_long = df_chart[["Etiqueta_corta", "% de victorias", "% de empates", "% de derrotas"]].melt(
+        id_vars=["Etiqueta_corta"],
+        var_name="Metrica",
+        value_name="Valor",
+    ).dropna(subset=["Valor"])
+    if df_long.empty:
+        return None
+
+    fig = px.bar(
+        df_long,
+        x="Etiqueta_corta",
+        y="Valor",
+        color="Metrica",
+        barmode="group",
+        text="Valor",
+        title=f"Distribucion de resultados por periodo - {nombre_tecnico}",
+        color_discrete_map={
+            "% de victorias": "#19e28f",
+            "% de empates": "#f3bf4c",
+            "% de derrotas": "#ff6b6b",
+        },
+    )
+    fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside", hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}%<extra></extra>")
+    fig.update_layout(xaxis_title="", yaxis_title="Porcentaje", height=390)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
 POSICION_ESTADISTICAS_CLAVE = {
     "Arquero": [
         ("Goles recibidos / 90", ["Goles_recibidos/90", "Goles_recibidos_90"]),
@@ -1771,12 +1838,6 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
         minmax="minmax(86px, 1fr)",
         compacta=True,
     )
-    metricas_derivadas_html = construir_metricas_dt_html(
-        metricas_derivadas_periodo,
-        columnas=7,
-        minmax="minmax(90px, 1fr)",
-        compacta=True,
-    )
 
     render_html_block(
         f"""
@@ -1792,11 +1853,6 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
                         <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;display:flex;justify-content:center;">
                             <div style="min-width:828px;width:100%;display:flex;justify-content:center;">
                                 {metricas_html}
-                            </div>
-                        </div>
-                        <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.15rem;display:flex;justify-content:center;">
-                            <div style="min-width:728px;width:100%;display:flex;justify-content:center;">
-                                {metricas_derivadas_html}
                             </div>
                         </div>
                         <div class="alab-player-panel-copy" style="margin-top:0.05rem;padding:0.8rem 0.9rem;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:rgba(255,255,255,0.02);">{observaciones}</div>
@@ -6193,6 +6249,20 @@ if st.session_state["menu"] == "Directores Técnicos":
                 st.plotly_chart(fig_clubes_dt, use_container_width=True)
             else:
                 st.info("No hay datos suficientes para graficar los puntos por periodo.")
+
+        col_chart_dt_3, col_chart_dt_4 = st.columns(2)
+        with col_chart_dt_3:
+            fig_balance_goles_dt = crear_grafico_balance_goles_tecnico(periodos_dt, tecnico.get("Nombre_DT", "Tecnico"))
+            if fig_balance_goles_dt is not None:
+                st.plotly_chart(fig_balance_goles_dt, use_container_width=True)
+            else:
+                st.info("No hay datos suficientes para graficar goles por partido y balance ofensivo.")
+        with col_chart_dt_4:
+            fig_porcentajes_dt = crear_grafico_porcentajes_resultado_tecnico(periodos_dt, tecnico.get("Nombre_DT", "Tecnico"))
+            if fig_porcentajes_dt is not None:
+                st.plotly_chart(fig_porcentajes_dt, use_container_width=True)
+            else:
+                st.info("No hay datos suficientes para graficar la distribucion de resultados por periodo.")
 
         st.markdown("---")
         if st.button("📝 Generar informe DT", key=f"generar_pdf_dt_{id_dt}"):

@@ -261,17 +261,37 @@ def cargar_datos_sheets(
 ) -> pd.DataFrame:
     try:
         ws = obtener_hoja(nombre_hoja, columnas_base)
-        if conservar_texto:
+        usar_valores_crudos = conservar_texto
+        if not usar_valores_crudos:
+            try:
+                data = ws.get_all_records()
+                df = pd.DataFrame(data)
+            except Exception as exc:
+                mensaje_error = str(exc).lower()
+                if "header row in the worksheet contains duplicates" in mensaje_error:
+                    usar_valores_crudos = True
+                else:
+                    raise
+
+        if usar_valores_crudos:
             valores = ws.get_all_values()
             if valores:
-                encabezados = valores[0]
                 filas = valores[1:]
-                df = pd.DataFrame(filas, columns=encabezados)
+                if columnas_base:
+                    ancho_objetivo = len(columnas_base)
+                    filas_normalizadas = []
+                    for fila in filas:
+                        fila_ajustada = list(fila[:ancho_objetivo])
+                        if len(fila_ajustada) < ancho_objetivo:
+                            fila_ajustada.extend([""] * (ancho_objetivo - len(fila_ajustada)))
+                        filas_normalizadas.append(fila_ajustada)
+                    df = pd.DataFrame(filas_normalizadas, columns=columnas_base)
+                else:
+                    encabezados = valores[0]
+                    df = pd.DataFrame(filas, columns=encabezados)
             else:
                 df = pd.DataFrame(columns=columnas_base or [])
-        else:
-            data = ws.get_all_records()
-            df = pd.DataFrame(data)
+
         df = alinear_columnas_dataframe(df, columnas_base)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)

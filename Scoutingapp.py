@@ -1605,6 +1605,27 @@ def formatear_fecha_comparativa(valor):
     return texto
 
 
+def construir_metricas_dt_html(metricas, columnas=3, minmax="minmax(92px, 1fr)", compacta=False):
+    padding = "0.54rem 0.46rem" if compacta else "0.72rem 0.58rem"
+    min_height = "66px" if compacta else "84px"
+    font_label = "0.56rem" if compacta else "0.61rem"
+    font_value = "0.96rem" if compacta else "1.05rem"
+    gap = "0.38rem" if compacta else "0.5rem"
+
+    tarjetas = "".join(
+        f"<div class='alab-detail-item' style='padding:{padding};min-height:{min_height};display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:16px;'>"
+        f"<span class='alab-detail-label' style='font-size:{font_label};line-height:1.18;letter-spacing:0.06em;max-width:100%;'>{escape_html(etiqueta)}</span>"
+        f"<span class='alab-detail-value' style='font-size:{font_value};line-height:1.1;margin-top:0.42rem;'>{escape_html(valor)}</span>"
+        f"</div>"
+        for etiqueta, valor in metricas
+    )
+
+    return (
+        f"<div class='alab-detail-grid' style='display:grid;grid-template-columns:repeat({columnas}, {minmax});"
+        f"gap:{gap};width:100%;align-items:stretch;'>{tarjetas}</div>"
+    )
+
+
 def render_tarjeta_periodo_dt(periodo, indice=None):
     club = escape_html(periodo.get("Club_periodo"), "Club no informado")
     liga = escape_html(periodo.get("Liga_periodo"), "Liga no informada")
@@ -1631,28 +1652,31 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
         ("Puntos conseguidos", normalizar_entero_dt(periodo.get("PTC"))),
         ("Rendimiento", f"{formatear_valor_estadistica(periodo.get('Rendimiento (%)'))}%"),
     ]
-    metricas_html = "".join(
-        f"<div class='alab-detail-item' style='padding:0.65rem 0.75rem;min-height:82px;display:flex;flex-direction:column;justify-content:space-between;'>"
-        f"<span class='alab-detail-label' style='font-size:0.62rem;line-height:1.15;letter-spacing:0.05em;'>{escape_html(etiqueta)}</span>"
-        f"<span class='alab-detail-value' style='font-size:1.02rem;line-height:1.1;'>{escape_html(valor)}</span>"
-        f"</div>"
-        for etiqueta, valor in metricas_periodo
+    metricas_html = construir_metricas_dt_html(
+        metricas_periodo,
+        columnas=9,
+        minmax="minmax(86px, 1fr)",
+        compacta=True,
     )
 
     render_html_block(
         f"""
         <div class="alab-player-panel" style="margin-bottom:1rem;">
-            <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-                <div class="alab-compare-photo-wrap">{escudo_html}</div>
+            <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:nowrap;">
+                <div class="alab-compare-photo-wrap" style="flex:0 0 104px;display:flex;justify-content:center;align-items:flex-start;padding-top:0.2rem;">{escudo_html}</div>
                 <div style="flex:1 1 420px;min-width:260px;max-width:100%;overflow:hidden;">
-                    <div class="alab-player-panel-title" style="margin-bottom:0.35rem;">{club}</div>
-                    <div class="alab-player-panel-copy" style="margin-bottom:0.75rem;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
-                    <div style="margin-bottom:0.8rem;overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;">
-                        <div class="alab-detail-grid" style="display:grid;grid-template-columns:repeat(9, minmax(96px, 1fr));gap:0.45rem;min-width:930px;align-items:stretch;">
-                            {metricas_html}
+                    <div style="display:flex;flex-direction:column;gap:0.85rem;">
+                        <div>
+                            <div class="alab-player-panel-title" style="margin-bottom:0.35rem;text-align:left;">{club}</div>
+                            <div class="alab-player-panel-copy" style="margin-bottom:0;text-align:left;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
                         </div>
+                        <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;display:flex;justify-content:center;">
+                            <div style="min-width:828px;width:100%;display:flex;justify-content:center;">
+                                {metricas_html}
+                            </div>
+                        </div>
+                        <div class="alab-player-panel-copy" style="margin-top:0.05rem;padding:0.8rem 0.9rem;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:rgba(255,255,255,0.02);">{observaciones}</div>
                     </div>
-                    <div class="alab-player-panel-copy">{observaciones}</div>
                 </div>
             </div>
         </div>
@@ -2998,6 +3022,19 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.set_text_color(*color_texto)
             pdf.multi_cell(ancho - 6, 4.2, valor)
 
+        def metrica_competitiva_pdf(x_pos, y_pos, ancho, alto, etiqueta, valor):
+            pdf.set_fill_color(*color_panel_alt)
+            pdf.set_draw_color(*color_borde)
+            pdf.rect(x_pos, y_pos, ancho, alto, "DF")
+            pdf.set_xy(x_pos + 1.8, y_pos + 1.2)
+            pdf.set_font("Arial", "B", 5.2)
+            pdf.set_text_color(*color_acento)
+            pdf.multi_cell(ancho - 3.6, 2.5, sanitizar_texto_pdf(etiqueta.upper()), align="C")
+            pdf.set_xy(x_pos + 1.8, y_pos + alto - 4.7)
+            pdf.set_font("Arial", "B", 8.1)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(ancho - 3.6, 3.4, sanitizar_texto_pdf(str(valor)), align="C")
+
         def dibujar_header_tabla_periodos(columnas, anchos):
             pdf.set_fill_color(23, 32, 38)
             pdf.set_text_color(255, 255, 255)
@@ -3132,37 +3169,42 @@ def generar_pdf_tecnico(tecnico, periodos):
         pdf.set_y(desc_y + desc_h + 4)
 
         resumen_panel_y = pdf.get_y()
-        resumen_panel_h = 20
-        resumen_cols_gap = 4
-        resumen_col_w = (total_w - resumen_cols_gap) / 2
+        resumen_panel_h = 31
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
-        pdf.rect(pdf.l_margin, resumen_panel_y, resumen_col_w, resumen_panel_h, "DF")
-        pdf.rect(pdf.l_margin + resumen_col_w + resumen_cols_gap, resumen_panel_y, resumen_col_w, resumen_panel_h, "DF")
+        pdf.rect(pdf.l_margin, resumen_panel_y, total_w, resumen_panel_h, "DF")
         pdf.set_xy(pdf.l_margin + 4, resumen_panel_y + 3)
-        pdf.set_font("Arial", "B", 9.5)
+        pdf.set_font("Arial", "B", 10)
         pdf.set_text_color(*color_texto)
-        pdf.cell(resumen_col_w - 8, 4, "Resumen agregado", ln=True)
-        pdf.set_x(pdf.l_margin + 4)
-        pdf.set_font("Arial", "", 8.6)
-        pdf.set_text_color(*color_texto_muted)
-        pdf.multi_cell(
-            resumen_col_w - 8,
-            4.1,
-            f"PJ {resumen['pj']} | PG {resumen['pg']} | PE {resumen['pe']} | PP {resumen['pp']}\nGF {resumen['gf']} | GC {resumen['gc']} | DFG {resumen['dfg']}",
-        )
-        pdf.set_xy(pdf.l_margin + resumen_col_w + resumen_cols_gap + 4, resumen_panel_y + 3)
-        pdf.set_font("Arial", "B", 9.5)
-        pdf.set_text_color(*color_texto)
-        pdf.cell(resumen_col_w - 8, 4, "Contexto actual", ln=True)
-        pdf.set_x(pdf.l_margin + resumen_col_w + resumen_cols_gap + 4)
-        pdf.set_font("Arial", "", 8.6)
-        pdf.set_text_color(*color_texto_muted)
-        pdf.multi_cell(
-            resumen_col_w - 8,
-            4.1,
-            f"Club: {resumen['club_actual']}\nLiga: {resumen['liga_actual']}\nPuntos: {resumen['ptc']}",
-        )
+        pdf.cell(total_w - 8, 4, "Resumen competitivo", ln=True)
+
+        metricas_pdf = [
+            ("Partidos jugados", resumen["pj"]),
+            ("Partidos ganados", resumen["pg"]),
+            ("Partidos empatados", resumen["pe"]),
+            ("Partidos perdidos", resumen["pp"]),
+            ("Goles a favor", resumen["gf"]),
+            ("Goles en contra", resumen["gc"]),
+            ("Puntos conseguidos", resumen["ptc"]),
+            ("Diferencia de gol", resumen["dfg"]),
+            ("Puntos por partido", puntos_partido),
+            ("Rendimiento", rendimiento_texto),
+        ]
+        metricas_cols = 5
+        metricas_gap = 2
+        metricas_inner_w = total_w - 8
+        metrica_w = (metricas_inner_w - (metricas_gap * (metricas_cols - 1))) / metricas_cols
+        metrica_h = 8.2
+        metricas_start_x = pdf.l_margin + 4
+        metricas_start_y = resumen_panel_y + 9
+
+        for indice, (etiqueta, valor) in enumerate(metricas_pdf):
+            col = indice % metricas_cols
+            row = indice // metricas_cols
+            metrica_x = metricas_start_x + col * (metrica_w + metricas_gap)
+            metrica_y = metricas_start_y + row * (metrica_h + metricas_gap)
+            metrica_competitiva_pdf(metrica_x, metrica_y, metrica_w, metrica_h, etiqueta, valor)
+
         pdf.set_y(resumen_panel_y + resumen_panel_h + 4)
 
         if grafico_linea is not None:
@@ -5725,18 +5767,29 @@ if st.session_state["menu"] == "Directores Técnicos":
             )
 
         with bottom_right_dt:
+            metricas_resumen_competitivo = [
+                ("Partidos jugados", resumen_dt["pj"]),
+                ("Partidos ganados", resumen_dt["pg"]),
+                ("Partidos empatados", resumen_dt["pe"]),
+                ("Partidos perdidos", resumen_dt["pp"]),
+                ("Goles a favor", resumen_dt["gf"]),
+                ("Goles en contra", resumen_dt["gc"]),
+                ("Puntos conseguidos", resumen_dt["ptc"]),
+                ("Diferencia de gol", resumen_dt["dfg"]),
+                ("Puntos por partido", formatear_valor_estadistica(resumen_dt["puntos_por_partido"])),
+                ("Rendimiento", f"{formatear_valor_estadistica(resumen_dt['rendimiento'])}%"),
+            ]
+            metricas_resumen_competitivo_html = construir_metricas_dt_html(
+                metricas_resumen_competitivo,
+                columnas=2,
+                minmax="minmax(0, 1fr)",
+                compacta=True,
+            )
             render_html_block(
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Resumen competitivo</div>
-                    <div class="alab-detail-grid">
-                        <div class="alab-detail-item"><span class="alab-detail-label">PJ</span><span class="alab-detail-value">{resumen_dt['pj']}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PG</span><span class="alab-detail-value">{resumen_dt['pg']}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PTC</span><span class="alab-detail-value">{resumen_dt['ptc']}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">DFG</span><span class="alab-detail-value">{resumen_dt['dfg']}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Puntos por partido</span><span class="alab-detail-value">{formatear_valor_estadistica(resumen_dt['puntos_por_partido'])}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{formatear_valor_estadistica(resumen_dt['rendimiento'])}%</span></div>
-                    </div>
+                    <div style="margin-top:0.45rem;">{metricas_resumen_competitivo_html}</div>
                 </div>
                 """
             )

@@ -615,7 +615,7 @@ POSICION_ESTADISTICAS_CLAVE = {
         ),
         ("Precisión de centros", ["Precisión_centros", "Precision_centros"]),
     ],
-    "Delantero centro": [
+    "Delantero": [
         ("Duelos ofensivos ganados", ["Duelos_atacantes_ganados"]),
         ("Duelos aéreos ganados", ["Duelos_aéreos_ganados", "Duelos_aereos_ganados"]),
         ("Precisión de pases", ["Precisión_pases", "Precision_pases"]),
@@ -3269,7 +3269,7 @@ if st.session_state["menu"] == "Jugadores":
         "Defensa central izquierdo", "Lateral izquierdo",
         "Mediocampista defensivo", "Mediocampista mixto",
         "Mediocampista ofensivo", "Extremo derecho",
-        "Extremo izquierdo", "Delantero centro"
+        "Extremo izquierdo", "Delantero"
     ]
 
     opciones_ligas = [
@@ -5102,7 +5102,7 @@ if st.session_state["menu"] == "Lista corta":
             "Mediocampista ofensivo",
             "Extremo izquierdo",
         ],
-        "Delanteros": ["Delantero centro"],
+        "Delanteros": ["Delantero"],
     }
 
     # =========================================================
@@ -5912,7 +5912,7 @@ if st.session_state["menu"] == "Panel General":
         ("Mediocampista ofensivo","🎯 Volantes ofensivos"),
         ("Extremo derecho","⚡ Extremos derechos"),
         ("Extremo izquierdo","⚡ Extremos izquierdos"),
-        ("Delantero centro","🎯 Delanteros centro"),
+        ("Delantero","🎯 Delanteros"),
     ]
 
     cobertura_posiciones = df_scores["Posición"].nunique() if not df_scores.empty else 0

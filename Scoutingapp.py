@@ -3219,11 +3219,11 @@ menu_options = [
     "Panel General",
     "Agenda",
     "Jugadores",
-    "Ver informes",
+    "Informes Jugadores",
     "Lista corta",
     "Panel Scouts",
-    "Estadísticas",
-    "Comparativa",
+    "Estadísticas Jugadores",
+    "Comparativa Jugadores",
 ]
 
 if st.session_state.get("menu") not in menu_options:
@@ -3998,7 +3998,7 @@ if st.session_state["menu"] == "Jugadores":
 # BLOQUE ESTADÍSTICAS — Comparativo jugador vs promedio de liga
 # =========================================================
 
-if st.session_state["menu"] == "Estadísticas":
+if st.session_state["menu"] == "Estadísticas Jugadores":
 
     st.subheader("Estadísticas comparativas")
     section_header(
@@ -4206,7 +4206,7 @@ if st.session_state["menu"] == "Estadísticas":
 # BLOQUE COMPARATIVA — Tres jugadores de la misma posición
 # =========================================================
 
-if st.session_state["menu"] == "Comparativa":
+if st.session_state["menu"] == "Comparativa Jugadores":
 
     df_players = df_players_all.copy()
     df_players["ID_Jugador"] = df_players["ID_Jugador"].astype(str)
@@ -4367,7 +4367,7 @@ if st.session_state["menu"] == "Comparativa":
 # BLOQUE 4 / 5 — Ver Informes (optimizado y con ficha completa)
 # =========================================================
 
-if st.session_state["menu"] == "Ver informes":
+if st.session_state["menu"] == "Informes Jugadores":
     # ---------------------------------------------------------
     # DATASETS SEGÚN ROL
     # ---------------------------------------------------------

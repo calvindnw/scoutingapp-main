@@ -516,11 +516,11 @@ def inicializar_datasets_sesion():
         df_players["nombre_wyscout"] = ""
 
     if "ID_DT" in df_dt.columns:
-        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+        df_dt["ID_DT"] = df_dt["ID_DT"].map(normalizar_id_texto)
     if "ID_periodo_DT" in df_dt_periods.columns:
-        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].map(normalizar_id_texto)
     if "ID_DT" in df_dt_periods.columns:
-        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
+        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].map(normalizar_id_texto)
 
     st.session_state["df_players"] = df_players.copy()
     st.session_state["df_reports"] = df_reports.copy()
@@ -536,11 +536,11 @@ def refrescar_datasets_sesion():
         df_players["nombre_wyscout"] = ""
 
     if "ID_DT" in df_dt.columns:
-        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+        df_dt["ID_DT"] = df_dt["ID_DT"].map(normalizar_id_texto)
     if "ID_periodo_DT" in df_dt_periods.columns:
-        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].map(normalizar_id_texto)
     if "ID_DT" in df_dt_periods.columns:
-        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
+        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].map(normalizar_id_texto)
 
     st.session_state["df_players"] = df_players.copy()
     st.session_state["df_reports"] = df_reports.copy()
@@ -560,7 +560,7 @@ def calcular_edad(fecha_nac):
 def generar_id_unico(df, columna="ID_Jugador"):
     if columna not in df.columns or df.empty:
         return 1
-    ids = df[columna].dropna().astype(str)
+    ids = df[columna].dropna().map(normalizar_id_texto)
     nums = [int(i) for i in ids if i.isdigit()]
     return max(nums) + 1 if nums else 1
 
@@ -663,6 +663,38 @@ def normalizar_entero_dt(valor, default=0):
     return int(round(numero))
 
 
+def normalizar_id_texto(valor) -> str:
+    if valor is None:
+        return ""
+    try:
+        if pd.isna(valor):
+            return ""
+    except TypeError:
+        pass
+
+    if isinstance(valor, (int, np.integer)):
+        return str(int(valor))
+
+    if isinstance(valor, (float, np.floating)):
+        if float(valor).is_integer():
+            return str(int(valor))
+        return str(valor).strip()
+
+    texto = str(valor).strip()
+    if not texto:
+        return ""
+
+    match = re.fullmatch(r"(\d+)\.0+", texto)
+    if match:
+        return match.group(1)
+    return texto
+
+
+def truncar_texto_seguro(valor, limite):
+    texto = valor_campo_pdf(valor)
+    return texto if len(texto) <= limite else f"{texto[:limite - 3].rstrip()}..."
+
+
 def construir_label_periodo_dt(periodo):
     club = str(periodo.get("Club_periodo", "Sin club") or "Sin club").strip()
     inicio = formatear_fecha_dt(periodo.get("inicio_periodo"))
@@ -683,9 +715,9 @@ def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
             df[columna] = ""
 
     if "ID_periodo_DT" in df.columns:
-        df["ID_periodo_DT"] = df["ID_periodo_DT"].astype(str)
+        df["ID_periodo_DT"] = df["ID_periodo_DT"].map(normalizar_id_texto)
     if "ID_DT" in df.columns:
-        df["ID_DT"] = df["ID_DT"].astype(str)
+        df["ID_DT"] = df["ID_DT"].map(normalizar_id_texto)
 
     columnas_numericas = ["PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG"]
     for columna in columnas_numericas:
@@ -705,8 +737,8 @@ def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
     )
 
     return df.sort_values(
-        by=["periodo_actual", "inicio_periodo_dt", "ID_periodo_DT"],
-        ascending=[False, False, False],
+        by=["periodo_actual", "fin_periodo_dt", "inicio_periodo_dt", "ID_periodo_DT"],
+        ascending=[False, False, False, False],
         na_position="last",
     ).reset_index(drop=True)
 
@@ -714,7 +746,7 @@ def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
 def obtener_tecnico_por_id(df_dt, id_dt):
     if not id_dt:
         return None
-    coincidencias = df_dt[df_dt["ID_DT"].astype(str) == str(id_dt)]
+    coincidencias = df_dt[df_dt["ID_DT"].map(normalizar_id_texto) == normalizar_id_texto(id_dt)]
     if coincidencias.empty:
         return None
     return coincidencias.iloc[0]
@@ -727,7 +759,7 @@ def obtener_periodos_dt_tecnico(df_periodos, id_dt):
     df = df_periodos.copy()
     if "ID_DT" not in df.columns:
         return normalizar_dataframe_periodos_dt(pd.DataFrame(columns=PERIODO_DT_COLUMNAS))
-    df = df[df["ID_DT"].astype(str) == str(id_dt)].copy()
+    df = df[df["ID_DT"].map(normalizar_id_texto) == normalizar_id_texto(id_dt)].copy()
     return normalizar_dataframe_periodos_dt(df)
 
 
@@ -773,6 +805,34 @@ def construir_resumen_tecnico(periodos: pd.DataFrame) -> dict:
         "club_actual": str(actual.get("Club_periodo", "-") or "-").strip() or "-",
         "liga_actual": str(actual.get("Liga_periodo", "-") or "-").strip() or "-",
     }
+
+
+def construir_tabla_resumen_periodos_dt(periodos: pd.DataFrame) -> pd.DataFrame:
+    if periodos is None or periodos.empty:
+        return pd.DataFrame()
+
+    tabla = periodos.copy()
+    tabla["Estado"] = tabla["periodo_actual"].map(lambda valor: "Actual" if bool(valor) else "Cerrado")
+    tabla["Inicio"] = tabla["inicio_periodo"].apply(formatear_fecha_dt)
+    tabla["Fin"] = tabla.apply(
+        lambda fila: "Actualidad" if bool(fila.get("periodo_actual", False)) else formatear_fecha_dt(fila.get("fin_periodo")),
+        axis=1,
+    )
+    tabla["Puntos/partido"] = tabla["Puntos por partido"].apply(formatear_valor_estadistica)
+    tabla["Rendimiento"] = tabla["Rendimiento (%)"].apply(lambda valor: f"{formatear_valor_estadistica(valor)}%")
+
+    columnas = [
+        "Estado", "Club_periodo", "Liga_periodo", "Pais", "Inicio", "Fin",
+        "PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG", "Puntos/partido", "Rendimiento",
+    ]
+    tabla = tabla[columnas].rename(
+        columns={
+            "Club_periodo": "Club",
+            "Liga_periodo": "Liga",
+            "Pais": "Pais",
+        }
+    )
+    return tabla.reset_index(drop=True)
 
 
 def construir_dataset_evolucion_tecnico(periodos: pd.DataFrame):
@@ -2836,7 +2896,7 @@ def generar_pdf_tecnico(tecnico, periodos):
         nacionalidad = valor_campo_pdf(tecnico.get("Nacionalidad_DT"))
         segunda_nacionalidad = valor_campo_pdf(tecnico.get("Segunda_Nacionalidad_DT"))
         edad_dt = calcular_edad(tecnico.get("Fecha_Nac_DT"))
-        edad_texto = f"{edad_dt} anos" if str(edad_dt) != "?" else "-"
+        edad_texto = f"{edad_dt} años" if str(edad_dt) != "?" else "-"
         puntos_partido = formatear_valor_estadistica(resumen["puntos_por_partido"])
         rendimiento_texto = f"{formatear_valor_estadistica(resumen['rendimiento'])}%"
         enlaces = []
@@ -2871,6 +2931,15 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.set_font("Arial", "B", 10)
             pdf.set_text_color(*color_texto)
             pdf.multi_cell(ancho - 6, 4.2, valor)
+
+        def dibujar_header_tabla_periodos(columnas, anchos):
+            pdf.set_fill_color(23, 32, 38)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_draw_color(*color_borde)
+            pdf.set_font("Arial", "B", 5.7)
+            for columna, ancho in zip(columnas, anchos):
+                pdf.cell(ancho, 5.2, sanitizar_texto_pdf(columna), border=1, align="C", fill=True)
+            pdf.ln()
 
         hero_y = 14
         hero_h = 22
@@ -3065,6 +3134,60 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.set_text_color(*color_texto_muted)
             pdf.multi_cell(0, 5.2, "No hay periodos cargados para este tecnico.")
         else:
+            tabla_periodos_pdf = construir_tabla_resumen_periodos_dt(periodos)
+            if not tabla_periodos_pdf.empty:
+                pdf.set_font("Arial", "B", 9.5)
+                pdf.set_text_color(*color_texto)
+                pdf.cell(0, 5, "Tabla cronologica", ln=True)
+                pdf.ln(0.6)
+
+                columnas_tabla = [
+                    "Estado", "Club", "Liga", "Inicio", "Fin", "PJ", "PG", "PE", "PP", "PTC", "DFG", "Rendimiento",
+                ]
+                anchos_tabla = [13, 27, 24, 15, 15, 8, 8, 8, 8, 10, 10, 18]
+                dibujar_header_tabla_periodos(columnas_tabla, anchos_tabla)
+
+                for _, fila_tabla in tabla_periodos_pdf.iterrows():
+                    if pdf.get_y() + 5.2 > pdf.h - pdf.b_margin - 8:
+                        pdf.add_page()
+                        dibujar_titulo_seccion_pdf(
+                            pdf,
+                            "Historial de periodos",
+                            "Continuacion de la tabla cronologica y detalle por etapas.",
+                            espacio_posterior_minimo=20,
+                        )
+                        dibujar_header_tabla_periodos(columnas_tabla, anchos_tabla)
+
+                    valores_fila = [
+                        truncar_texto_seguro(fila_tabla.get("Estado", "-"), 10),
+                        truncar_texto_seguro(fila_tabla.get("Club", "-"), 22),
+                        truncar_texto_seguro(fila_tabla.get("Liga", "-"), 20),
+                        truncar_texto_seguro(fila_tabla.get("Inicio", "-"), 10),
+                        truncar_texto_seguro(fila_tabla.get("Fin", "-"), 10),
+                        str(fila_tabla.get("PJ", "-")),
+                        str(fila_tabla.get("PG", "-")),
+                        str(fila_tabla.get("PE", "-")),
+                        str(fila_tabla.get("PP", "-")),
+                        str(fila_tabla.get("PTC", "-")),
+                        str(fila_tabla.get("DFG", "-")),
+                        truncar_texto_seguro(fila_tabla.get("Rendimiento", "-"), 12),
+                    ]
+
+                    pdf.set_fill_color(*color_panel_alt)
+                    pdf.set_text_color(*color_texto_muted)
+                    pdf.set_draw_color(*color_borde)
+                    pdf.set_font("Arial", "", 5.4)
+                    for valor, ancho in zip(valores_fila, anchos_tabla):
+                        pdf.cell(ancho, 5.0, sanitizar_texto_pdf(valor), border=1, align="C", fill=True)
+                    pdf.ln()
+
+                pdf.ln(3)
+
+            pdf.set_font("Arial", "B", 9.5)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(0, 5, "Detalle por periodo", ln=True)
+            pdf.ln(0.8)
+
             for _, periodo in periodos.iterrows():
                 asegurar_espacio_pdf(pdf, 31)
                 x = pdf.l_margin
@@ -4158,12 +4281,12 @@ def cargar_datos():
             df["ID_Jugador"] = df["ID_Jugador"].astype(str)
 
     if not df_dt.empty and "ID_DT" in df_dt.columns:
-        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+        df_dt["ID_DT"] = df_dt["ID_DT"].map(normalizar_id_texto)
     if not df_dt_periods.empty:
         if "ID_periodo_DT" in df_dt_periods.columns:
-            df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+            df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].map(normalizar_id_texto)
         if "ID_DT" in df_dt_periods.columns:
-            df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
+            df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].map(normalizar_id_texto)
 
     return df_players, df_reports, df_short, df_dt, df_dt_periods
 
@@ -5523,7 +5646,7 @@ if st.session_state["menu"] == "Directores Técnicos":
                 <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Ficha rápida</div>
                     <div class="alab-detail-grid">
-                        <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(formatear_fecha_dt(tecnico.get('Fecha_Nac_DT')))} ({edad_dt} anos)</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(formatear_fecha_dt(tecnico.get('Fecha_Nac_DT')))} ({edad_dt} años)</span></div>
                         <div class="alab-detail-item"><span class="alab-detail-label">Nacionalidad</span><span class="alab-detail-value">{escape_html(nacionalidad_dt_texto)}</span></div>
                         <div class="alab-detail-item"><span class="alab-detail-label">Segunda nacionalidad</span><span class="alab-detail-value">{escape_html(segunda_nac_dt)}</span></div>
                         <div class="alab-detail-item"><span class="alab-detail-label">Club actual</span><span class="alab-detail-value">{escape_html(tecnico.get('Club_actual_DT'), '-')}</span></div>
@@ -5605,121 +5728,179 @@ if st.session_state["menu"] == "Directores Técnicos":
         if periodos_dt.empty:
             st.info("Todavia no hay periodos cargados para este tecnico.")
         else:
+            st.dataframe(
+                construir_tabla_resumen_periodos_dt(periodos_dt),
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.markdown(" ")
             for indice_periodo, (_, periodo) in enumerate(periodos_dt.iterrows(), start=1):
                 render_tarjeta_periodo_dt(periodo, indice_periodo)
 
         if CURRENT_ROLE in ["admin", "scout"]:
             st.markdown("---")
-            section_header("Agregar o editar periodo")
+            section_header("Gestión de periodos")
 
             if st.session_state.get("toast_guardado_periodo_dt"):
                 st.toast("✅ Periodo guardado correctamente.", icon="✅")
                 st.session_state["toast_guardado_periodo_dt"] = False
 
-            modo_periodo_dt = st.radio(
-                "Modo",
-                ["Agregar periodo", "Editar periodo"],
-                horizontal=True,
-                key=f"modo_periodo_dt_{id_dt}",
-            )
+            with st.expander("➕ Agregar periodo", expanded=False):
+                with st.form(f"periodo_dt_form_add_{id_dt}", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        club_periodo = st.text_input("Club")
+                        url_escudo = st.text_input("Url escudo club")
+                        liga_periodo = st.selectbox("Liga", opciones_ligas_dt, index=0, key=f"liga_add_{id_dt}")
+                        pais_periodo = st.selectbox("Pais", opciones_paises_dt, index=0, key=f"pais_add_{id_dt}")
+                        inicio_periodo_dt = st.date_input("Inicio", value=date.today(), format="DD/MM/YYYY", key=f"inicio_add_{id_dt}")
+                        periodo_actual_dt = st.checkbox("Se encuentra actualmente en este equipo", value=False, key=f"actual_add_{id_dt}")
+                        fin_periodo_dt = st.date_input("Fin", value=date.today(), format="DD/MM/YYYY", disabled=periodo_actual_dt, key=f"fin_add_{id_dt}")
+                    with col2:
+                        pj = st.number_input("Partidos jugados", min_value=0, value=0, step=1, key=f"pj_add_{id_dt}")
+                        pg = st.number_input("Partidos ganados", min_value=0, value=0, step=1, key=f"pg_add_{id_dt}")
+                        pe = st.number_input("Partidos empatados", min_value=0, value=0, step=1, key=f"pe_add_{id_dt}")
+                        pp = st.number_input("Partidos perdidos", min_value=0, value=0, step=1, key=f"pp_add_{id_dt}")
+                        gf = st.number_input("Goles a favor", min_value=0, value=0, step=1, key=f"gf_add_{id_dt}")
+                        gc = st.number_input("Goles en contra", min_value=0, value=0, step=1, key=f"gc_add_{id_dt}")
+                        ptc_calculado = int(pg * 3 + pe)
+                        dfg_calculado = int(gf - gc)
+                        st.text_input("Puntos obtenidos", value=str(ptc_calculado), disabled=True, key=f"ptc_add_{id_dt}")
+                        st.text_input("Diferencia de gol", value=str(dfg_calculado), disabled=True, key=f"dfg_add_{id_dt}")
+                    observaciones_periodo = st.text_area("Observaciones del periodo", height=120, key=f"obs_add_{id_dt}")
 
-            periodo_edicion = None
-            id_periodo_edicion = ""
-            if modo_periodo_dt == "Editar periodo" and not periodos_dt.empty:
-                opciones_periodos_dt = {
-                    construir_label_periodo_dt(periodo): str(periodo.get("ID_periodo_DT", ""))
-                    for _, periodo in periodos_dt.iterrows()
-                }
-                seleccion_periodo_dt = st.selectbox(
-                    "Seleccioná el periodo a editar",
-                    [""] + list(opciones_periodos_dt.keys()),
-                    key=f"seleccion_editar_periodo_dt_{id_dt}",
-                )
-                if seleccion_periodo_dt:
-                    id_periodo_edicion = opciones_periodos_dt[seleccion_periodo_dt]
-                    periodo_edicion = periodos_dt[periodos_dt["ID_periodo_DT"].astype(str) == id_periodo_edicion].iloc[0]
+                    guardar_periodo_dt = st.form_submit_button("💾 Guardar etapa")
 
-            with st.form(f"periodo_dt_form_{id_dt}", clear_on_submit=modo_periodo_dt == "Agregar periodo"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    club_periodo = st.text_input("Club", value=str(periodo_edicion.get("Club_periodo", "") if periodo_edicion is not None else ""))
-                    url_escudo = st.text_input("Url escudo club", value=str(periodo_edicion.get("URL_escudo", "") if periodo_edicion is not None else ""))
-                    liga_periodo = st.selectbox(
-                        "Liga",
-                        opciones_ligas_dt,
-                        index=opciones_ligas_dt.index(periodo_edicion.get("Liga_periodo")) if periodo_edicion is not None and periodo_edicion.get("Liga_periodo") in opciones_ligas_dt else 0,
-                    )
-                    pais_periodo = st.selectbox(
-                        "Pais",
-                        opciones_paises_dt,
-                        index=opciones_paises_dt.index(periodo_edicion.get("Pais")) if periodo_edicion is not None and periodo_edicion.get("Pais") in opciones_paises_dt else 0,
-                    )
-                    inicio_periodo = st.text_input("Inicio (dd/mm/aaaa)", value=str(periodo_edicion.get("inicio_periodo", "") if periodo_edicion is not None else ""))
-                    periodo_actual_dt = st.checkbox(
-                        "Se encuentra actualmente en este equipo",
-                        value=bool(periodo_edicion.get("periodo_actual", False)) if periodo_edicion is not None else False,
-                    )
-                    fin_periodo_default = ""
-                    if periodo_edicion is not None and not bool(periodo_edicion.get("periodo_actual", False)):
-                        fin_periodo_default = str(periodo_edicion.get("fin_periodo", "") or "")
-                    fin_periodo = st.text_input(
-                        "Fin (dd/mm/aaaa)",
-                        value=fin_periodo_default,
-                        disabled=periodo_actual_dt,
-                    )
-                with col2:
-                    pj = st.number_input("Partidos jugados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PJ", 0) if periodo_edicion is not None else 0), step=1)
-                    pg = st.number_input("Partidos ganados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PG", 0) if periodo_edicion is not None else 0), step=1)
-                    pe = st.number_input("Partidos empatados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PE", 0) if periodo_edicion is not None else 0), step=1)
-                    pp = st.number_input("Partidos perdidos", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PP", 0) if periodo_edicion is not None else 0), step=1)
-                    gf = st.number_input("Goles a favor", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GF", 0) if periodo_edicion is not None else 0), step=1)
-                    gc = st.number_input("Goles en contra", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GC", 0) if periodo_edicion is not None else 0), step=1)
-                    ptc = st.number_input("Puntos obtenidos", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PTC", 0) if periodo_edicion is not None else 0), step=1)
-                    dfg_default = normalizar_entero_dt(periodo_edicion.get("DFG", 0) if periodo_edicion is not None else 0)
-                    dfg = st.number_input("Diferencia de gol", value=dfg_default, step=1)
-                observaciones_periodo = st.text_area(
-                    "Observaciones del periodo",
-                    value=str(periodo_edicion.get("Observaciones_periodo", "") if periodo_edicion is not None else ""),
-                    height=120,
-                )
-
-                guardar_periodo_dt = st.form_submit_button(
-                    "💾 Guardar etapa" if modo_periodo_dt == "Agregar periodo" else "💾 Guardar cambios del periodo"
-                )
-
-                if guardar_periodo_dt and club_periodo:
-                    fin_periodo_guardar = "Actualidad" if periodo_actual_dt else fin_periodo
-                    if (pg + pe + pp) > pj:
-                        st.warning("⚠️ La suma de PG, PE y PP no puede superar los PJ.")
-                    else:
-                        id_periodo = generar_id_unico(df_dt_periods_all, "ID_periodo_DT") if modo_periodo_dt == "Agregar periodo" else id_periodo_edicion
-                        fila_periodo = [
-                            id_periodo,
-                            id_dt,
-                            club_periodo,
-                            url_escudo,
-                            liga_periodo,
-                            pais_periodo,
-                            inicio_periodo,
-                            fin_periodo_guardar,
-                            int(pj),
-                            int(pg),
-                            int(pe),
-                            int(pp),
-                            int(gf),
-                            int(gc),
-                            int(ptc),
-                            int(dfg),
-                            observaciones_periodo,
-                        ]
-
-                        if modo_periodo_dt == "Agregar periodo":
-                            agregar_fila("Periodo DT", fila_periodo)
+                    if guardar_periodo_dt and club_periodo:
+                        if (pg + pe + pp) > pj:
+                            st.warning("⚠️ La suma de PG, PE y PP no puede superar los PJ.")
                         else:
-                            actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo, fila_periodo, PERIODO_DT_COLUMNAS)
+                            fila_periodo = [
+                                generar_id_unico(df_dt_periods_all, "ID_periodo_DT"),
+                                id_dt,
+                                club_periodo,
+                                url_escudo,
+                                liga_periodo,
+                                pais_periodo,
+                                inicio_periodo_dt.strftime("%d/%m/%Y"),
+                                "Actualidad" if periodo_actual_dt else fin_periodo_dt.strftime("%d/%m/%Y"),
+                                int(pj),
+                                int(pg),
+                                int(pe),
+                                int(pp),
+                                int(gf),
+                                int(gc),
+                                ptc_calculado,
+                                dfg_calculado,
+                                observaciones_periodo,
+                            ]
+                            agregar_fila("Periodo DT", fila_periodo)
+                            st.session_state["toast_guardado_periodo_dt"] = True
+                            st.rerun()
 
-                        st.session_state["toast_guardado_periodo_dt"] = True
-                        st.rerun()
+            with st.expander("✏️ Editar periodo", expanded=False):
+                if periodos_dt.empty:
+                    st.info("Todavia no hay periodos cargados para editar.")
+                else:
+                    opciones_periodos_dt = {
+                        construir_label_periodo_dt(periodo): str(periodo.get("ID_periodo_DT", ""))
+                        for _, periodo in periodos_dt.iterrows()
+                    }
+                    seleccion_periodo_dt = st.selectbox(
+                        "Seleccioná el periodo a editar",
+                        [""] + list(opciones_periodos_dt.keys()),
+                        key=f"seleccion_editar_periodo_dt_{id_dt}",
+                    )
+
+                    if seleccion_periodo_dt:
+                        id_periodo_edicion = opciones_periodos_dt[seleccion_periodo_dt]
+                        periodo_edicion = periodos_dt[
+                            periodos_dt["ID_periodo_DT"].map(normalizar_id_texto) == normalizar_id_texto(id_periodo_edicion)
+                        ].iloc[0]
+
+                        inicio_edicion = pd.to_datetime(periodo_edicion.get("inicio_periodo"), errors="coerce", dayfirst=True)
+                        fin_edicion = pd.to_datetime(periodo_edicion.get("fin_periodo"), errors="coerce", dayfirst=True)
+                        if pd.isna(inicio_edicion):
+                            inicio_edicion = pd.Timestamp(date.today())
+                        if pd.isna(fin_edicion):
+                            fin_edicion = pd.Timestamp(date.today())
+
+                        with st.form(f"periodo_dt_form_edit_{id_dt}"):
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                club_periodo = st.text_input("Club", value=str(periodo_edicion.get("Club_periodo", "") or ""))
+                                url_escudo = st.text_input("Url escudo club", value=str(periodo_edicion.get("URL_escudo", "") or ""))
+                                liga_periodo = st.selectbox(
+                                    "Liga",
+                                    opciones_ligas_dt,
+                                    index=opciones_ligas_dt.index(periodo_edicion.get("Liga_periodo")) if periodo_edicion.get("Liga_periodo") in opciones_ligas_dt else 0,
+                                    key=f"liga_edit_{id_periodo_edicion}",
+                                )
+                                pais_periodo = st.selectbox(
+                                    "Pais",
+                                    opciones_paises_dt,
+                                    index=opciones_paises_dt.index(periodo_edicion.get("Pais")) if periodo_edicion.get("Pais") in opciones_paises_dt else 0,
+                                    key=f"pais_edit_{id_periodo_edicion}",
+                                )
+                                inicio_periodo_dt = st.date_input("Inicio", value=inicio_edicion.to_pydatetime(), format="DD/MM/YYYY", key=f"inicio_edit_{id_periodo_edicion}")
+                                periodo_actual_dt = st.checkbox(
+                                    "Se encuentra actualmente en este equipo",
+                                    value=bool(periodo_edicion.get("periodo_actual", False)),
+                                    key=f"actual_edit_{id_periodo_edicion}",
+                                )
+                                fin_periodo_dt = st.date_input(
+                                    "Fin",
+                                    value=fin_edicion.to_pydatetime(),
+                                    format="DD/MM/YYYY",
+                                    disabled=periodo_actual_dt,
+                                    key=f"fin_edit_{id_periodo_edicion}",
+                                )
+                            with col2:
+                                pj = st.number_input("Partidos jugados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PJ", 0)), step=1, key=f"pj_edit_{id_periodo_edicion}")
+                                pg = st.number_input("Partidos ganados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PG", 0)), step=1, key=f"pg_edit_{id_periodo_edicion}")
+                                pe = st.number_input("Partidos empatados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PE", 0)), step=1, key=f"pe_edit_{id_periodo_edicion}")
+                                pp = st.number_input("Partidos perdidos", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PP", 0)), step=1, key=f"pp_edit_{id_periodo_edicion}")
+                                gf = st.number_input("Goles a favor", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GF", 0)), step=1, key=f"gf_edit_{id_periodo_edicion}")
+                                gc = st.number_input("Goles en contra", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GC", 0)), step=1, key=f"gc_edit_{id_periodo_edicion}")
+                                ptc_calculado = int(pg * 3 + pe)
+                                dfg_calculado = int(gf - gc)
+                                st.text_input("Puntos obtenidos", value=str(ptc_calculado), disabled=True, key=f"ptc_edit_{id_periodo_edicion}")
+                                st.text_input("Diferencia de gol", value=str(dfg_calculado), disabled=True, key=f"dfg_edit_{id_periodo_edicion}")
+                            observaciones_periodo = st.text_area(
+                                "Observaciones del periodo",
+                                value=str(periodo_edicion.get("Observaciones_periodo", "") or ""),
+                                height=120,
+                                key=f"obs_edit_{id_periodo_edicion}",
+                            )
+
+                            guardar_periodo_dt = st.form_submit_button("💾 Guardar cambios del periodo")
+
+                            if guardar_periodo_dt and club_periodo:
+                                if (pg + pe + pp) > pj:
+                                    st.warning("⚠️ La suma de PG, PE y PP no puede superar los PJ.")
+                                else:
+                                    fila_periodo = [
+                                        id_periodo_edicion,
+                                        id_dt,
+                                        club_periodo,
+                                        url_escudo,
+                                        liga_periodo,
+                                        pais_periodo,
+                                        inicio_periodo_dt.strftime("%d/%m/%Y"),
+                                        "Actualidad" if periodo_actual_dt else fin_periodo_dt.strftime("%d/%m/%Y"),
+                                        int(pj),
+                                        int(pg),
+                                        int(pe),
+                                        int(pp),
+                                        int(gf),
+                                        int(gc),
+                                        ptc_calculado,
+                                        dfg_calculado,
+                                        observaciones_periodo,
+                                    ]
+                                    actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo_edicion, fila_periodo, PERIODO_DT_COLUMNAS)
+                                    st.session_state["toast_guardado_periodo_dt"] = True
+                                    st.rerun()
 
         st.markdown("---")
         section_header("Visualización del rendimiento")

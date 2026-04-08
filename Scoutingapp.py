@@ -1005,14 +1005,27 @@ def construir_dataset_evolucion_tecnico(periodos: pd.DataFrame):
     return df
 
 
+def construir_etiqueta_grafico_dt(valor, orden=None, limite=14):
+    texto = str(valor or "Club").strip()
+    if len(texto) > limite:
+        texto = f"{texto[:limite - 3].rstrip()}..."
+    return f"{texto} ({orden})" if orden is not None else texto
+
+
 def crear_grafico_evolucion_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
     df_chart = construir_dataset_evolucion_tecnico(periodos)
     if df_chart is None or df_chart.empty:
         return None
 
+    df_chart = df_chart.copy()
+    df_chart["Etiqueta_grafico"] = df_chart.apply(
+        lambda fila: construir_etiqueta_grafico_dt(fila.get("Club_periodo"), fila.get("Orden_periodo")),
+        axis=1,
+    )
+
     fig = px.line(
         df_chart,
-        x="Etiqueta_corta",
+        x="Etiqueta_grafico",
         y="Rendimiento (%)",
         markers=True,
         title=f"Evolucion del rendimiento - {nombre_tecnico}",
@@ -1022,7 +1035,8 @@ def crear_grafico_evolucion_tecnico(periodos: pd.DataFrame, nombre_tecnico: str)
         marker=dict(size=9, color="#19e28f"),
         hovertemplate="<b>%{x}</b><br>Rendimiento: %{y:.2f}%<extra></extra>",
     )
-    fig.update_layout(xaxis_title="", yaxis_title="Rendimiento (%)", showlegend=False, height=390)
+    fig.update_layout(xaxis_title="", yaxis_title="Rendimiento (%)", showlegend=False, height=410, margin=dict(l=20, r=20, t=56, b=78))
+    fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     apply_glass_plotly(fig)
     return fig
@@ -1032,24 +1046,29 @@ def crear_grafico_clubes_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
     if periodos is None or periodos.empty:
         return None
 
-    df_chart = periodos[["Club_periodo", "PTC"]].copy()
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
     if df_chart.empty:
         return None
 
+    df_chart = df_chart[["Club_periodo", "Orden_periodo", "PTC"]].copy()
+    df_chart["Etiqueta_grafico"] = df_chart.apply(
+        lambda fila: construir_etiqueta_grafico_dt(fila.get("Club_periodo"), fila.get("Orden_periodo")),
+        axis=1,
+    )
+
     fig = px.bar(
         df_chart,
-        x="Club_periodo",
+        x="Etiqueta_grafico",
         y="PTC",
-        color="Club_periodo",
-        text="PTC",
+        color="Etiqueta_grafico",
+        custom_data=["Club_periodo"],
         title=f"Puntos obtenidos por periodo - {nombre_tecnico}",
     )
     fig.update_traces(
-        texttemplate="%{text}",
-        textposition="outside",
-        hovertemplate="<b>%{x}</b><br>Puntos: %{y}<extra></extra>",
+        hovertemplate="<b>%{customdata[0]}</b><br>Puntos: %{y}<extra></extra>",
     )
-    fig.update_layout(xaxis_title="", yaxis_title="PTC", showlegend=False, height=390)
+    fig.update_layout(xaxis_title="", yaxis_title="PTC", showlegend=False, height=410, margin=dict(l=20, r=20, t=56, b=82))
+    fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     apply_glass_plotly(fig)
     return fig
@@ -1060,8 +1079,14 @@ def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: 
     if df_chart is None or df_chart.empty:
         return None
 
-    df_long = df_chart[["Etiqueta_corta", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido"]].melt(
-        id_vars=["Etiqueta_corta"],
+    df_chart = df_chart.copy()
+    df_chart["Etiqueta_grafico"] = df_chart.apply(
+        lambda fila: construir_etiqueta_grafico_dt(fila.get("Club_periodo"), fila.get("Orden_periodo")),
+        axis=1,
+    )
+
+    df_long = df_chart[["Etiqueta_grafico", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido"]].melt(
+        id_vars=["Etiqueta_grafico"],
         var_name="Metrica",
         value_name="Valor",
     ).dropna(subset=["Valor"])
@@ -1070,7 +1095,7 @@ def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: 
 
     fig = px.line(
         df_long,
-        x="Etiqueta_corta",
+        x="Etiqueta_grafico",
         y="Valor",
         color="Metrica",
         markers=True,
@@ -1082,8 +1107,9 @@ def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: 
         },
     )
     fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}<extra></extra>")
-    fig.update_layout(xaxis_title="", yaxis_title="Valor por partido", height=390)
-    fig.update_yaxes(rangemode="tozero")
+    fig.update_layout(xaxis_title="", yaxis_title="Valor por partido", height=410, margin=dict(l=20, r=20, t=56, b=82))
+    fig.update_xaxes(tickangle=-24, automargin=True)
+    fig.update_yaxes(automargin=True)
     apply_glass_plotly(fig)
     return fig
 
@@ -1093,8 +1119,14 @@ def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_t
     if df_chart is None or df_chart.empty:
         return None
 
-    df_long = df_chart[["Etiqueta_corta", "% de victorias", "% de empates", "% de derrotas"]].melt(
-        id_vars=["Etiqueta_corta"],
+    df_chart = df_chart.copy()
+    df_chart["Etiqueta_grafico"] = df_chart.apply(
+        lambda fila: construir_etiqueta_grafico_dt(fila.get("Club_periodo"), fila.get("Orden_periodo")),
+        axis=1,
+    )
+
+    df_long = df_chart[["Etiqueta_grafico", "% de victorias", "% de empates", "% de derrotas"]].melt(
+        id_vars=["Etiqueta_grafico"],
         var_name="Metrica",
         value_name="Valor",
     ).dropna(subset=["Valor"])
@@ -1103,11 +1135,10 @@ def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_t
 
     fig = px.bar(
         df_long,
-        x="Etiqueta_corta",
+        x="Etiqueta_grafico",
         y="Valor",
         color="Metrica",
         barmode="group",
-        text="Valor",
         title=f"Distribucion de resultados por periodo - {nombre_tecnico}",
         color_discrete_map={
             "% de victorias": "#19e28f",
@@ -1115,8 +1146,9 @@ def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_t
             "% de derrotas": "#ff6b6b",
         },
     )
-    fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside", hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}%<extra></extra>")
-    fig.update_layout(xaxis_title="", yaxis_title="Porcentaje", height=390)
+    fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}%<extra></extra>")
+    fig.update_layout(xaxis_title="", yaxis_title="Porcentaje", height=410, margin=dict(l=20, r=20, t=56, b=82), bargap=0.28)
+    fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     apply_glass_plotly(fig)
     return fig
@@ -3113,17 +3145,26 @@ def obtener_alto_imagen_pdf(buffer, ancho_pdf):
     return ancho_pdf * (alto_px / ancho_px)
 
 
+def construir_etiquetas_pdf_dt(df_chart, limite=13):
+    return [
+        construir_etiqueta_grafico_dt(fila.get("Club_periodo"), fila.get("Orden_periodo"), limite=limite)
+        for _, fila in df_chart.iterrows()
+    ]
+
+
 def crear_linea_rendimiento_dt_pdf(periodos, nombre_tecnico):
     df_chart = construir_dataset_evolucion_tecnico(periodos)
     if df_chart is None or df_chart.empty:
         return None
 
-    fig, ax = plt.subplots(figsize=(7.2, 2.8))
+    etiquetas = construir_etiquetas_pdf_dt(df_chart, limite=12)
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.05))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
-    ax.plot(df_chart["Etiqueta_corta"], df_chart["Rendimiento (%)"], color="#19e28f", linewidth=2.4, marker="o")
+    ax.plot(etiquetas, df_chart["Rendimiento (%)"], color="#19e28f", linewidth=2.4, marker="o")
     ax.set_title(f"Rendimiento por periodo - {nombre_tecnico}", color="#edf5f0", fontsize=11)
-    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.4, rotation=18)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.1, rotation=24)
     ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
     ax.set_ylabel("Rendimiento (%)", color="#d6e4dc", fontsize=8.2)
     ax.grid(axis="y", color="#254637", alpha=0.55)
@@ -3131,7 +3172,7 @@ def crear_linea_rendimiento_dt_pdf(periodos, nombre_tecnico):
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
-    plt.subplots_adjust(top=0.82, bottom=0.3, left=0.08, right=0.98)
+    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
     return crear_buffer_figura_pdf(fig)
 
 
@@ -3139,23 +3180,14 @@ def crear_barras_resumen_dt_pdf(periodos):
     if periodos is None or periodos.empty:
         return None
 
-    df_chart = periodos[["Club_periodo", "PTC"]].copy()
-    fig, ax = plt.subplots(figsize=(7.2, 2.8))
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    etiquetas = construir_etiquetas_pdf_dt(df_chart, limite=12)
+    fig, ax = plt.subplots(figsize=(7.2, 3.05))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
-    barras = ax.bar(df_chart["Club_periodo"], df_chart["PTC"], color="#2ec4ff")
-    for barra in barras:
-        ax.text(
-            barra.get_x() + barra.get_width() / 2,
-            barra.get_height() + 0.1,
-            f"{barra.get_height():.0f}",
-            ha="center",
-            va="bottom",
-            fontsize=7,
-            color="#edf5f0",
-        )
+    ax.bar(etiquetas, df_chart["PTC"], color="#2ec4ff")
     ax.set_title("Puntos obtenidos por periodo", color="#edf5f0", fontsize=11)
-    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.4, rotation=18)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.1, rotation=24)
     ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
     ax.set_ylabel("PTC", color="#d6e4dc", fontsize=8.2)
     ax.grid(axis="y", color="#254637", alpha=0.55)
@@ -3163,7 +3195,62 @@ def crear_barras_resumen_dt_pdf(periodos):
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
-    plt.subplots_adjust(top=0.82, bottom=0.3, left=0.08, right=0.98)
+    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
+def crear_balance_goles_dt_pdf(periodos, nombre_tecnico):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    etiquetas = construir_etiquetas_pdf_dt(df_chart, limite=12)
+    fig, ax = plt.subplots(figsize=(7.2, 3.05))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+    ax.plot(etiquetas, df_chart["Goles por partido"], color="#19e28f", linewidth=2.2, marker="o", label="Goles por partido")
+    ax.plot(etiquetas, df_chart["Goles recibidos por partido"], color="#ff7f50", linewidth=2.2, marker="o", label="Goles recibidos")
+    ax.plot(etiquetas, df_chart["Diferencia por partido"], color="#2ec4ff", linewidth=2.2, marker="o", label="Diferencia por partido")
+    ax.set_title(f"Produccion de gol por periodo - {nombre_tecnico}", color="#edf5f0", fontsize=11)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.1, rotation=24)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.set_ylabel("Valor por partido", color="#d6e4dc", fontsize=8.2)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    ax.legend(frameon=False, fontsize=7, labelcolor="#d6e4dc", loc="upper right")
+    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
+def crear_porcentajes_resultado_dt_pdf(periodos, nombre_tecnico):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    etiquetas = construir_etiquetas_pdf_dt(df_chart, limite=12)
+    posiciones = np.arange(len(df_chart))
+    ancho = 0.24
+    fig, ax = plt.subplots(figsize=(7.2, 3.05))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+    ax.bar(posiciones - ancho, df_chart["% de victorias"], width=ancho, color="#19e28f", label="% victorias")
+    ax.bar(posiciones, df_chart["% de empates"], width=ancho, color="#f3bf4c", label="% empates")
+    ax.bar(posiciones + ancho, df_chart["% de derrotas"], width=ancho, color="#ff6b6b", label="% derrotas")
+    ax.set_xticks(posiciones)
+    ax.set_xticklabels(etiquetas, rotation=24, ha="right", color="#b7cec2", fontsize=7.1)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.set_ylabel("Porcentaje", color="#d6e4dc", fontsize=8.2)
+    ax.set_title(f"Distribucion de resultados por periodo - {nombre_tecnico}", color="#edf5f0", fontsize=11)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    ax.legend(frameon=False, fontsize=7, labelcolor="#d6e4dc", loc="upper right")
+    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
     return crear_buffer_figura_pdf(fig)
 
 
@@ -3178,6 +3265,8 @@ def generar_pdf_tecnico(tecnico, periodos):
         foto_buffer = descargar_foto_para_pdf(tecnico.get("URL_Foto_DT", ""), max_size=(420, 420))
         grafico_linea = crear_linea_rendimiento_dt_pdf(periodos, nombre)
         grafico_barras = crear_barras_resumen_dt_pdf(periodos)
+        grafico_balance = crear_balance_goles_dt_pdf(periodos, nombre)
+        grafico_resultados = crear_porcentajes_resultado_dt_pdf(periodos, nombre)
         club_actual = valor_campo_pdf(tecnico.get("Club_actual_DT"))
         liga_actual = valor_campo_pdf(tecnico.get("Liga_actual_DT"))
         nacionalidad = valor_campo_pdf(tecnico.get("Nacionalidad_DT"))
@@ -3366,7 +3455,7 @@ def generar_pdf_tecnico(tecnico, periodos):
         pdf.set_y(desc_y + desc_h + 4)
 
         resumen_panel_y = pdf.get_y()
-        resumen_panel_h = 53
+        resumen_panel_h = 31
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
         pdf.rect(pdf.l_margin, resumen_panel_y, total_w, resumen_panel_h, "DF")
@@ -3383,17 +3472,9 @@ def generar_pdf_tecnico(tecnico, periodos):
             ("Goles a favor", resumen["gf"]),
             ("Goles en contra", resumen["gc"]),
             ("Puntos conseguidos", resumen["ptc"]),
-            ("Diferencia de gol", resumen["dfg"]),
-            ("Puntos por partido", puntos_partido),
-            ("Goles por partido", formatear_valor_estadistica(resumen["goles_por_partido"])),
-            ("Goles recibidos por partido", formatear_valor_estadistica(resumen["goles_recibidos_por_partido"])),
-            ("Diferencia por partido", formatear_valor_estadistica(resumen["diferencia_por_partido"])),
-            ("% de victorias", f"{formatear_valor_estadistica(resumen['porcentaje_victorias'])}%"),
-            ("% de empates", f"{formatear_valor_estadistica(resumen['porcentaje_empates'])}%"),
-            ("% de derrotas", f"{formatear_valor_estadistica(resumen['porcentaje_derrotas'])}%"),
             ("Rendimiento", rendimiento_texto),
         ]
-        metricas_cols = 5
+        metricas_cols = 4
         metricas_gap = 2
         metricas_inner_w = total_w - 8
         metrica_w = (metricas_inner_w - (metricas_gap * (metricas_cols - 1))) / metricas_cols
@@ -3431,6 +3512,37 @@ def generar_pdf_tecnico(tecnico, periodos):
             y_barras = pdf.get_y() + 1
             pdf.image(grafico_barras, x=pdf.l_margin + 2, y=y_barras, w=ancho_barras)
             pdf.set_y(y_barras + alto_barras + 2)
+
+        if grafico_balance is not None or grafico_resultados is not None:
+            pdf.add_page()
+            dibujar_titulo_seccion_pdf(
+                pdf,
+                "Graficos competitivos",
+                "Lectura ofensiva, defensiva y distribucion de resultados por cada etapa del entrenador.",
+                espacio_posterior_minimo=22,
+            )
+
+            if grafico_balance is not None:
+                ancho_balance = total_w - 4
+                alto_balance = obtener_alto_imagen_pdf(grafico_balance, ancho_balance)
+                asegurar_espacio_pdf(pdf, alto_balance + 8)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(*color_texto)
+                pdf.cell(0, 5, "Produccion de gol por periodo", ln=True)
+                y_balance = pdf.get_y() + 1
+                pdf.image(grafico_balance, x=pdf.l_margin + 2, y=y_balance, w=ancho_balance)
+                pdf.set_y(y_balance + alto_balance + 2)
+
+            if grafico_resultados is not None:
+                ancho_resultados = total_w - 4
+                alto_resultados = obtener_alto_imagen_pdf(grafico_resultados, ancho_resultados)
+                asegurar_espacio_pdf(pdf, alto_resultados + 8)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(*color_texto)
+                pdf.cell(0, 5, "Distribucion de resultados por periodo", ln=True)
+                y_resultados = pdf.get_y() + 1
+                pdf.image(grafico_resultados, x=pdf.l_margin + 2, y=y_resultados, w=ancho_resultados)
+                pdf.set_y(y_resultados + alto_resultados + 2)
 
         pdf.add_page()
         dibujar_titulo_seccion_pdf(
@@ -5978,14 +6090,6 @@ if st.session_state["menu"] == "Directores Técnicos":
                 ("Goles a favor", resumen_dt["gf"]),
                 ("Goles en contra", resumen_dt["gc"]),
                 ("Puntos conseguidos", resumen_dt["ptc"]),
-                ("Diferencia de gol", resumen_dt["dfg"]),
-                ("Puntos por partido", formatear_valor_estadistica(resumen_dt["puntos_por_partido"])),
-                ("Goles por partido", formatear_valor_estadistica(resumen_dt["goles_por_partido"])),
-                ("Goles recibidos por partido", formatear_valor_estadistica(resumen_dt["goles_recibidos_por_partido"])),
-                ("Diferencia por partido", formatear_valor_estadistica(resumen_dt["diferencia_por_partido"])),
-                ("% de victorias", f"{formatear_valor_estadistica(resumen_dt['porcentaje_victorias'])}%"),
-                ("% de empates", f"{formatear_valor_estadistica(resumen_dt['porcentaje_empates'])}%"),
-                ("% de derrotas", f"{formatear_valor_estadistica(resumen_dt['porcentaje_derrotas'])}%"),
                 ("Rendimiento", f"{formatear_valor_estadistica(resumen_dt['rendimiento'])}%"),
             ]
             metricas_resumen_competitivo_html = construir_metricas_dt_html(

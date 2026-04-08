@@ -175,6 +175,38 @@ def normalizar_nombre_hoja(nombre):
     return texto.casefold()
 
 
+def alinear_columnas_dataframe(df: pd.DataFrame, columnas_base: list | None) -> pd.DataFrame:
+    if df is None:
+        return pd.DataFrame(columns=columnas_base or [])
+    if df.empty:
+        return pd.DataFrame(columns=columnas_base or list(df.columns))
+    if not columnas_base:
+        return df
+
+    df_alineado = df.copy()
+    columnas_actuales = list(df_alineado.columns)
+    mapa_actual = {normalizar_clave_estadistica(columna): columna for columna in columnas_actuales}
+    renombres = {}
+
+    for columna_esperada in columnas_base:
+        clave = normalizar_clave_estadistica(columna_esperada)
+        columna_real = mapa_actual.get(clave)
+        if columna_real and columna_real != columna_esperada:
+            renombres[columna_real] = columna_esperada
+
+    if renombres:
+        df_alineado = df_alineado.rename(columns=renombres)
+
+    for columna_esperada in columnas_base:
+        if columna_esperada not in df_alineado.columns:
+            df_alineado[columna_esperada] = ""
+
+    columnas_ordenadas = columnas_base + [
+        columna for columna in df_alineado.columns if columna not in columnas_base
+    ]
+    return df_alineado[columnas_ordenadas]
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def listar_hojas_disponibles():
     return [ws.title for ws in conectar_sheets().worksheets()]
@@ -240,6 +272,7 @@ def cargar_datos_sheets(
         else:
             data = ws.get_all_records()
             df = pd.DataFrame(data)
+        df = alinear_columnas_dataframe(df, columnas_base)
         if df.empty and columnas_base:
             df = pd.DataFrame(columns=columnas_base)
         return df
@@ -5472,8 +5505,9 @@ if st.session_state["menu"] == "Comparativa Jugadores":
 if st.session_state["menu"] == "Directores Técnicos":
 
     df_dt = df_dt_all.copy()
-    df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    df_dt["ID_DT"] = df_dt["ID_DT"].map(normalizar_id_texto)
     df_dt_periods = normalizar_dataframe_periodos_dt(df_dt_periods_all.copy())
+    seleccion_dt = ""
 
     opciones_ligas_dt = CATALOGO_LIGAS.copy()
     opciones_paises_dt = CATALOGO_PAISES.copy()
@@ -5497,11 +5531,12 @@ if st.session_state["menu"] == "Directores Técnicos":
         for _, row in df_dt.iterrows()
     }
 
-    seleccion_dt = st.selectbox(
+    st.selectbox(
         "🔍 Buscar técnico",
         [""] + list(opciones_tecnicos.keys()),
         key="buscar_tecnico_principal",
     )
+    seleccion_dt = str(st.session_state.get("buscar_tecnico_principal", "") or "")
 
     if not seleccion_dt:
         render_html_block(
@@ -5939,7 +5974,7 @@ if st.session_state["menu"] == "Directores Técnicos":
 if st.session_state["menu"] == "Comparativa de Técnicos":
 
     df_dt = df_dt_all.copy()
-    df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    df_dt["ID_DT"] = df_dt["ID_DT"].map(normalizar_id_texto)
     df_dt_periods = normalizar_dataframe_periodos_dt(df_dt_periods_all.copy())
 
     render_html_block(

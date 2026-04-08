@@ -390,14 +390,31 @@ def actualizar_fila_en_hoja(nombre_hoja: str, id_columna: str, id_valor, fila: l
     """Actualiza una fila puntual detectandola por un ID estable."""
     try:
         ws = obtener_hoja(nombre_hoja, columnas_base)
-        data_actual = ws.get_all_records()
-        df_actual = pd.DataFrame(data_actual)
+        valores = ws.get_all_values()
+        if not valores:
+            st.error(f"⚠️ La hoja '{nombre_hoja}' no contiene datos para actualizar.")
+            return False
+
+        encabezados = columnas_base or list(valores[0])
+        filas = valores[1:]
+        ancho_objetivo = len(encabezados)
+        filas_normalizadas = []
+        for fila_existente in filas:
+            fila_ajustada = list(fila_existente[:ancho_objetivo])
+            if len(fila_ajustada) < ancho_objetivo:
+                fila_ajustada.extend([""] * (ancho_objetivo - len(fila_ajustada)))
+            filas_normalizadas.append(fila_ajustada)
+
+        df_actual = pd.DataFrame(filas_normalizadas, columns=encabezados)
+        df_actual = alinear_columnas_dataframe(df_actual, columnas_base or encabezados)
 
         if df_actual.empty or id_columna not in df_actual.columns:
             st.error(f"⚠️ No se encontro la columna '{id_columna}' en la hoja '{nombre_hoja}'.")
             return False
 
-        coincidencias = df_actual.index[df_actual[id_columna].astype(str) == str(id_valor)]
+        coincidencias = df_actual.index[
+            df_actual[id_columna].map(normalizar_id_texto) == normalizar_id_texto(id_valor)
+        ]
         if coincidencias.empty:
             st.warning(f"⚠️ No se encontro el registro {id_columna}={id_valor} en la hoja '{nombre_hoja}'.")
             return False
@@ -639,11 +656,20 @@ DT_COMPARISON_METRICS = {
     "Goles en contra": "GC",
     "Diferencia de gol": "DFG",
     "Puntos por partido": "Puntos por partido",
+    "Goles por partido": "Goles por partido",
+    "Goles recibidos por partido": "Goles recibidos por partido",
+    "Diferencia por partido": "Diferencia por partido",
+    "% de victorias": "% de victorias",
+    "% de empates": "% de empates",
+    "% de derrotas": "% de derrotas",
     "Rendimiento (%)": "Rendimiento (%)",
 }
 
 DT_LEAGUE_METRICS = {
     "Puntos por partido": "Puntos por partido",
+    "Goles por partido": "Goles por partido",
+    "Goles recibidos por partido": "Goles recibidos por partido",
+    "% de victorias": "% de victorias",
     "Rendimiento (%)": "Rendimiento (%)",
     "Puntos obtenidos": "PTC",
     "Partidos ganados": "PG",
@@ -716,6 +742,56 @@ def normalizar_entero_dt(valor, default=0):
     return int(round(numero))
 
 
+def calcular_metricas_competitivas_dt(pj, pg, pe, pp, gf, gc, ptc=None, dfg=None) -> dict:
+    pj = normalizar_entero_dt(pj)
+    pg = normalizar_entero_dt(pg)
+    pe = normalizar_entero_dt(pe)
+    pp = normalizar_entero_dt(pp)
+    gf = normalizar_entero_dt(gf)
+    gc = normalizar_entero_dt(gc)
+    ptc = normalizar_entero_dt(ptc, default=(pg * 3 + pe))
+    dfg = normalizar_entero_dt(dfg, default=(gf - gc))
+
+    if pj <= 0:
+        return {
+            "pj": pj,
+            "pg": pg,
+            "pe": pe,
+            "pp": pp,
+            "gf": gf,
+            "gc": gc,
+            "ptc": ptc,
+            "dfg": dfg,
+            "Puntos por partido": None,
+            "Goles por partido": None,
+            "Goles recibidos por partido": None,
+            "Diferencia por partido": None,
+            "% de victorias": None,
+            "% de empates": None,
+            "% de derrotas": None,
+            "Rendimiento (%)": None,
+        }
+
+    return {
+        "pj": pj,
+        "pg": pg,
+        "pe": pe,
+        "pp": pp,
+        "gf": gf,
+        "gc": gc,
+        "ptc": ptc,
+        "dfg": dfg,
+        "Puntos por partido": round(ptc / pj, 2),
+        "Goles por partido": round(gf / pj, 2),
+        "Goles recibidos por partido": round(gc / pj, 2),
+        "Diferencia por partido": round(dfg / pj, 2),
+        "% de victorias": round((pg / pj) * 100, 2),
+        "% de empates": round((pe / pj) * 100, 2),
+        "% de derrotas": round((pp / pj) * 100, 2),
+        "Rendimiento (%)": round((ptc / (pj * 3)) * 100, 2),
+    }
+
+
 def normalizar_id_texto(valor) -> str:
     if valor is None:
         return ""
@@ -759,7 +835,9 @@ def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
     if df_periodos is None or df_periodos.empty:
         return pd.DataFrame(columns=PERIODO_DT_COLUMNAS + [
             "inicio_periodo_dt", "fin_periodo_dt", "periodo_actual", "etiqueta_periodo",
-            "Puntos por partido", "Rendimiento (%)",
+            "Puntos por partido", "Goles por partido", "Goles recibidos por partido",
+            "Diferencia por partido", "% de victorias", "% de empates", "% de derrotas",
+            "Rendimiento (%)",
         ])
 
     df = df_periodos.copy()
@@ -776,18 +854,26 @@ def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
     for columna in columnas_numericas:
         df[columna] = pd.to_numeric(df[columna], errors="coerce").fillna(0)
 
+    df["PTC"] = (df["PG"] * 3 + df["PE"]).astype(int)
+    df["DFG"] = (df["GF"] - df["GC"]).astype(int)
+
     df["inicio_periodo_dt"] = pd.to_datetime(df["inicio_periodo"], errors="coerce", dayfirst=True)
     df["fin_periodo_dt"] = pd.to_datetime(df["fin_periodo"], errors="coerce", dayfirst=True)
     df["periodo_actual"] = df["fin_periodo"].apply(es_periodo_dt_actual)
     df["etiqueta_periodo"] = df.apply(construir_label_periodo_dt, axis=1)
-    df["Puntos por partido"] = df.apply(
-        lambda fila: round(float(fila["PTC"]) / float(fila["PJ"]), 2) if float(fila["PJ"]) > 0 else np.nan,
+    metricas_df = df.apply(
+        lambda fila: pd.Series(
+            calcular_metricas_competitivas_dt(
+                fila["PJ"], fila["PG"], fila["PE"], fila["PP"], fila["GF"], fila["GC"], fila["PTC"], fila["DFG"]
+            )
+        ),
         axis=1,
     )
-    df["Rendimiento (%)"] = df.apply(
-        lambda fila: round((float(fila["PTC"]) / (float(fila["PJ"]) * 3)) * 100, 2) if float(fila["PJ"]) > 0 else np.nan,
-        axis=1,
-    )
+    for columna in [
+        "Puntos por partido", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido",
+        "% de victorias", "% de empates", "% de derrotas", "Rendimiento (%)",
+    ]:
+        df[columna] = metricas_df[columna]
 
     return df.sort_values(
         by=["periodo_actual", "fin_periodo_dt", "inicio_periodo_dt", "ID_periodo_DT"],
@@ -831,14 +917,26 @@ def construir_resumen_tecnico(periodos: pd.DataFrame) -> dict:
             "ptc": 0,
             "dfg": 0,
             "puntos_por_partido": None,
+            "goles_por_partido": None,
+            "goles_recibidos_por_partido": None,
+            "diferencia_por_partido": None,
+            "porcentaje_victorias": None,
+            "porcentaje_empates": None,
+            "porcentaje_derrotas": None,
             "rendimiento": None,
             "club_actual": "-",
             "liga_actual": "-",
         }
 
     total_pj = int(periodos["PJ"].sum())
+    total_pg = int(periodos["PG"].sum())
+    total_pe = int(periodos["PE"].sum())
+    total_pp = int(periodos["PP"].sum())
+    total_gf = int(periodos["GF"].sum())
+    total_gc = int(periodos["GC"].sum())
     total_ptc = int(periodos["PTC"].sum())
-    total_dfg = int(periodos["DFG"].sum()) if "DFG" in periodos.columns else int(periodos["GF"].sum() - periodos["GC"].sum())
+    total_dfg = int(periodos["DFG"].sum()) if "DFG" in periodos.columns else int(total_gf - total_gc)
+    metricas_totales = calcular_metricas_competitivas_dt(total_pj, total_pg, total_pe, total_pp, total_gf, total_gc, total_ptc, total_dfg)
     actual = periodos.iloc[0]
 
     return {
@@ -846,15 +944,21 @@ def construir_resumen_tecnico(periodos: pd.DataFrame) -> dict:
         "clubes": int(periodos["Club_periodo"].astype(str).str.strip().replace("", np.nan).dropna().nunique()),
         "ligas": int(periodos["Liga_periodo"].astype(str).str.strip().replace("", np.nan).dropna().nunique()),
         "pj": total_pj,
-        "pg": int(periodos["PG"].sum()),
-        "pe": int(periodos["PE"].sum()),
-        "pp": int(periodos["PP"].sum()),
-        "gf": int(periodos["GF"].sum()),
-        "gc": int(periodos["GC"].sum()),
+        "pg": total_pg,
+        "pe": total_pe,
+        "pp": total_pp,
+        "gf": total_gf,
+        "gc": total_gc,
         "ptc": total_ptc,
         "dfg": total_dfg,
-        "puntos_por_partido": round(total_ptc / total_pj, 2) if total_pj else None,
-        "rendimiento": round((total_ptc / (total_pj * 3)) * 100, 2) if total_pj else None,
+        "puntos_por_partido": metricas_totales["Puntos por partido"],
+        "goles_por_partido": metricas_totales["Goles por partido"],
+        "goles_recibidos_por_partido": metricas_totales["Goles recibidos por partido"],
+        "diferencia_por_partido": metricas_totales["Diferencia por partido"],
+        "porcentaje_victorias": metricas_totales["% de victorias"],
+        "porcentaje_empates": metricas_totales["% de empates"],
+        "porcentaje_derrotas": metricas_totales["% de derrotas"],
+        "rendimiento": metricas_totales["Rendimiento (%)"],
         "club_actual": str(actual.get("Club_periodo", "-") or "-").strip() or "-",
         "liga_actual": str(actual.get("Liga_periodo", "-") or "-").strip() or "-",
     }
@@ -1652,10 +1756,25 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
         ("Puntos conseguidos", normalizar_entero_dt(periodo.get("PTC"))),
         ("Rendimiento", f"{formatear_valor_estadistica(periodo.get('Rendimiento (%)'))}%"),
     ]
+    metricas_derivadas_periodo = [
+        ("Puntos por partido", formatear_valor_estadistica(periodo.get("Puntos por partido"))),
+        ("Goles por partido", formatear_valor_estadistica(periodo.get("Goles por partido"))),
+        ("Goles recibidos por partido", formatear_valor_estadistica(periodo.get("Goles recibidos por partido"))),
+        ("Diferencia por partido", formatear_valor_estadistica(periodo.get("Diferencia por partido"))),
+        ("% de victorias", f"{formatear_valor_estadistica(periodo.get('% de victorias'))}%"),
+        ("% de empates", f"{formatear_valor_estadistica(periodo.get('% de empates'))}%"),
+        ("% de derrotas", f"{formatear_valor_estadistica(periodo.get('% de derrotas'))}%"),
+    ]
     metricas_html = construir_metricas_dt_html(
         metricas_periodo,
         columnas=9,
         minmax="minmax(86px, 1fr)",
+        compacta=True,
+    )
+    metricas_derivadas_html = construir_metricas_dt_html(
+        metricas_derivadas_periodo,
+        columnas=7,
+        minmax="minmax(90px, 1fr)",
         compacta=True,
     )
 
@@ -1673,6 +1792,11 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
                         <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;display:flex;justify-content:center;">
                             <div style="min-width:828px;width:100%;display:flex;justify-content:center;">
                                 {metricas_html}
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.15rem;display:flex;justify-content:center;">
+                            <div style="min-width:728px;width:100%;display:flex;justify-content:center;">
+                                {metricas_derivadas_html}
                             </div>
                         </div>
                         <div class="alab-player-panel-copy" style="margin-top:0.05rem;padding:0.8rem 0.9rem;border:1px solid rgba(255,255,255,0.08);border-radius:14px;background:rgba(255,255,255,0.02);">{observaciones}</div>
@@ -1747,6 +1871,8 @@ def render_tarjeta_tecnico_comparativa(tecnico, periodos, indice_columna):
         foto_html = "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin foto</div>"
 
     ppg = formatear_valor_estadistica(resumen.get("puntos_por_partido"))
+    gpg = formatear_valor_estadistica(resumen.get("goles_por_partido"))
+    win_rate = formatear_valor_estadistica(resumen.get("porcentaje_victorias"))
     rendimiento = formatear_valor_estadistica(resumen.get("rendimiento"))
 
     render_html_block(
@@ -1761,6 +1887,8 @@ def render_tarjeta_tecnico_comparativa(tecnico, periodos, indice_columna):
                 <div class="alab-detail-item"><span class="alab-detail-label">Nacionalidad</span><span class="alab-detail-value">{nacionalidad}</span></div>
                 <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(fecha_edad)}</span></div>
                 <div class="alab-detail-item"><span class="alab-detail-label">Puntos por partido</span><span class="alab-detail-value">{ppg}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Goles por partido</span><span class="alab-detail-value">{gpg}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">% de victorias</span><span class="alab-detail-value">{win_rate}%</span></div>
                 <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{rendimiento}%</span></div>
             </div>
             <div class="alab-compare-description">{introduccion}</div>
@@ -1803,6 +1931,12 @@ def construir_dataset_comparativa_tecnicos(tecnicos, df_periodos):
                 "PTC": resumen["ptc"],
                 "DFG": resumen["dfg"],
                 "Puntos por partido": resumen["puntos_por_partido"],
+                "Goles por partido": resumen["goles_por_partido"],
+                "Goles recibidos por partido": resumen["goles_recibidos_por_partido"],
+                "Diferencia por partido": resumen["diferencia_por_partido"],
+                "% de victorias": resumen["porcentaje_victorias"],
+                "% de empates": resumen["porcentaje_empates"],
+                "% de derrotas": resumen["porcentaje_derrotas"],
                 "Rendimiento (%)": resumen["rendimiento"],
             }
         )
@@ -1816,23 +1950,30 @@ def construir_dataset_comparativa_tecnicos(tecnicos, df_periodos):
                         "Periodo": fila["Etiqueta_corta"],
                         "Orden_periodo": fila["Orden_periodo"],
                         "Puntos por partido": fila["Puntos por partido"],
+                        "Goles por partido": fila["Goles por partido"],
+                        "% de victorias": fila["% de victorias"],
                         "Rendimiento (%)": fila["Rendimiento (%)"],
                     }
                 )
 
         ligas = (
             periodos.groupby("Liga_periodo", dropna=False)
-            .agg(PJ=("PJ", "sum"), PG=("PG", "sum"), PTC=("PTC", "sum"))
+            .agg(PJ=("PJ", "sum"), PG=("PG", "sum"), PE=("PE", "sum"), PP=("PP", "sum"), GF=("GF", "sum"), GC=("GC", "sum"), PTC=("PTC", "sum"), DFG=("DFG", "sum"))
             .reset_index()
         )
-        ligas["Puntos por partido"] = ligas.apply(
-            lambda fila: round(float(fila["PTC"]) / float(fila["PJ"]), 2) if float(fila["PJ"]) > 0 else np.nan,
+        metricas_ligas = ligas.apply(
+            lambda fila: pd.Series(
+                calcular_metricas_competitivas_dt(
+                    fila["PJ"], fila["PG"], fila["PE"], fila["PP"], fila["GF"], fila["GC"], fila["PTC"], fila["DFG"]
+                )
+            ),
             axis=1,
         )
-        ligas["Rendimiento (%)"] = ligas.apply(
-            lambda fila: round((float(fila["PTC"]) / (float(fila["PJ"]) * 3)) * 100, 2) if float(fila["PJ"]) > 0 else np.nan,
-            axis=1,
-        )
+        for columna in [
+            "Puntos por partido", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido",
+            "% de victorias", "% de empates", "% de derrotas", "Rendimiento (%)",
+        ]:
+            ligas[columna] = metricas_ligas[columna]
         ligas["Tecnico"] = nombre
         filas_ligas.extend(ligas.to_dict("records"))
 
@@ -1864,7 +2005,7 @@ def crear_grafico_resumen_tecnicos(dataset_comparativa, etiqueta_metrica):
         color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
     )
     fig.update_traces(
-        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Rendimiento (%)"} else "%{text}",
+        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido", "% de victorias", "% de empates", "% de derrotas", "Rendimiento (%)"} else "%{text}",
         textposition="outside",
     )
     fig.update_layout(xaxis_title="", yaxis_title=etiqueta_metrica, showlegend=False, height=430)
@@ -1877,7 +2018,7 @@ def crear_grafico_evolucion_comparativa_tecnicos(dataset_comparativa, etiqueta_m
     if not dataset_comparativa or dataset_comparativa["evolucion"].empty:
         return None
 
-    if etiqueta_metrica not in {"Puntos por partido", "Rendimiento (%)"}:
+    if etiqueta_metrica not in {"Puntos por partido", "Goles por partido", "% de victorias", "Rendimiento (%)"}:
         etiqueta_metrica = "Rendimiento (%)"
 
     fig = px.line(
@@ -1955,7 +2096,7 @@ def crear_grafico_ligas_tecnicos(dataset_comparativa, etiqueta_metrica):
         color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
     )
     fig.update_traces(
-        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Rendimiento (%)"} else "%{text}",
+        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Goles por partido", "Goles recibidos por partido", "Diferencia por partido", "% de victorias", "% de empates", "% de derrotas", "Rendimiento (%)"} else "%{text}",
         textposition="outside",
     )
     fig.update_layout(xaxis_title="", yaxis_title=etiqueta_metrica, height=430)
@@ -3169,7 +3310,7 @@ def generar_pdf_tecnico(tecnico, periodos):
         pdf.set_y(desc_y + desc_h + 4)
 
         resumen_panel_y = pdf.get_y()
-        resumen_panel_h = 31
+        resumen_panel_h = 53
         pdf.set_fill_color(*color_panel)
         pdf.set_draw_color(*color_borde)
         pdf.rect(pdf.l_margin, resumen_panel_y, total_w, resumen_panel_h, "DF")
@@ -3188,6 +3329,12 @@ def generar_pdf_tecnico(tecnico, periodos):
             ("Puntos conseguidos", resumen["ptc"]),
             ("Diferencia de gol", resumen["dfg"]),
             ("Puntos por partido", puntos_partido),
+            ("Goles por partido", formatear_valor_estadistica(resumen["goles_por_partido"])),
+            ("Goles recibidos por partido", formatear_valor_estadistica(resumen["goles_recibidos_por_partido"])),
+            ("Diferencia por partido", formatear_valor_estadistica(resumen["diferencia_por_partido"])),
+            ("% de victorias", f"{formatear_valor_estadistica(resumen['porcentaje_victorias'])}%"),
+            ("% de empates", f"{formatear_valor_estadistica(resumen['porcentaje_empates'])}%"),
+            ("% de derrotas", f"{formatear_valor_estadistica(resumen['porcentaje_derrotas'])}%"),
             ("Rendimiento", rendimiento_texto),
         ]
         metricas_cols = 5
@@ -5777,6 +5924,12 @@ if st.session_state["menu"] == "Directores Técnicos":
                 ("Puntos conseguidos", resumen_dt["ptc"]),
                 ("Diferencia de gol", resumen_dt["dfg"]),
                 ("Puntos por partido", formatear_valor_estadistica(resumen_dt["puntos_por_partido"])),
+                ("Goles por partido", formatear_valor_estadistica(resumen_dt["goles_por_partido"])),
+                ("Goles recibidos por partido", formatear_valor_estadistica(resumen_dt["goles_recibidos_por_partido"])),
+                ("Diferencia por partido", formatear_valor_estadistica(resumen_dt["diferencia_por_partido"])),
+                ("% de victorias", f"{formatear_valor_estadistica(resumen_dt['porcentaje_victorias'])}%"),
+                ("% de empates", f"{formatear_valor_estadistica(resumen_dt['porcentaje_empates'])}%"),
+                ("% de derrotas", f"{formatear_valor_estadistica(resumen_dt['porcentaje_derrotas'])}%"),
                 ("Rendimiento", f"{formatear_valor_estadistica(resumen_dt['rendimiento'])}%"),
             ]
             metricas_resumen_competitivo_html = construir_metricas_dt_html(
@@ -6019,9 +6172,11 @@ if st.session_state["menu"] == "Directores Técnicos":
                                         dfg_calculado,
                                         observaciones_periodo,
                                     ]
-                                    actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo_edicion, fila_periodo, PERIODO_DT_COLUMNAS)
-                                    st.session_state["toast_guardado_periodo_dt"] = True
-                                    st.rerun()
+                                    if actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo_edicion, fila_periodo, PERIODO_DT_COLUMNAS):
+                                        st.session_state["toast_guardado_periodo_dt"] = True
+                                        st.rerun()
+                                    else:
+                                        st.error("⚠️ No se pudieron guardar los cambios del periodo. Revisá la hoja y volvé a intentar.")
 
         st.markdown("---")
         section_header("Visualización del rendimiento")

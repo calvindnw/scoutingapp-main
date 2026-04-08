@@ -333,6 +333,38 @@ def agregar_fila(nombre_hoja: str, fila: list):
         st.error(f"⚠️ Error al agregar fila en '{nombre_hoja}': {e}")
 
 
+def actualizar_fila_en_hoja(nombre_hoja: str, id_columna: str, id_valor, fila: list, columnas_base: list = None):
+    """Actualiza una fila puntual detectandola por un ID estable."""
+    try:
+        ws = obtener_hoja(nombre_hoja, columnas_base)
+        data_actual = ws.get_all_records()
+        df_actual = pd.DataFrame(data_actual)
+
+        if df_actual.empty or id_columna not in df_actual.columns:
+            st.error(f"⚠️ No se encontro la columna '{id_columna}' en la hoja '{nombre_hoja}'.")
+            return False
+
+        coincidencias = df_actual.index[df_actual[id_columna].astype(str) == str(id_valor)]
+        if coincidencias.empty:
+            st.warning(f"⚠️ No se encontro el registro {id_columna}={id_valor} en la hoja '{nombre_hoja}'.")
+            return False
+
+        fila = [
+            int(valor) if isinstance(valor, np.integer) else
+            float(valor) if isinstance(valor, np.floating) else
+            valor
+            for valor in fila
+        ]
+        row_number = int(coincidencias[0]) + 2
+        last_col = col_letter(len(fila))
+        ws.update(f"A{row_number}:{last_col}{row_number}", [fila])
+        refrescar_datasets_sesion()
+        return True
+    except Exception as e:
+        st.error(f"⚠️ Error al actualizar en '{nombre_hoja}': {e}")
+        return False
+
+
 # =========================================================
 # BOTÓN MANUAL DE REFRESCO
 # =========================================================
@@ -467,7 +499,7 @@ st.sidebar.markdown(f"<b>Rol:</b> {CURRENT_ROLE}", unsafe_allow_html=True)
 if st.sidebar.button("Cerrar sesión"):
     st.session_state["user"] = None
     st.session_state["role"] = None
-    for clave in ["df_players", "df_reports", "df_short"]:
+    for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods"]:
         st.session_state.pop(clave, None)
     st.rerun()
 
@@ -475,28 +507,46 @@ if st.sidebar.button("Cerrar sesión"):
 def inicializar_datasets_sesion():
     if all(
         clave in st.session_state
-        for clave in ["df_players", "df_reports", "df_short"]
+        for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods"]
     ):
         return
 
-    df_players, df_reports, df_short = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
+
+    if "ID_DT" in df_dt.columns:
+        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    if "ID_periodo_DT" in df_dt_periods.columns:
+        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+    if "ID_DT" in df_dt_periods.columns:
+        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
 
     st.session_state["df_players"] = df_players.copy()
     st.session_state["df_reports"] = df_reports.copy()
     st.session_state["df_short"] = df_short.copy()
+    st.session_state["df_dt"] = df_dt.copy()
+    st.session_state["df_dt_periods"] = df_dt_periods.copy()
 
 
 def refrescar_datasets_sesion():
     st.cache_data.clear()
-    df_players, df_reports, df_short = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
+
+    if "ID_DT" in df_dt.columns:
+        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    if "ID_periodo_DT" in df_dt_periods.columns:
+        df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+    if "ID_DT" in df_dt_periods.columns:
+        df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
 
     st.session_state["df_players"] = df_players.copy()
     st.session_state["df_reports"] = df_reports.copy()
     st.session_state["df_short"] = df_short.copy()
+    st.session_state["df_dt"] = df_dt.copy()
+    st.session_state["df_dt_periods"] = df_dt_periods.copy()
 
 def calcular_edad(fecha_nac):
     try:
@@ -513,6 +563,279 @@ def generar_id_unico(df, columna="ID_Jugador"):
     ids = df[columna].dropna().astype(str)
     nums = [int(i) for i in ids if i.isdigit()]
     return max(nums) + 1 if nums else 1
+
+
+DT_COLUMNAS = [
+    "ID_DT", "Nombre_DT", "Fecha_Nac_DT", "Nacionalidad_DT", "Segunda_Nacionalidad_DT",
+    "Introducción", "Club_actual_DT", "Liga_actual_DT", "URL_Foto_DT", "URL_Perfil_DT", "Instagram_DT",
+]
+
+PERIODO_DT_COLUMNAS = [
+    "ID_periodo_DT", "ID_DT", "Club_periodo", "URL_escudo", "Liga_periodo", "Pais",
+    "inicio_periodo", "fin_periodo", "PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG",
+    "Observaciones_periodo",
+]
+
+DT_COMPARISON_METRICS = {
+    "Puntos obtenidos": "PTC",
+    "Partidos jugados": "PJ",
+    "Partidos ganados": "PG",
+    "Partidos empatados": "PE",
+    "Partidos perdidos": "PP",
+    "Goles a favor": "GF",
+    "Goles en contra": "GC",
+    "Diferencia de gol": "DFG",
+    "Puntos por partido": "Puntos por partido",
+    "Rendimiento (%)": "Rendimiento (%)",
+}
+
+DT_LEAGUE_METRICS = {
+    "Puntos por partido": "Puntos por partido",
+    "Rendimiento (%)": "Rendimiento (%)",
+    "Puntos obtenidos": "PTC",
+    "Partidos ganados": "PG",
+}
+
+CATALOGO_LIGAS = [
+    "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A", "Argentina - Primera C",
+    "Argentina - Proyección", "Argentina - Reserva ascenso", "Argentina - Regional Amateur", "Argentina - Promocional Amateur", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
+    "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
+    "Uruguay - Segunda División", "Paraguay - División Profesional",
+    "Colombia - Primera A", "Ecuador - LigaPro Serie A", "Ecuador - Serie B",
+    "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
+    "España - LaLiga", "España - LaLiga 2", "España - 1 RFEF", "España - 2 RFEF", "Italia - Serie A", "Italia - Serie B", "Italia - Serie C",
+    "Inglaterra - Premier League", "Inglaterra - Championship",
+    "Francia - Ligue 1", "Alemania - Bundesliga", "Portugal - Primeira Liga",
+    "Países Bajos - Eredivisie", "Suiza - Super League",
+    "Polonia - Liga Polaca", "Bélgica - Pro League",
+    "Grecia - Super League", "Turquía - Süper Lig",
+    "Arabia Saudita - Saudi Pro League", "Estados Unidos - MLS",
+    "Otro",
+]
+
+CATALOGO_PAISES = [
+    "Argentina", "Brasil", "Chile", "Uruguay", "Paraguay", "Colombia", "México",
+    "Ecuador", "Perú", "Venezuela", "España", "Italia", "Francia", "Inglaterra",
+    "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
+    "Honduras", "Costa Rica", "El Salvador", "Panamá", "Cuba",
+    "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro",
+]
+
+
+def es_periodo_dt_actual(valor) -> bool:
+    if valor is None:
+        return True
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "nat", "<na>"}:
+        return True
+    texto = unicodedata.normalize("NFKD", texto.casefold())
+    texto = "".join(char for char in texto if not unicodedata.combining(char))
+    texto = re.sub(r"\s+", " ", texto).strip()
+    return texto in {
+        "actualidad", "actual", "en curso", "vigente", "presente", "actualmente",
+        "si", "sí", "true", "1",
+    }
+
+
+def formatear_fecha_dt(valor, fallback="-"):
+    if valor is None:
+        return fallback
+    try:
+        if pd.isna(valor):
+            return fallback
+    except TypeError:
+        pass
+
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "nat", "<na>"}:
+        return fallback
+
+    fecha = pd.to_datetime(texto, errors="coerce", dayfirst=True)
+    if pd.notna(fecha):
+        return fecha.strftime("%d/%m/%Y")
+    return texto
+
+
+def normalizar_entero_dt(valor, default=0):
+    numero = convertir_valor_numerico(valor)
+    if numero is None:
+        return default
+    return int(round(numero))
+
+
+def construir_label_periodo_dt(periodo):
+    club = str(periodo.get("Club_periodo", "Sin club") or "Sin club").strip()
+    inicio = formatear_fecha_dt(periodo.get("inicio_periodo"))
+    fin = "Actualidad" if bool(periodo.get("periodo_actual", False)) else formatear_fecha_dt(periodo.get("fin_periodo"))
+    return f"{club} | {inicio} - {fin}"
+
+
+def normalizar_dataframe_periodos_dt(df_periodos: pd.DataFrame) -> pd.DataFrame:
+    if df_periodos is None or df_periodos.empty:
+        return pd.DataFrame(columns=PERIODO_DT_COLUMNAS + [
+            "inicio_periodo_dt", "fin_periodo_dt", "periodo_actual", "etiqueta_periodo",
+            "Puntos por partido", "Rendimiento (%)",
+        ])
+
+    df = df_periodos.copy()
+    for columna in PERIODO_DT_COLUMNAS:
+        if columna not in df.columns:
+            df[columna] = ""
+
+    if "ID_periodo_DT" in df.columns:
+        df["ID_periodo_DT"] = df["ID_periodo_DT"].astype(str)
+    if "ID_DT" in df.columns:
+        df["ID_DT"] = df["ID_DT"].astype(str)
+
+    columnas_numericas = ["PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG"]
+    for columna in columnas_numericas:
+        df[columna] = pd.to_numeric(df[columna], errors="coerce").fillna(0)
+
+    df["inicio_periodo_dt"] = pd.to_datetime(df["inicio_periodo"], errors="coerce", dayfirst=True)
+    df["fin_periodo_dt"] = pd.to_datetime(df["fin_periodo"], errors="coerce", dayfirst=True)
+    df["periodo_actual"] = df["fin_periodo"].apply(es_periodo_dt_actual)
+    df["etiqueta_periodo"] = df.apply(construir_label_periodo_dt, axis=1)
+    df["Puntos por partido"] = df.apply(
+        lambda fila: round(float(fila["PTC"]) / float(fila["PJ"]), 2) if float(fila["PJ"]) > 0 else np.nan,
+        axis=1,
+    )
+    df["Rendimiento (%)"] = df.apply(
+        lambda fila: round((float(fila["PTC"]) / (float(fila["PJ"]) * 3)) * 100, 2) if float(fila["PJ"]) > 0 else np.nan,
+        axis=1,
+    )
+
+    return df.sort_values(
+        by=["periodo_actual", "inicio_periodo_dt", "ID_periodo_DT"],
+        ascending=[False, False, False],
+        na_position="last",
+    ).reset_index(drop=True)
+
+
+def obtener_tecnico_por_id(df_dt, id_dt):
+    if not id_dt:
+        return None
+    coincidencias = df_dt[df_dt["ID_DT"].astype(str) == str(id_dt)]
+    if coincidencias.empty:
+        return None
+    return coincidencias.iloc[0]
+
+
+def obtener_periodos_dt_tecnico(df_periodos, id_dt):
+    if df_periodos is None or df_periodos.empty or not id_dt:
+        return normalizar_dataframe_periodos_dt(pd.DataFrame(columns=PERIODO_DT_COLUMNAS))
+
+    df = df_periodos.copy()
+    if "ID_DT" not in df.columns:
+        return normalizar_dataframe_periodos_dt(pd.DataFrame(columns=PERIODO_DT_COLUMNAS))
+    df = df[df["ID_DT"].astype(str) == str(id_dt)].copy()
+    return normalizar_dataframe_periodos_dt(df)
+
+
+def construir_resumen_tecnico(periodos: pd.DataFrame) -> dict:
+    if periodos is None or periodos.empty:
+        return {
+            "periodos": 0,
+            "clubes": 0,
+            "ligas": 0,
+            "pj": 0,
+            "pg": 0,
+            "pe": 0,
+            "pp": 0,
+            "gf": 0,
+            "gc": 0,
+            "ptc": 0,
+            "dfg": 0,
+            "puntos_por_partido": None,
+            "rendimiento": None,
+            "club_actual": "-",
+            "liga_actual": "-",
+        }
+
+    total_pj = int(periodos["PJ"].sum())
+    total_ptc = int(periodos["PTC"].sum())
+    total_dfg = int(periodos["DFG"].sum()) if "DFG" in periodos.columns else int(periodos["GF"].sum() - periodos["GC"].sum())
+    actual = periodos.iloc[0]
+
+    return {
+        "periodos": int(len(periodos)),
+        "clubes": int(periodos["Club_periodo"].astype(str).str.strip().replace("", np.nan).dropna().nunique()),
+        "ligas": int(periodos["Liga_periodo"].astype(str).str.strip().replace("", np.nan).dropna().nunique()),
+        "pj": total_pj,
+        "pg": int(periodos["PG"].sum()),
+        "pe": int(periodos["PE"].sum()),
+        "pp": int(periodos["PP"].sum()),
+        "gf": int(periodos["GF"].sum()),
+        "gc": int(periodos["GC"].sum()),
+        "ptc": total_ptc,
+        "dfg": total_dfg,
+        "puntos_por_partido": round(total_ptc / total_pj, 2) if total_pj else None,
+        "rendimiento": round((total_ptc / (total_pj * 3)) * 100, 2) if total_pj else None,
+        "club_actual": str(actual.get("Club_periodo", "-") or "-").strip() or "-",
+        "liga_actual": str(actual.get("Liga_periodo", "-") or "-").strip() or "-",
+    }
+
+
+def construir_dataset_evolucion_tecnico(periodos: pd.DataFrame):
+    if periodos is None or periodos.empty:
+        return None
+
+    df = periodos.copy().sort_values(by=["inicio_periodo_dt", "ID_periodo_DT"], ascending=[True, True], na_position="last")
+    df["Orden_periodo"] = range(1, len(df) + 1)
+    df["Etiqueta_corta"] = df.apply(
+        lambda fila: f"{str(fila.get('Club_periodo', 'Club') or 'Club').strip()} ({fila['Orden_periodo']})",
+        axis=1,
+    )
+    return df
+
+
+def crear_grafico_evolucion_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    fig = px.line(
+        df_chart,
+        x="Etiqueta_corta",
+        y="Rendimiento (%)",
+        markers=True,
+        title=f"Evolucion del rendimiento - {nombre_tecnico}",
+    )
+    fig.update_traces(
+        line=dict(color="#19e28f", width=3),
+        marker=dict(size=9, color="#19e28f"),
+        hovertemplate="<b>%{x}</b><br>Rendimiento: %{y:.2f}%<extra></extra>",
+    )
+    fig.update_layout(xaxis_title="", yaxis_title="Rendimiento (%)", showlegend=False, height=390)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def crear_grafico_clubes_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
+    if periodos is None or periodos.empty:
+        return None
+
+    df_chart = periodos[["Club_periodo", "PTC"]].copy()
+    if df_chart.empty:
+        return None
+
+    fig = px.bar(
+        df_chart,
+        x="Club_periodo",
+        y="PTC",
+        color="Club_periodo",
+        text="PTC",
+        title=f"Puntos obtenidos por periodo - {nombre_tecnico}",
+    )
+    fig.update_traces(
+        texttemplate="%{text}",
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Puntos: %{y}<extra></extra>",
+    )
+    fig.update_layout(xaxis_title="", yaxis_title="PTC", showlegend=False, height=390)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
 
 
 POSICION_ESTADISTICAS_CLAVE = {
@@ -1167,6 +1490,328 @@ def formatear_fecha_comparativa(valor):
     if pd.notna(fecha):
         return fecha.strftime("%d/%m/%Y")
     return texto
+
+
+def render_tarjeta_periodo_dt(periodo, indice=None):
+    club = escape_html(periodo.get("Club_periodo"), "Club no informado")
+    liga = escape_html(periodo.get("Liga_periodo"), "Liga no informada")
+    pais = escape_html(periodo.get("Pais"), "Pais no informado")
+    observaciones = escape_html(str(periodo.get("Observaciones_periodo", "") or "").strip(), "Sin observaciones cargadas.")
+    if len(observaciones) > 260:
+        observaciones = f"{observaciones[:257].rstrip()}..."
+
+    escudo_url = normalizar_url_foto(periodo.get("URL_escudo", ""))
+    escudo_html = (
+        f"<img src='{escudo_url}' alt='Escudo de {club}' class='alab-player-photo alab-compare-photo' loading='lazy' referrerpolicy='no-referrer'/>"
+        if escudo_url
+        else "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin escudo</div>"
+    )
+    fin_periodo = "Actualidad" if bool(periodo.get("periodo_actual", False)) else formatear_fecha_dt(periodo.get("fin_periodo"))
+    kicker = f"Periodo {indice}" if indice is not None else "Periodo"
+
+    render_html_block(
+        f"""
+        <div class="alab-player-panel" style="margin-bottom:1rem;">
+            <div class="alab-compare-kicker">{kicker}</div>
+            <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+                <div class="alab-compare-photo-wrap">{escudo_html}</div>
+                <div style="flex:1 1 420px;min-width:260px;">
+                    <div class="alab-player-panel-title" style="margin-bottom:0.35rem;">{club}</div>
+                    <div class="alab-player-panel-copy" style="margin-bottom:0.75rem;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
+                    <div class="alab-detail-grid" style="margin-bottom:0.8rem;">
+                        <div class="alab-detail-item"><span class="alab-detail-label">PJ</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PJ'))}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PG</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PG'))}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PE</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PE'))}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PP</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PP'))}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PTC</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PTC'))}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{formatear_valor_estadistica(periodo.get('Rendimiento (%)'))}%</span></div>
+                    </div>
+                    <div class="alab-player-panel-copy">{observaciones}</div>
+                </div>
+            </div>
+        </div>
+        """
+    )
+
+
+def construir_opciones_comparativa_tecnicos(df_dt, ids_excluidos=None, current_id=""):
+    ids_excluidos = {str(valor) for valor in (ids_excluidos or set()) if str(valor).strip()}
+    df_base = df_dt.copy()
+    df_base["ID_DT"] = df_base["ID_DT"].astype(str)
+
+    if ids_excluidos:
+        df_base = df_base[~df_base["ID_DT"].isin(ids_excluidos)]
+
+    if current_id:
+        fila_actual = df_dt[df_dt["ID_DT"].astype(str) == str(current_id)]
+        if not fila_actual.empty:
+            df_base = pd.concat([df_base, fila_actual], ignore_index=True)
+
+    if df_base.empty:
+        return [""], {}
+
+    df_base = df_base.drop_duplicates(subset=["ID_DT"]).copy()
+    df_base["label_dt"] = df_base.apply(
+        lambda fila: f"{fila.get('Nombre_DT', 'Sin nombre')} - {fila.get('Club_actual_DT', 'Sin club')}",
+        axis=1,
+    )
+    df_base = df_base.sort_values("label_dt")
+
+    etiquetas = dict(zip(df_base["ID_DT"], df_base["label_dt"]))
+    opciones = [""] + df_base["ID_DT"].tolist()
+    return opciones, etiquetas
+
+
+def render_tarjeta_tecnico_comparativa(tecnico, periodos, indice_columna):
+    if tecnico is None:
+        render_html_block(
+            f"""
+            <div class="alab-player-panel alab-compare-card alab-compare-card-empty">
+                <div class="alab-compare-kicker">Tecnico {indice_columna}</div>
+                <div class="alab-compare-empty">Selecciona un tecnico para cargar su ficha y habilitar la comparativa.</div>
+            </div>
+            """
+        )
+        return
+
+    resumen = construir_resumen_tecnico(periodos)
+    nombre = escape_html(tecnico.get("Nombre_DT"), "Tecnico")
+    club = escape_html(tecnico.get("Club_actual_DT"))
+    liga = escape_html(tecnico.get("Liga_actual_DT"))
+    nacionalidad = escape_html(tecnico.get("Nacionalidad_DT"))
+    fecha_nacimiento = formatear_fecha_dt(tecnico.get("Fecha_Nac_DT"))
+    edad = calcular_edad(tecnico.get("Fecha_Nac_DT"))
+    fecha_edad = f"{fecha_nacimiento} ({edad} anos)" if str(edad) != "?" and fecha_nacimiento != "-" else fecha_nacimiento
+    introduccion = str(tecnico.get("Introducción", "") or "").strip()
+    if len(introduccion) > 240:
+        introduccion = f"{introduccion[:237].rstrip()}..."
+    introduccion = escape_html(introduccion, "Sin introduccion cargada.")
+
+    foto_url = normalizar_url_foto(tecnico.get("URL_Foto_DT", ""))
+    if foto_url:
+        foto_html = (
+            f"<img src='{foto_url}' alt='Foto de {nombre}' class='alab-player-photo alab-compare-photo' "
+            "loading='lazy' referrerpolicy='no-referrer'/>"
+        )
+    else:
+        foto_html = "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin foto</div>"
+
+    ppg = formatear_valor_estadistica(resumen.get("puntos_por_partido"))
+    rendimiento = formatear_valor_estadistica(resumen.get("rendimiento"))
+
+    render_html_block(
+        f"""
+        <div class="alab-player-panel alab-compare-card">
+            <div class="alab-compare-kicker">Tecnico {indice_columna}</div>
+            <div class="alab-compare-name">{nombre}</div>
+            <div class="alab-compare-photo-wrap">{foto_html}</div>
+            <div class="alab-compare-stack">
+                <div class="alab-detail-item"><span class="alab-detail-label">Club actual</span><span class="alab-detail-value">{club}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Liga actual</span><span class="alab-detail-value">{liga}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Nacionalidad</span><span class="alab-detail-value">{nacionalidad}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(fecha_edad)}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Puntos por partido</span><span class="alab-detail-value">{ppg}</span></div>
+                <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{rendimiento}%</span></div>
+            </div>
+            <div class="alab-compare-description">{introduccion}</div>
+        </div>
+        """
+    )
+
+
+def construir_dataset_comparativa_tecnicos(tecnicos, df_periodos):
+    if not tecnicos:
+        return None, ["Selecciona tecnicos para habilitar la comparativa."]
+
+    filas_resumen = []
+    filas_evolucion = []
+    filas_ligas = []
+    mensajes = []
+
+    for tecnico in tecnicos:
+        tecnico_id = str(tecnico.get("ID_DT", "") or "")
+        nombre = str(tecnico.get("Nombre_DT", "Tecnico") or "Tecnico").strip()
+        periodos = obtener_periodos_dt_tecnico(df_periodos, tecnico_id)
+
+        if periodos.empty:
+            mensajes.append(f"{nombre} no tiene periodos cargados.")
+            continue
+
+        resumen = construir_resumen_tecnico(periodos)
+        filas_resumen.append(
+            {
+                "Tecnico": nombre,
+                "Periodos": resumen["periodos"],
+                "Clubes": resumen["clubes"],
+                "Ligas": resumen["ligas"],
+                "PJ": resumen["pj"],
+                "PG": resumen["pg"],
+                "PE": resumen["pe"],
+                "PP": resumen["pp"],
+                "GF": resumen["gf"],
+                "GC": resumen["gc"],
+                "PTC": resumen["ptc"],
+                "DFG": resumen["dfg"],
+                "Puntos por partido": resumen["puntos_por_partido"],
+                "Rendimiento (%)": resumen["rendimiento"],
+            }
+        )
+
+        evolucion = construir_dataset_evolucion_tecnico(periodos)
+        if evolucion is not None and not evolucion.empty:
+            for _, fila in evolucion.iterrows():
+                filas_evolucion.append(
+                    {
+                        "Tecnico": nombre,
+                        "Periodo": fila["Etiqueta_corta"],
+                        "Orden_periodo": fila["Orden_periodo"],
+                        "Puntos por partido": fila["Puntos por partido"],
+                        "Rendimiento (%)": fila["Rendimiento (%)"],
+                    }
+                )
+
+        ligas = (
+            periodos.groupby("Liga_periodo", dropna=False)
+            .agg(PJ=("PJ", "sum"), PG=("PG", "sum"), PTC=("PTC", "sum"))
+            .reset_index()
+        )
+        ligas["Puntos por partido"] = ligas.apply(
+            lambda fila: round(float(fila["PTC"]) / float(fila["PJ"]), 2) if float(fila["PJ"]) > 0 else np.nan,
+            axis=1,
+        )
+        ligas["Rendimiento (%)"] = ligas.apply(
+            lambda fila: round((float(fila["PTC"]) / (float(fila["PJ"]) * 3)) * 100, 2) if float(fila["PJ"]) > 0 else np.nan,
+            axis=1,
+        )
+        ligas["Tecnico"] = nombre
+        filas_ligas.extend(ligas.to_dict("records"))
+
+    if not filas_resumen:
+        return None, mensajes or ["No hay periodos disponibles para comparar."]
+
+    return {
+        "resumen": pd.DataFrame(filas_resumen),
+        "evolucion": pd.DataFrame(filas_evolucion),
+        "ligas": pd.DataFrame(filas_ligas),
+    }, mensajes
+
+
+def crear_grafico_resumen_tecnicos(dataset_comparativa, etiqueta_metrica):
+    if not dataset_comparativa or dataset_comparativa["resumen"].empty:
+        return None
+
+    columna = DT_COMPARISON_METRICS.get(etiqueta_metrica)
+    if not columna or columna not in dataset_comparativa["resumen"].columns:
+        return None
+
+    fig = px.bar(
+        dataset_comparativa["resumen"],
+        x="Tecnico",
+        y=columna,
+        color="Tecnico",
+        text=columna,
+        title=f"Comparativa general - {etiqueta_metrica}",
+        color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
+    )
+    fig.update_traces(
+        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Rendimiento (%)"} else "%{text}",
+        textposition="outside",
+    )
+    fig.update_layout(xaxis_title="", yaxis_title=etiqueta_metrica, showlegend=False, height=430)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def crear_grafico_evolucion_comparativa_tecnicos(dataset_comparativa, etiqueta_metrica):
+    if not dataset_comparativa or dataset_comparativa["evolucion"].empty:
+        return None
+
+    if etiqueta_metrica not in {"Puntos por partido", "Rendimiento (%)"}:
+        etiqueta_metrica = "Rendimiento (%)"
+
+    fig = px.line(
+        dataset_comparativa["evolucion"],
+        x="Orden_periodo",
+        y=etiqueta_metrica,
+        color="Tecnico",
+        markers=True,
+        title=f"Evolucion comparativa - {etiqueta_metrica}",
+        hover_data={"Periodo": True, "Orden_periodo": False},
+        color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
+    )
+    fig.update_traces(hovertemplate="<b>%{fullData.name}</b><br>%{customdata[0]}<br>Valor: %{y:.2f}<extra></extra>")
+    fig.update_layout(xaxis_title="Orden cronologico de periodos", yaxis_title=etiqueta_metrica, height=430)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def construir_tabla_ligas_tecnicos(dataset_comparativa, etiqueta_metrica):
+    if not dataset_comparativa or dataset_comparativa["ligas"].empty:
+        return None, []
+
+    columna = DT_LEAGUE_METRICS.get(etiqueta_metrica)
+    if not columna or columna not in dataset_comparativa["ligas"].columns:
+        return None, []
+
+    df_ligas = dataset_comparativa["ligas"].copy()
+    tecnicos = dataset_comparativa["resumen"]["Tecnico"].tolist()
+    ligas = sorted(
+        [str(valor).strip() for valor in df_ligas["Liga_periodo"].dropna().astype(str).tolist() if str(valor).strip()]
+    )
+
+    filas = []
+    mensajes = []
+    for liga in ligas:
+        fila = {"Liga": liga}
+        for tecnico in tecnicos:
+            coincidencia = df_ligas[
+                (df_ligas["Tecnico"] == tecnico)
+                & (df_ligas["Liga_periodo"].astype(str).str.strip() == liga)
+            ]
+            if coincidencia.empty:
+                fila[tecnico] = "No dirigio en esta liga"
+                mensajes.append(f"{tecnico} no dirigio en {liga}.")
+            else:
+                valor = coincidencia.iloc[0][columna]
+                fila[tecnico] = formatear_valor_estadistica(valor) if columna in {"Puntos por partido", "Rendimiento (%)"} else normalizar_entero_dt(valor)
+        filas.append(fila)
+
+    return pd.DataFrame(filas), sorted(set(mensajes))
+
+
+def crear_grafico_ligas_tecnicos(dataset_comparativa, etiqueta_metrica):
+    if not dataset_comparativa or dataset_comparativa["ligas"].empty:
+        return None
+
+    columna = DT_LEAGUE_METRICS.get(etiqueta_metrica)
+    if not columna or columna not in dataset_comparativa["ligas"].columns:
+        return None
+
+    df_chart = dataset_comparativa["ligas"].copy()
+    df_chart = df_chart.dropna(subset=[columna])
+    if df_chart.empty:
+        return None
+
+    fig = px.bar(
+        df_chart,
+        x="Liga_periodo",
+        y=columna,
+        color="Tecnico",
+        barmode="group",
+        text=columna,
+        title=f"Comparativa por liga - {etiqueta_metrica}",
+        color_discrete_sequence=["#19e28f", "#2ec4ff", "#f3bf4c"],
+    )
+    fig.update_traces(
+        texttemplate="%{text:.2f}" if columna in {"Puntos por partido", "Rendimiento (%)"} else "%{text}",
+        textposition="outside",
+    )
+    fig.update_layout(xaxis_title="", yaxis_title=etiqueta_metrica, height=430)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
 
 
 def obtener_jugador_por_id(df_players, jugador_id):
@@ -2119,6 +2764,345 @@ def obtener_alto_imagen_pdf(buffer, ancho_pdf):
     if not ancho_px:
         return ancho_pdf
     return ancho_pdf * (alto_px / ancho_px)
+
+
+def crear_linea_rendimiento_dt_pdf(periodos, nombre_tecnico):
+    df_chart = construir_dataset_evolucion_tecnico(periodos)
+    if df_chart is None or df_chart.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(7.2, 2.8))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+    ax.plot(df_chart["Etiqueta_corta"], df_chart["Rendimiento (%)"], color="#19e28f", linewidth=2.4, marker="o")
+    ax.set_title(f"Rendimiento por periodo - {nombre_tecnico}", color="#edf5f0", fontsize=11)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.4, rotation=18)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.set_ylabel("Rendimiento (%)", color="#d6e4dc", fontsize=8.2)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    plt.subplots_adjust(top=0.82, bottom=0.3, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
+def crear_barras_resumen_dt_pdf(periodos):
+    if periodos is None or periodos.empty:
+        return None
+
+    df_chart = periodos[["Club_periodo", "PTC"]].copy()
+    fig, ax = plt.subplots(figsize=(7.2, 2.8))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+    barras = ax.bar(df_chart["Club_periodo"], df_chart["PTC"], color="#2ec4ff")
+    for barra in barras:
+        ax.text(
+            barra.get_x() + barra.get_width() / 2,
+            barra.get_height() + 0.1,
+            f"{barra.get_height():.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="#edf5f0",
+        )
+    ax.set_title("Puntos obtenidos por periodo", color="#edf5f0", fontsize=11)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.4, rotation=18)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.set_ylabel("PTC", color="#d6e4dc", fontsize=8.2)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    plt.subplots_adjust(top=0.82, bottom=0.3, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
+def generar_pdf_tecnico(tecnico, periodos):
+    if tecnico is None:
+        return None
+
+    try:
+        resumen = construir_resumen_tecnico(periodos)
+        nombre = valor_campo_pdf(tecnico.get("Nombre_DT"), "Tecnico")
+        intro = valor_campo_pdf(tecnico.get("Introducción"), "Sin introduccion cargada.")
+        foto_buffer = descargar_foto_para_pdf(tecnico.get("URL_Foto_DT", ""), max_size=(420, 420))
+        grafico_linea = crear_linea_rendimiento_dt_pdf(periodos, nombre)
+        grafico_barras = crear_barras_resumen_dt_pdf(periodos)
+        club_actual = valor_campo_pdf(tecnico.get("Club_actual_DT"))
+        liga_actual = valor_campo_pdf(tecnico.get("Liga_actual_DT"))
+        nacionalidad = valor_campo_pdf(tecnico.get("Nacionalidad_DT"))
+        segunda_nacionalidad = valor_campo_pdf(tecnico.get("Segunda_Nacionalidad_DT"))
+        edad_dt = calcular_edad(tecnico.get("Fecha_Nac_DT"))
+        edad_texto = f"{edad_dt} anos" if str(edad_dt) != "?" else "-"
+        puntos_partido = formatear_valor_estadistica(resumen["puntos_por_partido"])
+        rendimiento_texto = f"{formatear_valor_estadistica(resumen['rendimiento'])}%"
+        enlaces = []
+        if str(tecnico.get("URL_Perfil_DT", "")).startswith("http"):
+            enlaces.append("Perfil externo")
+        if str(tecnico.get("Instagram_DT", "")).startswith("http"):
+            enlaces.append("Instagram")
+
+        pdf = FPDF_SEGURO("P", "mm", "A4")
+        pdf.set_margins(left=10, top=12, right=10)
+        pdf.set_auto_page_break(auto=True, margin=12)
+        pdf.alias_nb_pages()
+        pdf.add_page()
+
+        color_panel = (11, 18, 24)
+        color_panel_alt = (17, 25, 31)
+        color_acento = (102, 140, 128)
+        color_texto = (246, 247, 248)
+        color_texto_muted = (213, 219, 221)
+        color_borde = (118, 138, 132)
+        color_destacado = (25, 226, 143)
+
+        def chip_resumen(x_pos, y_pos, ancho, alto, etiqueta, valor):
+            pdf.set_fill_color(*color_panel_alt)
+            pdf.set_draw_color(*color_borde)
+            pdf.rect(x_pos, y_pos, ancho, alto, "DF")
+            pdf.set_xy(x_pos + 3, y_pos + 2)
+            pdf.set_font("Arial", "B", 7)
+            pdf.set_text_color(*color_acento)
+            pdf.cell(ancho - 6, 3.4, etiqueta.upper(), ln=True)
+            pdf.set_x(x_pos + 3)
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_text_color(*color_texto)
+            pdf.multi_cell(ancho - 6, 4.2, valor)
+
+        hero_y = 14
+        hero_h = 22
+        hero_w = pdf.w - pdf.l_margin - pdf.r_margin
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, hero_y, hero_w, hero_h, "DF")
+        pdf.set_fill_color(*color_acento)
+        pdf.rect(pdf.l_margin, hero_y, 3.2, hero_h, "F")
+        pdf.set_xy(pdf.l_margin + 5, hero_y + 3)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(*color_acento)
+        pdf.cell(0, 4, "SCOUTING DOSSIER", ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "B", 18)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(0, 6, nombre, ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.cell(
+            0,
+            4.5,
+            f"{club_actual} · {liga_actual} · Fecha: {datetime.today().strftime('%d/%m/%Y')}",
+            ln=True,
+        )
+
+        chips_y = hero_y + hero_h + 4
+        chips_gap = 3
+        chips_total_w = pdf.w - pdf.l_margin - pdf.r_margin
+        chip_w = (chips_total_w - (chips_gap * 2)) / 3
+        chip_h = 12
+        chips = [
+            ("Club actual", club_actual),
+            ("Liga actual", liga_actual),
+            ("Edad", edad_texto),
+            ("Periodos", str(resumen["periodos"])),
+            ("Puntos por partido", puntos_partido),
+            ("Rendimiento", rendimiento_texto),
+        ]
+        for indice, (etiqueta, valor) in enumerate(chips):
+            col = indice % 3
+            row = indice // 3
+            chip_x = pdf.l_margin + col * (chip_w + chips_gap)
+            chip_y = chips_y + row * (chip_h + chips_gap)
+            chip_resumen(chip_x, chip_y, chip_w, chip_h, etiqueta, valor)
+
+        panel_y = chips_y + (chip_h * 2) + chips_gap + 5
+        foto_w = 46
+        panel_h = 64
+        total_w = pdf.w - pdf.l_margin - pdf.r_margin
+        gap_panel = 6
+        info_w = total_w - foto_w - gap_panel
+        info_x = pdf.l_margin + foto_w + gap_panel
+
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, panel_y, foto_w, panel_h, "DF")
+        pdf.rect(info_x, panel_y, info_w, panel_h, "DF")
+
+        if foto_buffer is not None:
+            pdf.image(foto_buffer, x=pdf.l_margin + 3, y=panel_y + 4, w=foto_w - 6)
+        else:
+            pdf.set_xy(pdf.l_margin + 7, panel_y + 24)
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_text_color(*color_texto_muted)
+            pdf.cell(foto_w - 14, 5, "Sin foto", align="C")
+
+        pdf.set_xy(info_x + 4, panel_y + 4)
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(info_w - 8, 5, "Ficha ejecutiva", ln=True)
+
+        datos = [
+            ("Nacimiento", formatear_fecha_dt(tecnico.get("Fecha_Nac_DT"))),
+            ("Edad", edad_texto),
+            ("Nacionalidad", nacionalidad),
+            ("Segunda nacionalidad", segunda_nacionalidad),
+            ("Periodos", str(resumen["periodos"])),
+            ("Clubes", str(resumen["clubes"])),
+            ("Puntos por partido", puntos_partido),
+            ("Rendimiento", rendimiento_texto),
+        ]
+        col_w = max((info_w - 14) / 2, 24)
+        base_y = panel_y + 13
+        for indice, (etiqueta, valor) in enumerate(datos):
+            col = indice % 2
+            row = indice // 2
+            x = info_x + 4 + col * (col_w + 4)
+            y = base_y + row * 10.5
+            pdf.set_xy(x, y)
+            pdf.set_font("Arial", "B", 7.2)
+            pdf.set_text_color(*color_acento)
+            pdf.cell(col_w, 3.6, etiqueta.upper(), ln=True)
+            pdf.set_x(x)
+            pdf.set_font("Arial", "", 8.8)
+            pdf.set_text_color(*color_texto)
+            pdf.multi_cell(col_w, 4.1, valor)
+
+        enlaces_y = panel_y + panel_h - 12
+        pdf.set_xy(info_x + 4, enlaces_y)
+        pdf.set_font("Arial", "B", 7)
+        pdf.set_text_color(*color_acento)
+        pdf.cell(info_w - 8, 3.4, "ENLACES", ln=True)
+        pdf.set_x(info_x + 4)
+        pdf.set_font("Arial", "", 8)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.cell(info_w - 8, 4, " · ".join(enlaces) if enlaces else "Sin enlaces externos cargados", ln=True)
+
+        pdf.set_y(panel_y + panel_h + 4)
+        desc_y = pdf.get_y()
+        desc_h = max(18, medir_altura_texto_pdf(pdf, intro, total_w - 8, 4.8) + 8)
+        pdf.set_fill_color(*color_panel_alt)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, desc_y, total_w, desc_h, "DF")
+        pdf.set_xy(pdf.l_margin + 4, desc_y + 3)
+        pdf.set_font("Arial", "B", 11)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(total_w - 8, 5, "Introduccion", ln=True)
+        pdf.set_x(pdf.l_margin + 4)
+        pdf.set_font("Arial", "", 9.4)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.multi_cell(total_w - 8, 4.8, intro)
+        pdf.set_y(desc_y + desc_h + 4)
+
+        resumen_panel_y = pdf.get_y()
+        resumen_panel_h = 20
+        resumen_cols_gap = 4
+        resumen_col_w = (total_w - resumen_cols_gap) / 2
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, resumen_panel_y, resumen_col_w, resumen_panel_h, "DF")
+        pdf.rect(pdf.l_margin + resumen_col_w + resumen_cols_gap, resumen_panel_y, resumen_col_w, resumen_panel_h, "DF")
+        pdf.set_xy(pdf.l_margin + 4, resumen_panel_y + 3)
+        pdf.set_font("Arial", "B", 9.5)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(resumen_col_w - 8, 4, "Resumen agregado", ln=True)
+        pdf.set_x(pdf.l_margin + 4)
+        pdf.set_font("Arial", "", 8.6)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.multi_cell(
+            resumen_col_w - 8,
+            4.1,
+            f"PJ {resumen['pj']} | PG {resumen['pg']} | PE {resumen['pe']} | PP {resumen['pp']}\nGF {resumen['gf']} | GC {resumen['gc']} | DFG {resumen['dfg']}",
+        )
+        pdf.set_xy(pdf.l_margin + resumen_col_w + resumen_cols_gap + 4, resumen_panel_y + 3)
+        pdf.set_font("Arial", "B", 9.5)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(resumen_col_w - 8, 4, "Contexto actual", ln=True)
+        pdf.set_x(pdf.l_margin + resumen_col_w + resumen_cols_gap + 4)
+        pdf.set_font("Arial", "", 8.6)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.multi_cell(
+            resumen_col_w - 8,
+            4.1,
+            f"Club: {resumen['club_actual']}\nLiga: {resumen['liga_actual']}\nPuntos: {resumen['ptc']}",
+        )
+        pdf.set_y(resumen_panel_y + resumen_panel_h + 4)
+
+        if grafico_linea is not None:
+            ancho_linea = total_w - 4
+            alto_linea = obtener_alto_imagen_pdf(grafico_linea, ancho_linea)
+            asegurar_espacio_pdf(pdf, alto_linea + 8)
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(0, 5, "Evolucion del rendimiento", ln=True)
+            y_linea = pdf.get_y() + 1
+            pdf.image(grafico_linea, x=pdf.l_margin + 2, y=y_linea, w=ancho_linea)
+            pdf.set_y(y_linea + alto_linea + 2)
+
+        if grafico_barras is not None:
+            ancho_barras = total_w - 4
+            alto_barras = obtener_alto_imagen_pdf(grafico_barras, ancho_barras)
+            asegurar_espacio_pdf(pdf, alto_barras + 8)
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(0, 5, "Puntos por periodo", ln=True)
+            y_barras = pdf.get_y() + 1
+            pdf.image(grafico_barras, x=pdf.l_margin + 2, y=y_barras, w=ancho_barras)
+            pdf.set_y(y_barras + alto_barras + 2)
+
+        pdf.add_page()
+        dibujar_titulo_seccion_pdf(
+            pdf,
+            "Historial de periodos",
+            "Ordenado desde la etapa actual hacia atras, con resumen competitivo y observaciones de cada ciclo.",
+            espacio_posterior_minimo=26,
+        )
+
+        if periodos is None or periodos.empty:
+            pdf.set_font("Arial", "I", 10)
+            pdf.set_text_color(*color_texto_muted)
+            pdf.multi_cell(0, 5.2, "No hay periodos cargados para este tecnico.")
+        else:
+            for _, periodo in periodos.iterrows():
+                asegurar_espacio_pdf(pdf, 31)
+                x = pdf.l_margin
+                y = pdf.get_y()
+                w = pdf.w - pdf.l_margin - pdf.r_margin
+                h = 27
+                pdf.set_fill_color(*color_panel)
+                pdf.set_draw_color(*color_borde)
+                pdf.rect(x, y, w, h, "DF")
+                pdf.set_fill_color(*color_destacado)
+                pdf.rect(x, y, 2.8, h, "F")
+                pdf.set_xy(x + 5, y + 3)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(*color_texto)
+                fin_periodo = "Actualidad" if bool(periodo.get("periodo_actual", False)) else formatear_fecha_dt(periodo.get("fin_periodo"))
+                pdf.cell(0, 4.5, valor_campo_pdf(periodo.get("Club_periodo"), "Club"), ln=True)
+                pdf.set_x(x + 5)
+                pdf.set_font("Arial", "", 8.2)
+                pdf.set_text_color(*color_texto_muted)
+                pdf.cell(0, 4, f"{valor_campo_pdf(periodo.get('Liga_periodo'))} · {valor_campo_pdf(periodo.get('Pais'))} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {fin_periodo}", ln=True)
+                pdf.set_x(x + 5)
+                pdf.cell(
+                    0,
+                    4,
+                    f"PJ {normalizar_entero_dt(periodo.get('PJ'))} | PG {normalizar_entero_dt(periodo.get('PG'))} | PE {normalizar_entero_dt(periodo.get('PE'))} | PP {normalizar_entero_dt(periodo.get('PP'))} | PTC {normalizar_entero_dt(periodo.get('PTC'))} | DFG {normalizar_entero_dt(periodo.get('DFG'))}",
+                    ln=True,
+                )
+                pdf.set_x(x + 5)
+                pdf.multi_cell(w - 10, 3.8, valor_campo_pdf(periodo.get("Observaciones_periodo"), "Sin observaciones cargadas."))
+                pdf.ln(2)
+
+        buffer = BytesIO()
+        pdf.output(buffer)
+        buffer.seek(0)
+        return buffer
+    except Exception as e:
+        st.error(f"⚠️ Error al generar PDF del tecnico: {e}")
+        return None
 
 
 def crear_radar_valoracion_pdf(promedios_grupos):
@@ -3159,16 +4143,29 @@ def cargar_datos():
     columnas_short = ["ID_Jugador","Nombre","Edad","Altura","Club","Posición",
                       "URL_Foto","URL_Perfil","Agregado_Por","Fecha_Agregado"]
 
+    columnas_dt = DT_COLUMNAS.copy()
+    columnas_periodo_dt = PERIODO_DT_COLUMNAS.copy()
+
     df_players = cargar_datos_sheets("Jugadores", columnas_jug)
     df_reports = cargar_datos_sheets("Informes", columnas_inf)
     df_short   = cargar_datos_sheets("Lista corta", columnas_short)
+    df_dt = cargar_datos_sheets("DT", columnas_dt)
+    df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
 
     # Normalización de IDs
     for df in (df_players, df_reports, df_short):
         if not df.empty and "ID_Jugador" in df.columns:
             df["ID_Jugador"] = df["ID_Jugador"].astype(str)
 
-    return df_players, df_reports, df_short
+    if not df_dt.empty and "ID_DT" in df_dt.columns:
+        df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    if not df_dt_periods.empty:
+        if "ID_periodo_DT" in df_dt_periods.columns:
+            df_dt_periods["ID_periodo_DT"] = df_dt_periods["ID_periodo_DT"].astype(str)
+        if "ID_DT" in df_dt_periods.columns:
+            df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].astype(str)
+
+    return df_players, df_reports, df_short, df_dt, df_dt_periods
 
 # ---------------------------------------------------------
 # INICIALIZACIÓN
@@ -3184,6 +4181,8 @@ inicializar_datasets_sesion()
 df_players_all = st.session_state["df_players"].copy()
 df_reports_all = st.session_state["df_reports"].copy()
 df_short_all   = st.session_state["df_short"].copy()
+df_dt_all = st.session_state["df_dt"].copy()
+df_dt_periods_all = st.session_state["df_dt_periods"].copy()
 
 if CURRENT_ROLE != "admin":
     # Informes: solo los del scout
@@ -3219,11 +4218,13 @@ menu_options = [
     "Panel General",
     "Agenda",
     "Jugadores",
+    "Directores Técnicos",
     "Informes Jugadores",
     "Lista corta",
     "Panel Scouts",
     "Estadísticas Jugadores",
     "Comparativa Jugadores",
+    "Comparativa de Técnicos",
 ]
 
 if st.session_state.get("menu") not in menu_options:
@@ -3272,30 +4273,9 @@ if st.session_state["menu"] == "Jugadores":
         "Extremo izquierdo", "Delantero"
     ]
 
-    opciones_ligas = [
-        "Argentina - LPF", "Argentina - Primera Nacional", "Argentina - B Metro", "Argentina - Federal A", "Argentina - Primera C",
-        "Argentina - Proyección", "Argentina - Reserva ascenso", "Argentina - Regional Amateur", "Argentina - Promocional Amateur", "Brasil - Serie A (Brasileirão)", "Brasil - Serie B",
-        "Chile - Primera División", "Chile - Segunda División", "Uruguay - Primera División",
-        "Uruguay - Segunda División", "Paraguay - División Profesional",
-        "Colombia - Primera A", "Ecuador - LigaPro Serie A", "Ecuador - Serie B",
-        "Perú - Liga 1", "Venezuela - Liga FUTVE", "México - Liga MX",
-        "España - LaLiga", "España - LaLiga 2", "España - 1 RFEF", "España - 2 RFEF", "Italia - Serie A", "Italia - Serie B", "Italia - Serie C",
-        "Inglaterra - Premier League", "Inglaterra - Championship",
-        "Francia - Ligue 1", "Alemania - Bundesliga", "Portugal - Primeira Liga",
-        "Países Bajos - Eredivisie", "Suiza - Super League",
-        "Polonia - Liga Polaca", "Bélgica - Pro League",
-        "Grecia - Super League", "Turquía - Süper Lig",
-        "Arabia Saudita - Saudi Pro League", "Estados Unidos - MLS",
-        "Otro"
-    ]
+    opciones_ligas = CATALOGO_LIGAS.copy()
 
-    opciones_paises = [
-        "Argentina", "Brasil", "Chile", "Uruguay", "Paraguay", "Colombia", "México",
-        "Ecuador", "Perú", "Venezuela", "España", "Italia", "Francia", "Inglaterra",
-        "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
-        "Honduras", "Costa Rica", "El Salvador", "Panamá","Cuba",
-        "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro"
-    ]
+    opciones_paises = CATALOGO_PAISES.copy()
 
     opciones_caracteristicas = [
         "agresivo", "completo", "tiempista", "dinámico", "velocista", "goleador",
@@ -4360,6 +5340,531 @@ if st.session_state["menu"] == "Comparativa Jugadores":
                             mime="application/pdf",
                             key="comparativa_pdf_descargar",
                         )
+
+
+# =========================================================
+# BLOQUE DT — Gestión de Directores Tecnicos
+# =========================================================
+
+if st.session_state["menu"] == "Directores Técnicos":
+
+    df_dt = df_dt_all.copy()
+    df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    df_dt_periods = normalizar_dataframe_periodos_dt(df_dt_periods_all.copy())
+
+    opciones_ligas_dt = CATALOGO_LIGAS.copy()
+    opciones_paises_dt = CATALOGO_PAISES.copy()
+
+    render_html_block(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Repositorio</div>
+            <h1 class="alab-dashboard-hero-title">Directores Técnicos</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Tecnicos</strong> {df_dt['ID_DT'].nunique() if 'ID_DT' in df_dt.columns else 0}</span>
+                <span class="alab-dashboard-chip"><strong>Periodos</strong> {len(df_dt_periods)}</span>
+                <span class="alab-dashboard-chip"><strong>Hoja</strong> DT + Periodo DT</span>
+            </div>
+        </div>
+        """
+    )
+
+    opciones_tecnicos = {
+        f"{row['Nombre_DT']} - {row.get('Club_actual_DT', 'Sin club')}": row["ID_DT"]
+        for _, row in df_dt.iterrows()
+    }
+
+    seleccion_dt = st.selectbox(
+        "🔍 Buscar técnico",
+        [""] + list(opciones_tecnicos.keys()),
+        key="buscar_tecnico_principal",
+    )
+
+    if not seleccion_dt:
+        render_html_block(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Tecnicos cargados</span>
+                    <span class="alab-mini-value">{df_dt['ID_DT'].nunique() if 'ID_DT' in df_dt.columns else 0}</span>
+                    <span class="alab-mini-copy">Base disponible para consulta, alta y seguimiento por periodos.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Ligas representadas</span>
+                    <span class="alab-mini-value">{df_dt['Liga_actual_DT'].nunique() if 'Liga_actual_DT' in df_dt.columns else 0}</span>
+                    <span class="alab-mini-copy">Cobertura competitiva actual dentro de la base de entrenadores.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Nacionalidades</span>
+                    <span class="alab-mini-value">{df_dt['Nacionalidad_DT'].nunique() if 'Nacionalidad_DT' in df_dt.columns else 0}</span>
+                    <span class="alab-mini-copy">Lectura rapida del alcance internacional del repositorio.</span>
+                </div>
+            </div>
+            """
+        )
+
+        section_header("Alta de nuevo técnico")
+
+        if st.session_state.get("toast_guardado_tecnico"):
+            st.toast("✅ Tecnico guardado correctamente.", icon="✅")
+            st.session_state["toast_guardado_tecnico"] = False
+
+        with st.expander("➕ Agregar nuevo técnico", expanded=False):
+            with st.form("nuevo_tecnico_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    nombre_dt = st.text_input("Nombre", value="")
+                    fecha_nac_dt = st.text_input("Fecha de nacimiento (dd/mm/aaaa)", value="")
+                    nacionalidad_dt = st.selectbox("Nacionalidad", opciones_paises_dt, index=0)
+                    segunda_nacionalidad_dt = st.selectbox("Segunda nacionalidad", [""] + opciones_paises_dt, index=0)
+                    introduccion_dt = st.text_area("Introducción", value="", height=140)
+
+                with col2:
+                    club_actual_dt = st.text_input("Club actual", value="")
+                    liga_actual_dt = st.selectbox("Liga actual", opciones_ligas_dt, index=0)
+                    url_foto_dt = st.text_input("URL Foto", value="")
+                    url_perfil_dt = st.text_input("Perfil externo", value="")
+                    instagram_dt = st.text_input("Instagram", value="")
+
+                guardar_dt = st.form_submit_button("💾 Guardar información de técnico")
+
+                if guardar_dt and nombre_dt:
+                    nuevo_id_dt = generar_id_unico(df_dt_all, "ID_DT")
+                    fila_dt = [
+                        nuevo_id_dt,
+                        nombre_dt,
+                        fecha_nac_dt,
+                        nacionalidad_dt,
+                        segunda_nacionalidad_dt,
+                        introduccion_dt,
+                        club_actual_dt,
+                        liga_actual_dt,
+                        url_foto_dt,
+                        url_perfil_dt,
+                        instagram_dt,
+                    ]
+                    agregar_fila("DT", fila_dt)
+                    st.session_state["toast_guardado_tecnico"] = True
+                    st.rerun()
+
+    if seleccion_dt:
+        id_dt = str(opciones_tecnicos[seleccion_dt])
+        tecnico = obtener_tecnico_por_id(df_dt, id_dt)
+        periodos_dt = obtener_periodos_dt_tecnico(df_dt_periods, id_dt)
+        resumen_dt = construir_resumen_tecnico(periodos_dt)
+
+        section_header(f"Ficha de {tecnico['Nombre_DT']}")
+        resumen_cols = st.columns(4)
+        with resumen_cols[0]:
+            st.metric("Periodos cargados", resumen_dt["periodos"])
+        with resumen_cols[1]:
+            st.metric("Clubes dirigidos", resumen_dt["clubes"])
+        with resumen_cols[2]:
+            st.metric("Puntos por partido", formatear_valor_estadistica(resumen_dt["puntos_por_partido"]))
+        with resumen_cols[3]:
+            st.metric("Rendimiento", f"{formatear_valor_estadistica(resumen_dt['rendimiento'])}%")
+
+        edad_dt = calcular_edad(tecnico.get("Fecha_Nac_DT"))
+        nacionalidad_dt_texto = tecnico.get("Nacionalidad_DT", "-") or "-"
+        segunda_nac_dt = tecnico.get("Segunda_Nacionalidad_DT", "") or "No informada"
+        introduccion_dt = str(tecnico.get("Introducción", "") or "").strip()
+        foto_url_dt = normalizar_url_foto(tecnico.get("URL_Foto_DT", ""))
+        links_dt = []
+        if str(tecnico.get("URL_Perfil_DT", "")).startswith("http"):
+            links_dt.append(f"<a href='{tecnico['URL_Perfil_DT']}' target='_blank'>Perfil externo</a>")
+        if str(tecnico.get("Instagram_DT", "")).startswith("http"):
+            links_dt.append(f"<a href='{tecnico['Instagram_DT']}' target='_blank'>Instagram</a>")
+        links_dt_html = "".join(f"<span class='alab-player-link'>{item}</span>" for item in links_dt)
+        if not links_dt_html:
+            links_dt_html = "<span class='alab-player-link alab-player-link-disabled'>Sin enlaces externos</span>"
+
+        foto_html_dt = (
+            f"<img src='{foto_url_dt}' alt='Foto de {tecnico.get('Nombre_DT', 'tecnico')}' class='alab-player-photo' loading='lazy' referrerpolicy='no-referrer'/>"
+            if foto_url_dt
+            else "<div class='alab-player-photo-placeholder'>Sin foto</div>"
+        )
+
+        top_left_dt, top_right_dt = st.columns(2)
+        bottom_left_dt, bottom_right_dt = st.columns(2)
+
+        with top_left_dt:
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall alab-player-media-panel">
+                    <div class="alab-player-media-row">
+                        <div class="alab-player-media-wrap">{foto_html_dt}</div>
+                        <div class="alab-player-summary alab-player-summary-focused">
+                            <div class="alab-player-identity-block alab-player-identity-block-compact">
+                                <div class="alab-player-name">{escape_html(tecnico.get('Nombre_DT'), 'Tecnico')}</div>
+                                <div class="alab-player-subtitle">{escape_html(tecnico.get('Club_actual_DT'), '-')}</div>
+                                <div class="alab-player-context">{escape_html(tecnico.get('Liga_actual_DT'), '-')}</div>
+                            </div>
+                            <div class="alab-player-link-row alab-player-link-row-inline">{links_dt_html}</div>
+                        </div>
+                    </div>
+                </div>
+                """
+            )
+
+        with top_right_dt:
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall">
+                    <div class="alab-player-panel-title">Introducción</div>
+                    <div class="alab-player-panel-copy">{escape_html(introduccion_dt, 'Todavia no hay una introduccion cargada para este tecnico.')}</div>
+                </div>
+                """
+            )
+
+        with bottom_left_dt:
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall">
+                    <div class="alab-player-panel-title">Ficha rápida</div>
+                    <div class="alab-detail-grid">
+                        <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(formatear_fecha_dt(tecnico.get('Fecha_Nac_DT')))} ({edad_dt} anos)</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Nacionalidad</span><span class="alab-detail-value">{escape_html(nacionalidad_dt_texto)}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Segunda nacionalidad</span><span class="alab-detail-value">{escape_html(segunda_nac_dt)}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Club actual</span><span class="alab-detail-value">{escape_html(tecnico.get('Club_actual_DT'), '-')}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Liga actual</span><span class="alab-detail-value">{escape_html(tecnico.get('Liga_actual_DT'), '-')}</span></div>
+                    </div>
+                </div>
+                """
+            )
+
+        with bottom_right_dt:
+            render_html_block(
+                f"""
+                <div class="alab-player-panel alab-player-panel-tall">
+                    <div class="alab-player-panel-title">Resumen competitivo</div>
+                    <div class="alab-detail-grid">
+                        <div class="alab-detail-item"><span class="alab-detail-label">PJ</span><span class="alab-detail-value">{resumen_dt['pj']}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PG</span><span class="alab-detail-value">{resumen_dt['pg']}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">PTC</span><span class="alab-detail-value">{resumen_dt['ptc']}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">DFG</span><span class="alab-detail-value">{resumen_dt['dfg']}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Puntos por partido</span><span class="alab-detail-value">{formatear_valor_estadistica(resumen_dt['puntos_por_partido'])}</span></div>
+                        <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{formatear_valor_estadistica(resumen_dt['rendimiento'])}%</span></div>
+                    </div>
+                </div>
+                """
+            )
+
+        if CURRENT_ROLE in ["admin", "scout"]:
+            with st.expander("✏️ Editar información del técnico", expanded=False):
+                with st.form(f"editar_tecnico_form_{id_dt}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        e_nombre_dt = st.text_input("Nombre", value=str(tecnico.get("Nombre_DT", "") or ""))
+                        e_fecha_nac_dt = st.text_input("Fecha de nacimiento (dd/mm/aaaa)", value=str(tecnico.get("Fecha_Nac_DT", "") or ""))
+                        e_nacionalidad_dt = st.selectbox(
+                            "Nacionalidad",
+                            opciones_paises_dt,
+                            index=opciones_paises_dt.index(tecnico.get("Nacionalidad_DT")) if tecnico.get("Nacionalidad_DT") in opciones_paises_dt else 0,
+                        )
+                        opciones_seg_dt = [""] + opciones_paises_dt
+                        e_segunda_nacionalidad_dt = st.selectbox(
+                            "Segunda nacionalidad",
+                            opciones_seg_dt,
+                            index=opciones_seg_dt.index(tecnico.get("Segunda_Nacionalidad_DT")) if tecnico.get("Segunda_Nacionalidad_DT") in opciones_seg_dt else 0,
+                        )
+                        e_introduccion_dt = st.text_area("Introducción", value=str(tecnico.get("Introducción", "") or ""), height=140)
+                    with col2:
+                        e_club_dt = st.text_input("Club actual", value=str(tecnico.get("Club_actual_DT", "") or ""))
+                        e_liga_dt = st.selectbox(
+                            "Liga actual",
+                            opciones_ligas_dt,
+                            index=opciones_ligas_dt.index(tecnico.get("Liga_actual_DT")) if tecnico.get("Liga_actual_DT") in opciones_ligas_dt else 0,
+                        )
+                        e_url_foto_dt = st.text_input("URL Foto", value=str(tecnico.get("URL_Foto_DT", "") or ""))
+                        e_url_perfil_dt = st.text_input("Perfil externo", value=str(tecnico.get("URL_Perfil_DT", "") or ""))
+                        e_instagram_dt = st.text_input("Instagram", value=str(tecnico.get("Instagram_DT", "") or ""))
+
+                    guardar_ed_dt = st.form_submit_button("💾 Guardar cambios del técnico")
+
+                    if guardar_ed_dt:
+                        fila_dt = [
+                            id_dt,
+                            e_nombre_dt,
+                            e_fecha_nac_dt,
+                            e_nacionalidad_dt,
+                            e_segunda_nacionalidad_dt,
+                            e_introduccion_dt,
+                            e_club_dt,
+                            e_liga_dt,
+                            e_url_foto_dt,
+                            e_url_perfil_dt,
+                            e_instagram_dt,
+                        ]
+                        if actualizar_fila_en_hoja("DT", "ID_DT", id_dt, fila_dt, DT_COLUMNAS):
+                            st.session_state["toast_guardado_tecnico"] = True
+                            st.rerun()
+
+        st.markdown("---")
+        section_header("Historial de periodos")
+        if periodos_dt.empty:
+            st.info("Todavia no hay periodos cargados para este tecnico.")
+        else:
+            for indice_periodo, (_, periodo) in enumerate(periodos_dt.iterrows(), start=1):
+                render_tarjeta_periodo_dt(periodo, indice_periodo)
+
+        if CURRENT_ROLE in ["admin", "scout"]:
+            st.markdown("---")
+            section_header("Agregar o editar periodo")
+
+            if st.session_state.get("toast_guardado_periodo_dt"):
+                st.toast("✅ Periodo guardado correctamente.", icon="✅")
+                st.session_state["toast_guardado_periodo_dt"] = False
+
+            modo_periodo_dt = st.radio(
+                "Modo",
+                ["Agregar periodo", "Editar periodo"],
+                horizontal=True,
+                key=f"modo_periodo_dt_{id_dt}",
+            )
+
+            periodo_edicion = None
+            id_periodo_edicion = ""
+            if modo_periodo_dt == "Editar periodo" and not periodos_dt.empty:
+                opciones_periodos_dt = {
+                    construir_label_periodo_dt(periodo): str(periodo.get("ID_periodo_DT", ""))
+                    for _, periodo in periodos_dt.iterrows()
+                }
+                seleccion_periodo_dt = st.selectbox(
+                    "Seleccioná el periodo a editar",
+                    [""] + list(opciones_periodos_dt.keys()),
+                    key=f"seleccion_editar_periodo_dt_{id_dt}",
+                )
+                if seleccion_periodo_dt:
+                    id_periodo_edicion = opciones_periodos_dt[seleccion_periodo_dt]
+                    periodo_edicion = periodos_dt[periodos_dt["ID_periodo_DT"].astype(str) == id_periodo_edicion].iloc[0]
+
+            with st.form(f"periodo_dt_form_{id_dt}", clear_on_submit=modo_periodo_dt == "Agregar periodo"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    club_periodo = st.text_input("Club", value=str(periodo_edicion.get("Club_periodo", "") if periodo_edicion is not None else ""))
+                    url_escudo = st.text_input("Url escudo club", value=str(periodo_edicion.get("URL_escudo", "") if periodo_edicion is not None else ""))
+                    liga_periodo = st.selectbox(
+                        "Liga",
+                        opciones_ligas_dt,
+                        index=opciones_ligas_dt.index(periodo_edicion.get("Liga_periodo")) if periodo_edicion is not None and periodo_edicion.get("Liga_periodo") in opciones_ligas_dt else 0,
+                    )
+                    pais_periodo = st.selectbox(
+                        "Pais",
+                        opciones_paises_dt,
+                        index=opciones_paises_dt.index(periodo_edicion.get("Pais")) if periodo_edicion is not None and periodo_edicion.get("Pais") in opciones_paises_dt else 0,
+                    )
+                    inicio_periodo = st.text_input("Inicio (dd/mm/aaaa)", value=str(periodo_edicion.get("inicio_periodo", "") if periodo_edicion is not None else ""))
+                    periodo_actual_dt = st.checkbox(
+                        "Se encuentra actualmente en este equipo",
+                        value=bool(periodo_edicion.get("periodo_actual", False)) if periodo_edicion is not None else False,
+                    )
+                    fin_periodo_default = ""
+                    if periodo_edicion is not None and not bool(periodo_edicion.get("periodo_actual", False)):
+                        fin_periodo_default = str(periodo_edicion.get("fin_periodo", "") or "")
+                    fin_periodo = st.text_input(
+                        "Fin (dd/mm/aaaa)",
+                        value=fin_periodo_default,
+                        disabled=periodo_actual_dt,
+                    )
+                with col2:
+                    pj = st.number_input("Partidos jugados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PJ", 0) if periodo_edicion is not None else 0), step=1)
+                    pg = st.number_input("Partidos ganados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PG", 0) if periodo_edicion is not None else 0), step=1)
+                    pe = st.number_input("Partidos empatados", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PE", 0) if periodo_edicion is not None else 0), step=1)
+                    pp = st.number_input("Partidos perdidos", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PP", 0) if periodo_edicion is not None else 0), step=1)
+                    gf = st.number_input("Goles a favor", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GF", 0) if periodo_edicion is not None else 0), step=1)
+                    gc = st.number_input("Goles en contra", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("GC", 0) if periodo_edicion is not None else 0), step=1)
+                    ptc = st.number_input("Puntos obtenidos", min_value=0, value=normalizar_entero_dt(periodo_edicion.get("PTC", 0) if periodo_edicion is not None else 0), step=1)
+                    dfg_default = normalizar_entero_dt(periodo_edicion.get("DFG", 0) if periodo_edicion is not None else 0)
+                    dfg = st.number_input("Diferencia de gol", value=dfg_default, step=1)
+                observaciones_periodo = st.text_area(
+                    "Observaciones del periodo",
+                    value=str(periodo_edicion.get("Observaciones_periodo", "") if periodo_edicion is not None else ""),
+                    height=120,
+                )
+
+                guardar_periodo_dt = st.form_submit_button(
+                    "💾 Guardar etapa" if modo_periodo_dt == "Agregar periodo" else "💾 Guardar cambios del periodo"
+                )
+
+                if guardar_periodo_dt and club_periodo:
+                    fin_periodo_guardar = "Actualidad" if periodo_actual_dt else fin_periodo
+                    if (pg + pe + pp) > pj:
+                        st.warning("⚠️ La suma de PG, PE y PP no puede superar los PJ.")
+                    else:
+                        id_periodo = generar_id_unico(df_dt_periods_all, "ID_periodo_DT") if modo_periodo_dt == "Agregar periodo" else id_periodo_edicion
+                        fila_periodo = [
+                            id_periodo,
+                            id_dt,
+                            club_periodo,
+                            url_escudo,
+                            liga_periodo,
+                            pais_periodo,
+                            inicio_periodo,
+                            fin_periodo_guardar,
+                            int(pj),
+                            int(pg),
+                            int(pe),
+                            int(pp),
+                            int(gf),
+                            int(gc),
+                            int(ptc),
+                            int(dfg),
+                            observaciones_periodo,
+                        ]
+
+                        if modo_periodo_dt == "Agregar periodo":
+                            agregar_fila("Periodo DT", fila_periodo)
+                        else:
+                            actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo, fila_periodo, PERIODO_DT_COLUMNAS)
+
+                        st.session_state["toast_guardado_periodo_dt"] = True
+                        st.rerun()
+
+        st.markdown("---")
+        section_header("Visualización del rendimiento")
+        col_chart_dt_1, col_chart_dt_2 = st.columns(2)
+        with col_chart_dt_1:
+            fig_evolucion_dt = crear_grafico_evolucion_tecnico(periodos_dt, tecnico.get("Nombre_DT", "Tecnico"))
+            if fig_evolucion_dt is not None:
+                st.plotly_chart(fig_evolucion_dt, use_container_width=True)
+            else:
+                st.info("No hay periodos suficientes para graficar la evolucion del rendimiento.")
+        with col_chart_dt_2:
+            fig_clubes_dt = crear_grafico_clubes_tecnico(periodos_dt, tecnico.get("Nombre_DT", "Tecnico"))
+            if fig_clubes_dt is not None:
+                st.plotly_chart(fig_clubes_dt, use_container_width=True)
+            else:
+                st.info("No hay datos suficientes para graficar los puntos por periodo.")
+
+        st.markdown("---")
+        if st.button("📝 Generar informe DT", key=f"generar_pdf_dt_{id_dt}"):
+            buffer_pdf_dt = generar_pdf_tecnico(tecnico, periodos_dt)
+            if buffer_pdf_dt is not None:
+                nombre_pdf_dt = str(tecnico.get("Nombre_DT", f"DT_{id_dt}")).replace(" ", "_")
+                st.download_button(
+                    "⬇️ Descargar informe DT",
+                    buffer_pdf_dt,
+                    file_name=f"Informe_DT_{nombre_pdf_dt}.pdf",
+                    mime="application/pdf",
+                    key=f"descargar_pdf_dt_{id_dt}",
+                )
+
+
+# =========================================================
+# BLOQUE DT — Comparativa de Tecnicos
+# =========================================================
+
+if st.session_state["menu"] == "Comparativa de Técnicos":
+
+    df_dt = df_dt_all.copy()
+    df_dt["ID_DT"] = df_dt["ID_DT"].astype(str)
+    df_dt_periods = normalizar_dataframe_periodos_dt(df_dt_periods_all.copy())
+
+    render_html_block(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Comparativa</div>
+            <h1 class="alab-dashboard-hero-title">Comparativa de técnicos</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Formato</strong> 3 tecnicos</span>
+                <span class="alab-dashboard-chip"><strong>Base</strong> {df_dt['ID_DT'].nunique() if 'ID_DT' in df_dt.columns else 0} tecnicos</span>
+                <span class="alab-dashboard-chip"><strong>Periodos</strong> {len(df_dt_periods)}</span>
+            </div>
+        </div>
+        """
+    )
+
+    slot_keys_dt = ["comparativa_dt_1", "comparativa_dt_2", "comparativa_dt_3"]
+    columnas_comparativa_dt = st.columns(3)
+
+    for indice, (columna, key) in enumerate(zip(columnas_comparativa_dt, slot_keys_dt), start=1):
+        current_id = str(st.session_state.get(key, "") or "")
+        ids_excluidos = {
+            str(st.session_state.get(other_key, "") or "")
+            for other_key in slot_keys_dt
+            if other_key != key and str(st.session_state.get(other_key, "") or "").strip()
+        }
+        opciones_ids, etiquetas_ids = construir_opciones_comparativa_tecnicos(
+            df_dt,
+            ids_excluidos=ids_excluidos,
+            current_id=current_id,
+        )
+
+        with columna:
+            tecnico_id = st.selectbox(
+                f"🔍 Buscar técnico {indice}",
+                opciones_ids,
+                format_func=lambda valor, etiquetas_ids=etiquetas_ids: "Seleccionar tecnico" if not valor else etiquetas_ids.get(valor, valor),
+                key=key,
+            )
+            tecnico = obtener_tecnico_por_id(df_dt, tecnico_id)
+            periodos = obtener_periodos_dt_tecnico(df_dt_periods, tecnico_id) if tecnico is not None else pd.DataFrame(columns=PERIODO_DT_COLUMNAS)
+            render_tarjeta_tecnico_comparativa(tecnico, periodos, indice)
+
+    tecnicos_seleccionados = [
+        obtener_tecnico_por_id(df_dt, str(st.session_state.get(key, "") or ""))
+        for key in slot_keys_dt
+    ]
+    tecnicos_seleccionados = [tecnico for tecnico in tecnicos_seleccionados if tecnico is not None]
+
+    st.markdown("---")
+    section_header("Comparativa de rendimiento", centered=True)
+
+    if len(tecnicos_seleccionados) < 2:
+        st.info("Selecciona al menos dos tecnicos para habilitar la comparativa.")
+    else:
+        dataset_dt, mensajes_dt = construir_dataset_comparativa_tecnicos(tecnicos_seleccionados, df_dt_periods)
+
+        for mensaje in mensajes_dt:
+            st.warning(mensaje)
+
+        if dataset_dt is None:
+            st.info("No hay periodos suficientes para generar la comparativa de tecnicos.")
+        else:
+            st.dataframe(dataset_dt["resumen"], use_container_width=True, hide_index=True)
+
+            metrica_general_dt = st.selectbox(
+                "Métrica general",
+                list(DT_COMPARISON_METRICS.keys()),
+                index=list(DT_COMPARISON_METRICS.keys()).index("Puntos por partido"),
+                key="metrica_general_comparativa_dt",
+            )
+            fig_resumen_dt = crear_grafico_resumen_tecnicos(dataset_dt, metrica_general_dt)
+            if fig_resumen_dt is not None:
+                st.plotly_chart(fig_resumen_dt, use_container_width=True)
+
+            metrica_evolucion_dt = st.selectbox(
+                "Métrica de evolución",
+                ["Rendimiento (%)", "Puntos por partido"],
+                index=0,
+                key="metrica_evolucion_comparativa_dt",
+            )
+            fig_evolucion_comparativa_dt = crear_grafico_evolucion_comparativa_tecnicos(dataset_dt, metrica_evolucion_dt)
+            if fig_evolucion_comparativa_dt is not None:
+                st.plotly_chart(fig_evolucion_comparativa_dt, use_container_width=True)
+            else:
+                st.info("No hay periodos suficientes para comparar la evolucion entre tecnicos.")
+
+            st.markdown("---")
+            section_header("Comparativa por liga")
+            metrica_liga_dt = st.selectbox(
+                "Métrica por liga",
+                list(DT_LEAGUE_METRICS.keys()),
+                index=0,
+                key="metrica_liga_comparativa_dt",
+            )
+            tabla_ligas_dt, mensajes_ligas_dt = construir_tabla_ligas_tecnicos(dataset_dt, metrica_liga_dt)
+            if mensajes_ligas_dt:
+                st.info("\n".join(mensajes_ligas_dt))
+
+            if tabla_ligas_dt is None or tabla_ligas_dt.empty:
+                st.info("No hay ligas compartidas o datos suficientes para construir la comparativa por liga.")
+            else:
+                st.dataframe(tabla_ligas_dt, use_container_width=True, hide_index=True)
+                fig_ligas_dt = crear_grafico_ligas_tecnicos(dataset_dt, metrica_liga_dt)
+                if fig_ligas_dt is not None:
+                    st.plotly_chart(fig_ligas_dt, use_container_width=True)
 
 
 

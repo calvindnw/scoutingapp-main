@@ -1620,24 +1620,37 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
         else "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin escudo</div>"
     )
     fin_periodo = "Actualidad" if bool(periodo.get("periodo_actual", False)) else formatear_fecha_dt(periodo.get("fin_periodo"))
-    kicker = f"Periodo {indice}" if indice is not None else "Periodo"
+    metricas_periodo = [
+        ("Partidos jugados", normalizar_entero_dt(periodo.get("PJ"))),
+        ("Partidos ganados", normalizar_entero_dt(periodo.get("PG"))),
+        ("Partidos empatados", normalizar_entero_dt(periodo.get("PE"))),
+        ("Partidos perdidos", normalizar_entero_dt(periodo.get("PP"))),
+        ("Goles a favor", normalizar_entero_dt(periodo.get("GF"))),
+        ("Goles en contra", normalizar_entero_dt(periodo.get("GC"))),
+        ("Diferencia de gol", normalizar_entero_dt(periodo.get("DFG"))),
+        ("Puntos conseguidos", normalizar_entero_dt(periodo.get("PTC"))),
+        ("Rendimiento", f"{formatear_valor_estadistica(periodo.get('Rendimiento (%)'))}%"),
+    ]
+    metricas_html = "".join(
+        f"<div class='alab-detail-item' style='padding:0.65rem 0.75rem;min-height:82px;display:flex;flex-direction:column;justify-content:space-between;'>"
+        f"<span class='alab-detail-label' style='font-size:0.62rem;line-height:1.15;letter-spacing:0.05em;'>{escape_html(etiqueta)}</span>"
+        f"<span class='alab-detail-value' style='font-size:1.02rem;line-height:1.1;'>{escape_html(valor)}</span>"
+        f"</div>"
+        for etiqueta, valor in metricas_periodo
+    )
 
     render_html_block(
         f"""
         <div class="alab-player-panel" style="margin-bottom:1rem;">
-            <div class="alab-compare-kicker">{kicker}</div>
             <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
                 <div class="alab-compare-photo-wrap">{escudo_html}</div>
-                <div style="flex:1 1 420px;min-width:260px;">
+                <div style="flex:1 1 420px;min-width:260px;max-width:100%;overflow:hidden;">
                     <div class="alab-player-panel-title" style="margin-bottom:0.35rem;">{club}</div>
                     <div class="alab-player-panel-copy" style="margin-bottom:0.75rem;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
-                    <div class="alab-detail-grid" style="margin-bottom:0.8rem;">
-                        <div class="alab-detail-item"><span class="alab-detail-label">PJ</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PJ'))}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PG</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PG'))}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PE</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PE'))}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PP</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PP'))}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">PTC</span><span class="alab-detail-value">{normalizar_entero_dt(periodo.get('PTC'))}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Rendimiento</span><span class="alab-detail-value">{formatear_valor_estadistica(periodo.get('Rendimiento (%)'))}%</span></div>
+                    <div style="margin-bottom:0.8rem;overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;">
+                        <div class="alab-detail-grid" style="display:grid;grid-template-columns:repeat(9, minmax(96px, 1fr));gap:0.45rem;min-width:930px;align-items:stretch;">
+                            {metricas_html}
+                        </div>
                     </div>
                     <div class="alab-player-panel-copy">{observaciones}</div>
                 </div>

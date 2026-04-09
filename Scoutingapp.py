@@ -7441,6 +7441,7 @@ if st.session_state["menu"] == "Lista corta":
     vista_lista_corta = st.session_state["lista_corta_subvista"]
 
     if vista_lista_corta == "Lista corta express":
+        st.session_state["lista_corta_subvista"] = "Lista corta express"
         df_players_express = df_players_all.copy()
         df_players_express["ID_Jugador"] = df_players_express["ID_Jugador"].astype(str)
 
@@ -7495,6 +7496,7 @@ if st.session_state["menu"] == "Lista corta":
                 key="lista_corta_express_agregar",
             ):
                 if jugador_express_id and jugador_express_id not in st.session_state["lista_corta_express_ids"]:
+                    st.session_state["lista_corta_subvista"] = "Lista corta express"
                     st.session_state["lista_corta_express_ids"].append(jugador_express_id)
                     st.rerun()
 
@@ -7502,6 +7504,7 @@ if st.session_state["menu"] == "Lista corta":
             acciones_express_col1, acciones_express_col2 = st.columns([1.3, 4.7])
             with acciones_express_col1:
                 if st.button("Limpiar selección", use_container_width=True, key="lista_corta_express_limpiar"):
+                    st.session_state["lista_corta_subvista"] = "Lista corta express"
                     st.session_state["lista_corta_express_ids"] = []
                     st.rerun()
             with acciones_express_col2:
@@ -7589,6 +7592,7 @@ if st.session_state["menu"] == "Lista corta":
                         key=f"lista_corta_express_quitar_{jugador['id']}",
                         use_container_width=True,
                     ):
+                        st.session_state["lista_corta_subvista"] = "Lista corta express"
                         st.session_state["lista_corta_express_ids"] = [
                             jugador_id for jugador_id in st.session_state["lista_corta_express_ids"] if str(jugador_id) != str(jugador["id"])
                         ]

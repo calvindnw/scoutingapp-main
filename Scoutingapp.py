@@ -7525,18 +7525,24 @@ if st.session_state["menu"] == "Lista corta":
                 render_html_block(
                     f"""
                     <div class="alab-player-panel alab-compare-card" style="margin-bottom:0.9rem;">
-                        <div class="alab-compare-name">{escape_html(jugador['nombre'])}</div>
-                        <div class="alab-compare-photo-wrap">{foto_html}</div>
-                        <div class="alab-detail-grid">
-                            <div class="alab-detail-item"><span class="alab-detail-label">Edad</span><span class="alab-detail-value">{escape_html(jugador['edad'])}</span></div>
-                            <div class="alab-detail-item"><span class="alab-detail-label">Posición</span><span class="alab-detail-value">{escape_html(jugador['posicion'])}</span></div>
-                            <div class="alab-detail-item"><span class="alab-detail-label">Equipo</span><span class="alab-detail-value">{escape_html(jugador['equipo'])}</span></div>
-                            <div class="alab-detail-item"><span class="alab-detail-label">Liga</span><span class="alab-detail-value">{escape_html(jugador['liga'])}</span></div>
-                            <div class="alab-detail-item"><span class="alab-detail-label">Pie</span><span class="alab-detail-value">{escape_html(jugador['pie'])}</span></div>
-                            <div class="alab-detail-item"><span class="alab-detail-label">Altura</span><span class="alab-detail-value">{escape_html(jugador['altura'])}</span></div>
+                        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+                            <div style="flex:0 0 116px;max-width:116px;">
+                                <div class="alab-compare-photo-wrap" style="margin:0;justify-content:flex-start;">{foto_html}</div>
+                            </div>
+                            <div style="flex:1 1 480px;min-width:280px;">
+                                <div class="alab-compare-name" style="margin-bottom:0.7rem;text-align:left;">{escape_html(jugador['nombre'])}</div>
+                                <div class="alab-detail-grid" style="margin-top:0;">
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Edad</span><span class="alab-detail-value">{escape_html(jugador['edad'])}</span></div>
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Posición</span><span class="alab-detail-value">{escape_html(jugador['posicion'])}</span></div>
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Equipo</span><span class="alab-detail-value">{escape_html(jugador['equipo'])}</span></div>
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Liga</span><span class="alab-detail-value">{escape_html(jugador['liga'])}</span></div>
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Pie</span><span class="alab-detail-value">{escape_html(jugador['pie'])}</span></div>
+                                    <div class="alab-detail-item"><span class="alab-detail-label">Altura</span><span class="alab-detail-value">{escape_html(jugador['altura'])}</span></div>
+                                </div>
+                                <div class="alab-compare-description" style="margin-top:0.6rem;text-align:left;">{perfil_html}</div>
+                                <div class="alab-detail-grid" style="margin-top:0.8rem;">{estadisticas_html}</div>
+                            </div>
                         </div>
-                        <div class="alab-compare-description" style="margin-top:0.6rem;">{perfil_html}</div>
-                        <div class="alab-detail-grid" style="margin-top:0.6rem;">{estadisticas_html}</div>
                     </div>
                     """
                 )

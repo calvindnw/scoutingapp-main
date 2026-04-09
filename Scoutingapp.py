@@ -3409,7 +3409,6 @@ def generar_pdf_tecnico(tecnico, periodos):
         grafico_balance = crear_balance_goles_dt_pdf(periodos, nombre)
         grafico_resultados = crear_porcentajes_resultado_dt_pdf(periodos, nombre)
         grafico_formaciones = crear_formaciones_dt_pdf(periodos, nombre)
-        grafico_formaciones = crear_formaciones_dt_pdf(periodos, nombre)
         club_actual = valor_campo_pdf(tecnico.get("Club_actual_DT"))
         liga_actual = valor_campo_pdf(tecnico.get("Liga_actual_DT"))
         nacionalidad = valor_campo_pdf(tecnico.get("Nacionalidad_DT"))
@@ -3472,6 +3471,63 @@ def generar_pdf_tecnico(tecnico, periodos):
             for columna, ancho in zip(columnas, anchos):
                 pdf.cell(ancho, 5.2, sanitizar_texto_pdf(columna), border=1, align="C", fill=True)
             pdf.ln()
+
+        def dibujar_tarjeta_grafico_pdf(titulo, buffer, ancho, alto_max=58):
+            if buffer is None:
+                return False
+            alto_real = min(obtener_alto_imagen_pdf(buffer, ancho - 6), alto_max)
+            alto_tarjeta = alto_real + 12
+            asegurar_espacio_pdf(pdf, alto_tarjeta + 2)
+            x = pdf.l_margin
+            y = pdf.get_y()
+            pdf.set_fill_color(*color_panel)
+            pdf.set_draw_color(*color_borde)
+            pdf.rect(x, y, ancho, alto_tarjeta, "DF")
+            pdf.set_xy(x + 3, y + 2.4)
+            pdf.set_font("Arial", "B", 9.5)
+            pdf.set_text_color(*color_texto)
+            pdf.cell(ancho - 6, 4, titulo, ln=True)
+            pdf.image(buffer, x=x + 3, y=y + 8.2, w=ancho - 6, h=alto_real)
+            pdf.set_y(y + alto_tarjeta + 2)
+            return True
+
+        def dibujar_grilla_graficos_pdf(graficos, titulo, subtitulo):
+            graficos_validos = [(etiqueta, buffer) for etiqueta, buffer in graficos if buffer is not None]
+            if not graficos_validos:
+                return
+
+            pdf.add_page()
+            dibujar_titulo_seccion_pdf(pdf, titulo, subtitulo, espacio_posterior_minimo=18)
+
+            gap = 4
+            ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
+            ancho_columna = (ancho_total - gap) / 2
+
+            for indice in range(0, len(graficos_validos), 2):
+                fila = graficos_validos[indice:indice + 2]
+                alturas = []
+                buffers_info = []
+                for _, buffer in fila:
+                    alto_real = min(obtener_alto_imagen_pdf(buffer, ancho_columna - 6), 58)
+                    alturas.append(alto_real + 12)
+                    buffers_info.append((buffer, alto_real))
+
+                alto_fila = max(alturas) if alturas else 0
+                asegurar_espacio_pdf(pdf, alto_fila + 3)
+                y_base = pdf.get_y()
+
+                for offset, ((etiqueta, buffer), (_, alto_real)) in enumerate(zip(fila, buffers_info)):
+                    x = pdf.l_margin + offset * (ancho_columna + gap)
+                    pdf.set_fill_color(*color_panel)
+                    pdf.set_draw_color(*color_borde)
+                    pdf.rect(x, y_base, ancho_columna, alto_fila, "DF")
+                    pdf.set_xy(x + 3, y_base + 2.4)
+                    pdf.set_font("Arial", "B", 9.2)
+                    pdf.set_text_color(*color_texto)
+                    pdf.multi_cell(ancho_columna - 6, 4, etiqueta)
+                    pdf.image(buffer, x=x + 3, y=y_base + 10.5, w=ancho_columna - 6, h=alto_real)
+
+                pdf.set_y(y_base + alto_fila + 3)
 
         hero_y = 14
         hero_h = 22
@@ -3634,71 +3690,18 @@ def generar_pdf_tecnico(tecnico, periodos):
 
         pdf.set_y(resumen_panel_y + resumen_panel_h + 4)
 
-        if grafico_linea is not None:
-            ancho_linea = total_w - 4
-            alto_linea = obtener_alto_imagen_pdf(grafico_linea, ancho_linea)
-            asegurar_espacio_pdf(pdf, alto_linea + 8)
-            pdf.set_font("Arial", "B", 10)
-            pdf.set_text_color(*color_texto)
-            pdf.cell(0, 5, "Evolucion del rendimiento", ln=True)
-            y_linea = pdf.get_y() + 1
-            pdf.image(grafico_linea, x=pdf.l_margin + 2, y=y_linea, w=ancho_linea)
-            pdf.set_y(y_linea + alto_linea + 2)
+        dibujar_grilla_graficos_pdf(
+            [
+                ("Evolucion del rendimiento", grafico_linea),
+                ("Puntos por periodo", grafico_barras),
+                ("Produccion de gol por periodo", grafico_balance),
+                ("Distribucion de resultados por periodo", grafico_resultados),
+                ("Formaciones utilizadas", grafico_formaciones),
+            ],
+            "Graficos competitivos",
+            "Lectura integral del rendimiento, la produccion ofensiva y las estructuras tacticas utilizadas por el entrenador.",
+        )
 
-        if grafico_barras is not None:
-            ancho_barras = total_w - 4
-            alto_barras = obtener_alto_imagen_pdf(grafico_barras, ancho_barras)
-            asegurar_espacio_pdf(pdf, alto_barras + 8)
-            pdf.set_font("Arial", "B", 10)
-            pdf.set_text_color(*color_texto)
-            pdf.cell(0, 5, "Puntos por periodo", ln=True)
-            y_barras = pdf.get_y() + 1
-            pdf.image(grafico_barras, x=pdf.l_margin + 2, y=y_barras, w=ancho_barras)
-            pdf.set_y(y_barras + alto_barras + 2)
-
-        if grafico_balance is not None or grafico_resultados is not None or grafico_formaciones is not None:
-            pdf.add_page()
-            dibujar_titulo_seccion_pdf(
-                pdf,
-                "Graficos competitivos",
-                "Lectura ofensiva, defensiva, resultados y formaciones mas utilizadas por cada etapa del entrenador.",
-                espacio_posterior_minimo=22,
-            )
-
-            if grafico_balance is not None:
-                ancho_balance = total_w - 4
-                alto_balance = obtener_alto_imagen_pdf(grafico_balance, ancho_balance)
-                asegurar_espacio_pdf(pdf, alto_balance + 8)
-                pdf.set_font("Arial", "B", 10)
-                pdf.set_text_color(*color_texto)
-                pdf.cell(0, 5, "Produccion de gol por periodo", ln=True)
-                y_balance = pdf.get_y() + 1
-                pdf.image(grafico_balance, x=pdf.l_margin + 2, y=y_balance, w=ancho_balance)
-                pdf.set_y(y_balance + alto_balance + 2)
-
-            if grafico_resultados is not None:
-                ancho_resultados = total_w - 4
-                alto_resultados = obtener_alto_imagen_pdf(grafico_resultados, ancho_resultados)
-                asegurar_espacio_pdf(pdf, alto_resultados + 8)
-                pdf.set_font("Arial", "B", 10)
-                pdf.set_text_color(*color_texto)
-                pdf.cell(0, 5, "Distribucion de resultados por periodo", ln=True)
-                y_resultados = pdf.get_y() + 1
-                pdf.image(grafico_resultados, x=pdf.l_margin + 2, y=y_resultados, w=ancho_resultados)
-                pdf.set_y(y_resultados + alto_resultados + 2)
-
-            if grafico_formaciones is not None:
-                ancho_formaciones = total_w - 4
-                alto_formaciones = obtener_alto_imagen_pdf(grafico_formaciones, ancho_formaciones)
-                asegurar_espacio_pdf(pdf, alto_formaciones + 8)
-                pdf.set_font("Arial", "B", 10)
-                pdf.set_text_color(*color_texto)
-                pdf.cell(0, 5, "Formaciones utilizadas", ln=True)
-                y_formaciones = pdf.get_y() + 1
-                pdf.image(grafico_formaciones, x=pdf.l_margin + 2, y=y_formaciones, w=ancho_formaciones)
-                pdf.set_y(y_formaciones + alto_formaciones + 2)
-
-        pdf.add_page()
         dibujar_titulo_seccion_pdf(
             pdf,
             "Historial de periodos",

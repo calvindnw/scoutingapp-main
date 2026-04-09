@@ -7412,12 +7412,33 @@ if st.session_state["menu"] == "Lista corta":
         """
     )
 
-    vista_lista_corta = st.radio(
-        "Modo de trabajo",
-        ["Lista corta táctica", "Lista corta express"],
-        horizontal=True,
-        key="lista_corta_subvista",
-    )
+    if "lista_corta_subvista" not in st.session_state:
+        st.session_state["lista_corta_subvista"] = "Lista corta táctica"
+
+    st.markdown("#### Modo de trabajo")
+    modo_col_1, modo_col_2, modo_col_3 = st.columns([1.35, 1.35, 4.3])
+    with modo_col_1:
+        if st.button(
+            "Lista corta táctica",
+            use_container_width=True,
+            type="primary" if st.session_state["lista_corta_subvista"] == "Lista corta táctica" else "secondary",
+            key="lista_corta_modo_tactica",
+        ) and st.session_state["lista_corta_subvista"] != "Lista corta táctica":
+            st.session_state["lista_corta_subvista"] = "Lista corta táctica"
+            st.rerun()
+    with modo_col_2:
+        if st.button(
+            "Lista corta express",
+            use_container_width=True,
+            type="primary" if st.session_state["lista_corta_subvista"] == "Lista corta express" else "secondary",
+            key="lista_corta_modo_express",
+        ) and st.session_state["lista_corta_subvista"] != "Lista corta express":
+            st.session_state["lista_corta_subvista"] = "Lista corta express"
+            st.rerun()
+    with modo_col_3:
+        section_note("Elegí entre la vista táctica tradicional o la generación express para armar informes rápidos en el momento.")
+
+    vista_lista_corta = st.session_state["lista_corta_subvista"]
 
     if vista_lista_corta == "Lista corta express":
         df_players_express = df_players_all.copy()
@@ -7505,8 +7526,16 @@ if st.session_state["menu"] == "Lista corta":
         for posicion, jugadores_posicion in grupos_express.items():
             st.markdown(f"### {posicion}")
             for jugador in jugadores_posicion:
+                nombre_jugador_express = escape_html(jugador["nombre"])
+                edad_jugador_express = escape_html(jugador["edad"])
+                posicion_jugador_express = escape_html(jugador["posicion"])
+                equipo_jugador_express = escape_html(jugador["equipo"])
+                liga_jugador_express = escape_html(jugador["liga"])
+                pie_jugador_express = escape_html(jugador["pie"])
+                altura_jugador_express = escape_html(jugador["altura"])
+
                 foto_html = (
-                    f"<img src='{jugador['foto']}' alt='Foto de {escape_html(jugador['nombre'])}' class='alab-player-photo alab-compare-photo' loading='lazy' referrerpolicy='no-referrer'/>"
+                    f"<img src='{jugador['foto']}' alt='Foto de {nombre_jugador_express}' class='alab-player-photo alab-compare-photo' loading='lazy' referrerpolicy='no-referrer'/>"
                     if jugador.get("foto")
                     else "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin foto</div>"
                 )
@@ -7522,35 +7551,41 @@ if st.session_state["menu"] == "Lista corta":
                 if not estadisticas_html:
                     estadisticas_html = "<div class='alab-detail-item'><span class='alab-detail-label'>Estadísticas clave</span><span class='alab-detail-value'>Sin datos disponibles</span></div>"
 
-                render_html_block(
-                    f"""
-                    <div class="alab-player-panel alab-compare-card" style="margin-bottom:0.9rem;">
-                        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
-                            <div style="flex:0 0 116px;max-width:116px;">
-                                <div class="alab-compare-photo-wrap" style="margin:0;justify-content:flex-start;">{foto_html}</div>
-                            </div>
-                            <div style="flex:1 1 480px;min-width:280px;">
-                                <div class="alab-compare-name" style="margin-bottom:0.7rem;text-align:left;">{escape_html(jugador['nombre'])}</div>
-                                <div class="alab-detail-grid" style="margin-top:0;">
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Edad</span><span class="alab-detail-value">{escape_html(jugador['edad'])}</span></div>
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Posición</span><span class="alab-detail-value">{escape_html(jugador['posicion'])}</span></div>
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Equipo</span><span class="alab-detail-value">{escape_html(jugador['equipo'])}</span></div>
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Liga</span><span class="alab-detail-value">{escape_html(jugador['liga'])}</span></div>
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Pie</span><span class="alab-detail-value">{escape_html(jugador['pie'])}</span></div>
-                                    <div class="alab-detail-item"><span class="alab-detail-label">Altura</span><span class="alab-detail-value">{escape_html(jugador['altura'])}</span></div>
+                tarjeta_col, accion_col = st.columns([8.8, 1.2])
+                with tarjeta_col:
+                    render_html_block(
+                        f"""
+                        <div class="alab-player-panel alab-compare-card" style="margin-bottom:0.9rem;width:100%;">
+                            <div style="display:flex;gap:1.1rem;align-items:flex-start;flex-wrap:nowrap;width:100%;">
+                                <div style="flex:0 0 122px;max-width:122px;">
+                                    <div class="alab-compare-photo-wrap" style="margin:0;justify-content:flex-start;">{foto_html}</div>
                                 </div>
-                                <div class="alab-compare-description" style="margin-top:0.6rem;text-align:left;">{perfil_html}</div>
-                                <div class="alab-detail-grid" style="margin-top:0.8rem;">{estadisticas_html}</div>
+                                <div style="flex:1 1 auto;min-width:0;width:100%;">
+                                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                                        <div class="alab-compare-name" style="margin-bottom:0.2rem;text-align:left;">{nombre_jugador_express}</div>
+                                        <div class="alab-compare-description" style="margin-top:0;text-align:left;white-space:nowrap;">{perfil_html}</div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:0.6rem;margin-top:0.6rem;">
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Edad</span><span class="alab-detail-value">{edad_jugador_express}</span></div>
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Posición</span><span class="alab-detail-value">{posicion_jugador_express}</span></div>
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Equipo</span><span class="alab-detail-value">{equipo_jugador_express}</span></div>
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Liga</span><span class="alab-detail-value">{liga_jugador_express}</span></div>
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Pie</span><span class="alab-detail-value">{pie_jugador_express}</span></div>
+                                        <div class="alab-detail-item"><span class="alab-detail-label">Altura</span><span class="alab-detail-value">{altura_jugador_express}</span></div>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:0.6rem;margin-top:0.8rem;">
+                                        {estadisticas_html}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    """
-                )
+                        """
+                    )
 
-                acciones_jugador_col1, acciones_jugador_col2 = st.columns([1.3, 4.7])
-                with acciones_jugador_col1:
+                with accion_col:
+                    st.write("")
                     if st.button(
-                        f"Quitar {jugador['nombre']}",
+                        "Quitar",
                         key=f"lista_corta_express_quitar_{jugador['id']}",
                         use_container_width=True,
                     ):
@@ -7558,8 +7593,6 @@ if st.session_state["menu"] == "Lista corta":
                             jugador_id for jugador_id in st.session_state["lista_corta_express_ids"] if str(jugador_id) != str(jugador["id"])
                         ]
                         st.rerun()
-                with acciones_jugador_col2:
-                    st.write("")
 
         pdf_express_buffer = generar_pdf_lista_corta_express(jugadores_express)
 

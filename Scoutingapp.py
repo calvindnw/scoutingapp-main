@@ -968,6 +968,22 @@ def construir_resumen_tecnico(periodos: pd.DataFrame) -> dict:
     }
 
 
+def construir_resumen_formaciones_dt(periodos: pd.DataFrame, limite=3) -> dict:
+    if periodos is None or periodos.empty or "Formación_DT" not in periodos.columns:
+        return {"cantidad": 0, "detalle": "Sin registros"}
+
+    serie = periodos["Formación_DT"].astype(str).str.strip()
+    serie = serie[~serie.isin(["", "nan", "None", "-"])]
+    if serie.empty:
+        return {"cantidad": 0, "detalle": "Sin registros"}
+
+    conteo = serie.value_counts()
+    return {
+        "cantidad": int(conteo.shape[0]),
+        "detalle": " · ".join(conteo.index.tolist()[:limite]),
+    }
+
+
 def construir_tabla_resumen_periodos_dt(periodos: pd.DataFrame) -> pd.DataFrame:
     if periodos is None or periodos.empty:
         return pd.DataFrame()
@@ -1042,8 +1058,9 @@ def crear_grafico_evolucion_tecnico(periodos: pd.DataFrame, nombre_tecnico: str)
     )
     fig.update_layout(xaxis_title="", yaxis_title="Rendimiento (%)", showlegend=False, height=410, margin=dict(l=20, r=20, t=56, b=78))
     fig.update_xaxes(tickangle=-24, automargin=True)
-    fig.update_yaxes(rangemode="tozero")
+    fig.update_yaxes(range=[0, 100], tickmode="array", tickvals=[0, 20, 40, 60, 80, 100])
     apply_glass_plotly(fig)
+    fig.update_yaxes(range=[0, 100], tickmode="array", tickvals=[0, 20, 40, 60, 80, 100])
     return fig
 
 
@@ -1119,23 +1136,22 @@ def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: 
         },
     )
     fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}<extra></extra>")
-    fig.update_layout(
-        xaxis_title="",
-        yaxis_title="Valor por partido",
-        height=430,
-        margin=dict(l=20, r=20, t=72, b=104),
-        legend=dict(
-            orientation="h",
-            yanchor="top",
-            y=-0.22,
-            xanchor="center",
-            x=0.5,
-            title_text="",
-        ),
-    )
+    fig.update_layout(xaxis_title="", yaxis_title="Valor por partido", height=430, margin=dict(l=20, r=20, t=72, b=118))
     fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(automargin=True)
     apply_glass_plotly(fig)
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.28,
+            xanchor="center",
+            x=0.5,
+            title_text="",
+            font=dict(size=10, color="rgba(226,236,231,0.86)"),
+        ),
+        margin=dict(l=20, r=20, t=56, b=126),
+    )
     return fig
 
 
@@ -1179,24 +1195,22 @@ def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_t
         },
     )
     fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}%<extra></extra>")
-    fig.update_layout(
-        xaxis_title="",
-        yaxis_title="Porcentaje",
-        height=430,
-        margin=dict(l=20, r=20, t=72, b=104),
-        bargap=0.28,
-        legend=dict(
-            orientation="h",
-            yanchor="top",
-            y=-0.22,
-            xanchor="center",
-            x=0.5,
-            title_text="",
-        ),
-    )
+    fig.update_layout(xaxis_title="", yaxis_title="Porcentaje", height=430, margin=dict(l=20, r=20, t=72, b=118), bargap=0.28)
     fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     apply_glass_plotly(fig)
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.28,
+            xanchor="center",
+            x=0.5,
+            title_text="",
+            font=dict(size=10, color="rgba(226,236,231,0.86)"),
+        ),
+        margin=dict(l=20, r=20, t=56, b=126),
+    )
     return fig
 
 
@@ -3257,6 +3271,8 @@ def crear_linea_rendimiento_dt_pdf(periodos, nombre_tecnico):
     ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.1, rotation=24)
     ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
     ax.set_ylabel("Rendimiento (%)", color="#d6e4dc", fontsize=8.2)
+    ax.set_ylim(0, 100)
+    ax.set_yticks([0, 20, 40, 60, 80, 100])
     ax.grid(axis="y", color="#254637", alpha=0.55)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -3310,8 +3326,8 @@ def crear_balance_goles_dt_pdf(periodos, nombre_tecnico):
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
-    ax.legend(frameon=False, fontsize=7, labelcolor="#d6e4dc", loc="upper right")
-    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
+    ax.legend(frameon=False, fontsize=6.7, labelcolor="#d6e4dc", loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=3)
+    plt.subplots_adjust(top=0.82, bottom=0.4, left=0.08, right=0.98)
     return crear_buffer_figura_pdf(fig)
 
 
@@ -3339,8 +3355,8 @@ def crear_porcentajes_resultado_dt_pdf(periodos, nombre_tecnico):
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
-    ax.legend(frameon=False, fontsize=7, labelcolor="#d6e4dc", loc="upper right")
-    plt.subplots_adjust(top=0.82, bottom=0.34, left=0.08, right=0.98)
+    ax.legend(frameon=False, fontsize=6.7, labelcolor="#d6e4dc", loc="upper center", bbox_to_anchor=(0.5, -0.18), ncol=3)
+    plt.subplots_adjust(top=0.82, bottom=0.4, left=0.08, right=0.98)
     return crear_buffer_figura_pdf(fig)
 
 
@@ -3384,6 +3400,7 @@ def generar_pdf_tecnico(tecnico, periodos):
 
     try:
         resumen = construir_resumen_tecnico(periodos)
+        resumen_formaciones = construir_resumen_formaciones_dt(periodos)
         nombre = valor_campo_pdf(tecnico.get("Nombre_DT"), "Tecnico")
         intro = valor_campo_pdf(tecnico.get("Introducción"), "Sin introduccion cargada.")
         foto_buffer = descargar_foto_para_pdf(tecnico.get("URL_Foto_DT", ""), max_size=(420, 420))
@@ -3391,6 +3408,7 @@ def generar_pdf_tecnico(tecnico, periodos):
         grafico_barras = crear_barras_resumen_dt_pdf(periodos)
         grafico_balance = crear_balance_goles_dt_pdf(periodos, nombre)
         grafico_resultados = crear_porcentajes_resultado_dt_pdf(periodos, nombre)
+        grafico_formaciones = crear_formaciones_dt_pdf(periodos, nombre)
         grafico_formaciones = crear_formaciones_dt_pdf(periodos, nombre)
         club_actual = valor_campo_pdf(tecnico.get("Club_actual_DT"))
         liga_actual = valor_campo_pdf(tecnico.get("Liga_actual_DT"))
@@ -3534,7 +3552,7 @@ def generar_pdf_tecnico(tecnico, periodos):
             ("Segunda nacionalidad", segunda_nacionalidad),
             ("Periodos", str(resumen["periodos"])),
             ("Clubes", str(resumen["clubes"])),
-            ("Puntos por partido", puntos_partido),
+            ("Formaciones", valor_campo_pdf(resumen_formaciones["detalle"], "Sin registros")),
             ("Rendimiento", rendimiento_texto),
         ]
         col_w = max((info_w - 14) / 2, 24)
@@ -3684,8 +3702,8 @@ def generar_pdf_tecnico(tecnico, periodos):
         dibujar_titulo_seccion_pdf(
             pdf,
             "Historial de periodos",
-            "Ordenado desde la etapa actual hacia atras, con resumen competitivo y observaciones de cada ciclo.",
-            espacio_posterior_minimo=26,
+            "Detalle cronologico de cada ciclo del entrenador, desde la actualidad hacia atras.",
+            espacio_posterior_minimo=24,
         )
 
         if periodos is None or periodos.empty:
@@ -3693,56 +3711,6 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.set_text_color(*color_texto_muted)
             pdf.multi_cell(0, 5.2, "No hay periodos cargados para este tecnico.")
         else:
-            tabla_periodos_pdf = construir_tabla_resumen_periodos_dt(periodos)
-            if not tabla_periodos_pdf.empty:
-                pdf.set_font("Arial", "B", 9.5)
-                pdf.set_text_color(*color_texto)
-                pdf.cell(0, 5, "Tabla cronologica", ln=True)
-                pdf.ln(0.6)
-
-                columnas_tabla = [
-                    "Estado", "Club", "Liga", "Formación", "Inicio", "Fin", "PJ", "PG", "PE", "PP", "PTC", "DFG", "Rendimiento",
-                ]
-                anchos_tabla = [11, 23, 21, 16, 13, 13, 7, 7, 7, 7, 9, 9, 16]
-                dibujar_header_tabla_periodos(columnas_tabla, anchos_tabla)
-
-                for _, fila_tabla in tabla_periodos_pdf.iterrows():
-                    if pdf.get_y() + 5.2 > pdf.h - pdf.b_margin - 8:
-                        pdf.add_page()
-                        dibujar_titulo_seccion_pdf(
-                            pdf,
-                            "Historial de periodos",
-                            "Continuacion de la tabla cronologica y detalle por etapas.",
-                            espacio_posterior_minimo=20,
-                        )
-                        dibujar_header_tabla_periodos(columnas_tabla, anchos_tabla)
-
-                    valores_fila = [
-                        truncar_texto_seguro(fila_tabla.get("Estado", "-"), 10),
-                        truncar_texto_seguro(fila_tabla.get("Club", "-"), 22),
-                        truncar_texto_seguro(fila_tabla.get("Liga", "-"), 20),
-                        truncar_texto_seguro(fila_tabla.get("Formación", "-"), 12),
-                        truncar_texto_seguro(fila_tabla.get("Inicio", "-"), 10),
-                        truncar_texto_seguro(fila_tabla.get("Fin", "-"), 10),
-                        str(fila_tabla.get("PJ", "-")),
-                        str(fila_tabla.get("PG", "-")),
-                        str(fila_tabla.get("PE", "-")),
-                        str(fila_tabla.get("PP", "-")),
-                        str(fila_tabla.get("PTC", "-")),
-                        str(fila_tabla.get("DFG", "-")),
-                        truncar_texto_seguro(fila_tabla.get("Rendimiento", "-"), 12),
-                    ]
-
-                    pdf.set_fill_color(*color_panel_alt)
-                    pdf.set_text_color(*color_texto_muted)
-                    pdf.set_draw_color(*color_borde)
-                    pdf.set_font("Arial", "", 5.4)
-                    for valor, ancho in zip(valores_fila, anchos_tabla):
-                        pdf.cell(ancho, 5.0, sanitizar_texto_pdf(valor), border=1, align="C", fill=True)
-                    pdf.ln()
-
-                pdf.ln(3)
-
             pdf.set_font("Arial", "B", 9.5)
             pdf.set_text_color(*color_texto)
             pdf.cell(0, 5, "Detalle por periodo", ln=True)
@@ -6140,6 +6108,7 @@ if st.session_state["menu"] == "Directores Técnicos":
         tecnico = obtener_tecnico_por_id(df_dt, id_dt)
         periodos_dt = obtener_periodos_dt_tecnico(df_dt_periods, id_dt)
         resumen_dt = construir_resumen_tecnico(periodos_dt)
+        resumen_formaciones_dt = construir_resumen_formaciones_dt(periodos_dt)
 
         section_header(f"Ficha de {tecnico['Nombre_DT']}")
         resumen_cols = st.columns(4)
@@ -6205,17 +6174,27 @@ if st.session_state["menu"] == "Directores Técnicos":
             )
 
         with bottom_left_dt:
+            metricas_ficha_rapida = [
+                ("Nacimiento", f"{escape_html(formatear_fecha_dt(tecnico.get('Fecha_Nac_DT')))} ({edad_dt} años)"),
+                ("Nacionalidad", escape_html(nacionalidad_dt_texto)),
+                ("Segunda nacionalidad", escape_html(segunda_nac_dt)),
+                ("Club actual", escape_html(tecnico.get('Club_actual_DT'), '-')),
+                ("Liga actual", escape_html(tecnico.get('Liga_actual_DT'), '-')),
+                ("Periodos cargados", resumen_dt["periodos"]),
+                ("Clubes dirigidos", resumen_dt["clubes"]),
+                ("Formaciones utilizadas", resumen_formaciones_dt["detalle"]),
+            ]
+            metricas_ficha_rapida_html = construir_metricas_dt_html(
+                metricas_ficha_rapida,
+                columnas=2,
+                minmax="minmax(0, 1fr)",
+                compacta=True,
+            )
             render_html_block(
                 f"""
                 <div class="alab-player-panel alab-player-panel-tall">
                     <div class="alab-player-panel-title">Ficha rápida</div>
-                    <div class="alab-detail-grid">
-                        <div class="alab-detail-item"><span class="alab-detail-label">Nacimiento</span><span class="alab-detail-value">{escape_html(formatear_fecha_dt(tecnico.get('Fecha_Nac_DT')))} ({edad_dt} años)</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Nacionalidad</span><span class="alab-detail-value">{escape_html(nacionalidad_dt_texto)}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Segunda nacionalidad</span><span class="alab-detail-value">{escape_html(segunda_nac_dt)}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Club actual</span><span class="alab-detail-value">{escape_html(tecnico.get('Club_actual_DT'), '-')}</span></div>
-                        <div class="alab-detail-item"><span class="alab-detail-label">Liga actual</span><span class="alab-detail-value">{escape_html(tecnico.get('Liga_actual_DT'), '-')}</span></div>
-                    </div>
+                    <div style="margin-top:0.45rem;">{metricas_ficha_rapida_html}</div>
                 </div>
                 """
             )
@@ -6247,6 +6226,7 @@ if st.session_state["menu"] == "Directores Técnicos":
             )
 
         if CURRENT_ROLE in ["admin", "scout"]:
+            st.markdown("<div style='height:0.65rem;'></div>", unsafe_allow_html=True)
             with st.expander("✏️ Editar información del técnico", expanded=False):
                 with st.form(f"editar_tecnico_form_{id_dt}"):
                     col1, col2 = st.columns(2)
@@ -6301,12 +6281,6 @@ if st.session_state["menu"] == "Directores Técnicos":
         if periodos_dt.empty:
             st.info("Todavia no hay periodos cargados para este tecnico.")
         else:
-            st.dataframe(
-                construir_tabla_resumen_periodos_dt(periodos_dt),
-                use_container_width=True,
-                hide_index=True,
-            )
-            st.markdown(" ")
             for indice_periodo, (_, periodo) in enumerate(periodos_dt.iterrows(), start=1):
                 render_tarjeta_periodo_dt(periodo, indice_periodo)
 

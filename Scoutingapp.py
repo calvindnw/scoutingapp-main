@@ -643,7 +643,7 @@ DT_COLUMNAS = [
 PERIODO_DT_COLUMNAS = [
     "ID_periodo_DT", "ID_DT", "Club_periodo", "URL_escudo", "Liga_periodo", "Pais",
     "inicio_periodo", "fin_periodo", "PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG",
-    "Observaciones_periodo",
+    "Observaciones_periodo", "Formación_DT",
 ]
 
 DT_COMPARISON_METRICS = {
@@ -698,6 +698,10 @@ CATALOGO_PAISES = [
     "Alemania", "Portugal", "Estados Unidos", "Canadá", "Bolivia",
     "Honduras", "Costa Rica", "El Salvador", "Panamá", "Cuba",
     "República Dominicana", "Guatemala", "Haití", "Jamaica", "Otro",
+]
+
+CATALOGO_FORMACIONES = [
+    "4-2-3-1", "4-1-4-1", "4-3-1-2", "4-1-3-2", "4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2",
 ]
 
 
@@ -979,7 +983,7 @@ def construir_tabla_resumen_periodos_dt(periodos: pd.DataFrame) -> pd.DataFrame:
     tabla["Rendimiento"] = tabla["Rendimiento (%)"].apply(lambda valor: f"{formatear_valor_estadistica(valor)}%")
 
     columnas = [
-        "Estado", "Club_periodo", "Liga_periodo", "Pais", "Inicio", "Fin",
+        "Estado", "Club_periodo", "Liga_periodo", "Pais", "Formación_DT", "Inicio", "Fin",
         "PJ", "PG", "PE", "PP", "GF", "GC", "PTC", "DFG", "Puntos/partido", "Rendimiento",
     ]
     tabla = tabla[columnas].rename(
@@ -987,6 +991,7 @@ def construir_tabla_resumen_periodos_dt(periodos: pd.DataFrame) -> pd.DataFrame:
             "Club_periodo": "Club",
             "Liga_periodo": "Liga",
             "Pais": "Pais",
+            "Formación_DT": "Formación",
         }
     )
     return tabla.reset_index(drop=True)
@@ -1093,21 +1098,41 @@ def crear_grafico_balance_goles_tecnico(periodos: pd.DataFrame, nombre_tecnico: 
     if df_long.empty:
         return None
 
+    mapa_metricas = {
+        "Goles por partido": "GF / partido",
+        "Goles recibidos por partido": "GC / partido",
+        "Diferencia por partido": "Dif. / partido",
+    }
+    df_long["Metrica_corta"] = df_long["Metrica"].map(mapa_metricas).fillna(df_long["Metrica"])
+
     fig = px.line(
         df_long,
         x="Etiqueta_grafico",
         y="Valor",
-        color="Metrica",
+        color="Metrica_corta",
         markers=True,
         title=f"Produccion de gol por periodo - {nombre_tecnico}",
         color_discrete_map={
-            "Goles por partido": "#19e28f",
-            "Goles recibidos por partido": "#ff7f50",
-            "Diferencia por partido": "#2ec4ff",
+            "GF / partido": "#19e28f",
+            "GC / partido": "#ff7f50",
+            "Dif. / partido": "#2ec4ff",
         },
     )
     fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}<extra></extra>")
-    fig.update_layout(xaxis_title="", yaxis_title="Valor por partido", height=410, margin=dict(l=20, r=20, t=56, b=82))
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Valor por partido",
+        height=430,
+        margin=dict(l=20, r=20, t=72, b=104),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.22,
+            xanchor="center",
+            x=0.5,
+            title_text="",
+        ),
+    )
     fig.update_xaxes(tickangle=-24, automargin=True)
     fig.update_yaxes(automargin=True)
     apply_glass_plotly(fig)
@@ -1133,22 +1158,85 @@ def crear_grafico_porcentajes_resultado_tecnico(periodos: pd.DataFrame, nombre_t
     if df_long.empty:
         return None
 
+    mapa_metricas = {
+        "% de victorias": "% victorias",
+        "% de empates": "% empates",
+        "% de derrotas": "% derrotas",
+    }
+    df_long["Metrica_corta"] = df_long["Metrica"].map(mapa_metricas).fillna(df_long["Metrica"])
+
     fig = px.bar(
         df_long,
         x="Etiqueta_grafico",
         y="Valor",
-        color="Metrica",
+        color="Metrica_corta",
         barmode="group",
         title=f"Distribucion de resultados por periodo - {nombre_tecnico}",
         color_discrete_map={
-            "% de victorias": "#19e28f",
-            "% de empates": "#f3bf4c",
-            "% de derrotas": "#ff6b6b",
+            "% victorias": "#19e28f",
+            "% empates": "#f3bf4c",
+            "% derrotas": "#ff6b6b",
         },
     )
     fig.update_traces(hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.2f}%<extra></extra>")
-    fig.update_layout(xaxis_title="", yaxis_title="Porcentaje", height=410, margin=dict(l=20, r=20, t=56, b=82), bargap=0.28)
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Porcentaje",
+        height=430,
+        margin=dict(l=20, r=20, t=72, b=104),
+        bargap=0.28,
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.22,
+            xanchor="center",
+            x=0.5,
+            title_text="",
+        ),
+    )
     fig.update_xaxes(tickangle=-24, automargin=True)
+    fig.update_yaxes(rangemode="tozero")
+    apply_glass_plotly(fig)
+    return fig
+
+
+def crear_grafico_formaciones_tecnico(periodos: pd.DataFrame, nombre_tecnico: str):
+    if periodos is None or periodos.empty or "Formación_DT" not in periodos.columns:
+        return None
+
+    df_chart = periodos.copy()
+    df_chart["Formación_DT"] = df_chart["Formación_DT"].astype(str).str.strip()
+    df_chart = df_chart[~df_chart["Formación_DT"].isin(["", "nan", "None", "-"])].copy()
+    if df_chart.empty:
+        return None
+
+    df_chart = (
+        df_chart.groupby("Formación_DT", dropna=False)
+        .agg(Periodos=("ID_periodo_DT", "count"), PTC=("PTC", "sum"), PJ=("PJ", "sum"))
+        .reset_index()
+        .sort_values(["Periodos", "PTC"], ascending=[False, False])
+    )
+    df_chart["Puntos por partido"] = df_chart.apply(
+        lambda fila: round(float(fila["PTC"]) / float(fila["PJ"]), 2) if float(fila["PJ"]) > 0 else np.nan,
+        axis=1,
+    )
+
+    fig = px.bar(
+        df_chart,
+        x="Formación_DT",
+        y="Periodos",
+        color="Puntos por partido",
+        text="Periodos",
+        title=f"Formaciones utilizadas - {nombre_tecnico}",
+        color_continuous_scale=["#2ec4ff", "#19e28f"],
+        custom_data=["Puntos por partido", "PTC"],
+    )
+    fig.update_traces(
+        textposition="outside",
+        hovertemplate="<b>%{x}</b><br>Periodos: %{y}<br>Puntos por partido: %{customdata[0]:.2f}<br>Puntos: %{customdata[1]}<extra></extra>",
+    )
+    fig.update_layout(xaxis_title="", yaxis_title="Cantidad de periodos", height=410, margin=dict(l=20, r=20, t=56, b=70), coloraxis_showscale=False)
+    fig.update_xaxes(tickangle=0, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     apply_glass_plotly(fig)
     return fig
@@ -1844,6 +1932,7 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
         else "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin escudo</div>"
     )
     fin_periodo = "Actualidad" if bool(periodo.get("periodo_actual", False)) else formatear_fecha_dt(periodo.get("fin_periodo"))
+    formacion = formatear_formacion_pdf(periodo.get("Formación_DT"))
     metricas_periodo = [
         ("Partidos jugados", normalizar_entero_dt(periodo.get("PJ"))),
         ("Partidos ganados", normalizar_entero_dt(periodo.get("PG"))),
@@ -1880,7 +1969,8 @@ def render_tarjeta_periodo_dt(periodo, indice=None):
                     <div style="display:flex;flex-direction:column;gap:0.85rem;">
                         <div>
                             <div class="alab-player-panel-title" style="margin-bottom:0.35rem;text-align:left;">{club}</div>
-                            <div class="alab-player-panel-copy" style="margin-bottom:0;text-align:left;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
+                            <div class="alab-player-panel-copy" style="margin-bottom:0.18rem;text-align:left;">{liga} · {pais} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {escape_html(fin_periodo)}</div>
+                            <div class="alab-player-panel-copy" style="margin-bottom:0;text-align:left;"><strong>Formación:</strong> {escape_html(formacion)}</div>
                         </div>
                         <div style="overflow-x:auto;overflow-y:hidden;padding-bottom:0.2rem;display:flex;justify-content:center;">
                             <div style="min-width:828px;width:100%;display:flex;justify-content:center;">
@@ -3254,6 +3344,40 @@ def crear_porcentajes_resultado_dt_pdf(periodos, nombre_tecnico):
     return crear_buffer_figura_pdf(fig)
 
 
+def crear_formaciones_dt_pdf(periodos, nombre_tecnico):
+    if periodos is None or periodos.empty or "Formación_DT" not in periodos.columns:
+        return None
+
+    df_chart = periodos.copy()
+    df_chart["Formación_DT"] = df_chart["Formación_DT"].astype(str).str.strip()
+    df_chart = df_chart[~df_chart["Formación_DT"].isin(["", "nan", "None", "-"])].copy()
+    if df_chart.empty:
+        return None
+
+    df_chart = (
+        df_chart.groupby("Formación_DT", dropna=False)
+        .agg(Periodos=("ID_periodo_DT", "count"), PTC=("PTC", "sum"), PJ=("PJ", "sum"))
+        .reset_index()
+        .sort_values(["Periodos", "PTC"], ascending=[False, False])
+    )
+    etiquetas = [abreviar_leyenda_grafico_pdf(valor, limite=12) for valor in df_chart["Formación_DT"].tolist()]
+    fig, ax = plt.subplots(figsize=(7.2, 3.05))
+    fig.patch.set_facecolor("#081510")
+    ax.set_facecolor("#0d2019")
+    ax.bar(etiquetas, df_chart["Periodos"], color="#19e28f")
+    ax.set_title(f"Formaciones utilizadas - {nombre_tecnico}", color="#edf5f0", fontsize=11)
+    ax.tick_params(axis="x", colors="#b7cec2", labelsize=7.1, rotation=18)
+    ax.tick_params(axis="y", colors="#b7cec2", labelsize=7.4)
+    ax.set_ylabel("Cantidad de periodos", color="#d6e4dc", fontsize=8.2)
+    ax.grid(axis="y", color="#254637", alpha=0.55)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#335e4c")
+    ax.spines["bottom"].set_color("#335e4c")
+    plt.subplots_adjust(top=0.82, bottom=0.3, left=0.08, right=0.98)
+    return crear_buffer_figura_pdf(fig)
+
+
 def generar_pdf_tecnico(tecnico, periodos):
     if tecnico is None:
         return None
@@ -3267,6 +3391,7 @@ def generar_pdf_tecnico(tecnico, periodos):
         grafico_barras = crear_barras_resumen_dt_pdf(periodos)
         grafico_balance = crear_balance_goles_dt_pdf(periodos, nombre)
         grafico_resultados = crear_porcentajes_resultado_dt_pdf(periodos, nombre)
+        grafico_formaciones = crear_formaciones_dt_pdf(periodos, nombre)
         club_actual = valor_campo_pdf(tecnico.get("Club_actual_DT"))
         liga_actual = valor_campo_pdf(tecnico.get("Liga_actual_DT"))
         nacionalidad = valor_campo_pdf(tecnico.get("Nacionalidad_DT"))
@@ -3513,12 +3638,12 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.image(grafico_barras, x=pdf.l_margin + 2, y=y_barras, w=ancho_barras)
             pdf.set_y(y_barras + alto_barras + 2)
 
-        if grafico_balance is not None or grafico_resultados is not None:
+        if grafico_balance is not None or grafico_resultados is not None or grafico_formaciones is not None:
             pdf.add_page()
             dibujar_titulo_seccion_pdf(
                 pdf,
                 "Graficos competitivos",
-                "Lectura ofensiva, defensiva y distribucion de resultados por cada etapa del entrenador.",
+                "Lectura ofensiva, defensiva, resultados y formaciones mas utilizadas por cada etapa del entrenador.",
                 espacio_posterior_minimo=22,
             )
 
@@ -3544,6 +3669,17 @@ def generar_pdf_tecnico(tecnico, periodos):
                 pdf.image(grafico_resultados, x=pdf.l_margin + 2, y=y_resultados, w=ancho_resultados)
                 pdf.set_y(y_resultados + alto_resultados + 2)
 
+            if grafico_formaciones is not None:
+                ancho_formaciones = total_w - 4
+                alto_formaciones = obtener_alto_imagen_pdf(grafico_formaciones, ancho_formaciones)
+                asegurar_espacio_pdf(pdf, alto_formaciones + 8)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(*color_texto)
+                pdf.cell(0, 5, "Formaciones utilizadas", ln=True)
+                y_formaciones = pdf.get_y() + 1
+                pdf.image(grafico_formaciones, x=pdf.l_margin + 2, y=y_formaciones, w=ancho_formaciones)
+                pdf.set_y(y_formaciones + alto_formaciones + 2)
+
         pdf.add_page()
         dibujar_titulo_seccion_pdf(
             pdf,
@@ -3565,9 +3701,9 @@ def generar_pdf_tecnico(tecnico, periodos):
                 pdf.ln(0.6)
 
                 columnas_tabla = [
-                    "Estado", "Club", "Liga", "Inicio", "Fin", "PJ", "PG", "PE", "PP", "PTC", "DFG", "Rendimiento",
+                    "Estado", "Club", "Liga", "Formación", "Inicio", "Fin", "PJ", "PG", "PE", "PP", "PTC", "DFG", "Rendimiento",
                 ]
-                anchos_tabla = [13, 27, 24, 15, 15, 8, 8, 8, 8, 10, 10, 18]
+                anchos_tabla = [11, 23, 21, 16, 13, 13, 7, 7, 7, 7, 9, 9, 16]
                 dibujar_header_tabla_periodos(columnas_tabla, anchos_tabla)
 
                 for _, fila_tabla in tabla_periodos_pdf.iterrows():
@@ -3585,6 +3721,7 @@ def generar_pdf_tecnico(tecnico, periodos):
                         truncar_texto_seguro(fila_tabla.get("Estado", "-"), 10),
                         truncar_texto_seguro(fila_tabla.get("Club", "-"), 22),
                         truncar_texto_seguro(fila_tabla.get("Liga", "-"), 20),
+                        truncar_texto_seguro(fila_tabla.get("Formación", "-"), 12),
                         truncar_texto_seguro(fila_tabla.get("Inicio", "-"), 10),
                         truncar_texto_seguro(fila_tabla.get("Fin", "-"), 10),
                         str(fila_tabla.get("PJ", "-")),
@@ -3612,11 +3749,11 @@ def generar_pdf_tecnico(tecnico, periodos):
             pdf.ln(0.8)
 
             for _, periodo in periodos.iterrows():
-                asegurar_espacio_pdf(pdf, 31)
+                asegurar_espacio_pdf(pdf, 35)
                 x = pdf.l_margin
                 y = pdf.get_y()
                 w = pdf.w - pdf.l_margin - pdf.r_margin
-                h = 27
+                h = 31
                 pdf.set_fill_color(*color_panel)
                 pdf.set_draw_color(*color_borde)
                 pdf.rect(x, y, w, h, "DF")
@@ -3631,6 +3768,8 @@ def generar_pdf_tecnico(tecnico, periodos):
                 pdf.set_font("Arial", "", 8.2)
                 pdf.set_text_color(*color_texto_muted)
                 pdf.cell(0, 4, f"{valor_campo_pdf(periodo.get('Liga_periodo'))} · {valor_campo_pdf(periodo.get('Pais'))} · {formatear_fecha_dt(periodo.get('inicio_periodo'))} - {fin_periodo}", ln=True)
+                pdf.set_x(x + 5)
+                pdf.cell(0, 4, f"Formacion: {formatear_formacion_pdf(periodo.get('Formación_DT'))}", ln=True)
                 pdf.set_x(x + 5)
                 pdf.cell(
                     0,
@@ -5382,7 +5521,7 @@ if st.session_state["menu"] == "Jugadores":
                 equipos_resultados = st.text_input("Equipos y resultado")
                 formacion = st.selectbox(
                     "Formación",
-                    ["4-2-3-1","4-1-4-1", "4-3-1-2", "4-1-3-2", "4-4-2", "4-3-3", "3-5-2", "3-4-3", "5-3-2"]
+                    CATALOGO_FORMACIONES
                 )
 
                 observaciones = st.text_area("Observaciones generales", height=100)
@@ -6187,6 +6326,7 @@ if st.session_state["menu"] == "Directores Técnicos":
                         url_escudo = st.text_input("Url escudo club")
                         liga_periodo = st.selectbox("Liga", opciones_ligas_dt, index=0, key=f"liga_add_{id_dt}")
                         pais_periodo = st.selectbox("Pais", opciones_paises_dt, index=0, key=f"pais_add_{id_dt}")
+                        formacion_dt = st.selectbox("Formación", CATALOGO_FORMACIONES, index=0, key=f"formacion_add_{id_dt}")
                         inicio_periodo_dt = st.date_input("Inicio", value=date.today(), format="DD/MM/YYYY", key=f"inicio_add_{id_dt}")
                         periodo_actual_dt = st.checkbox("Se encuentra actualmente en este equipo", value=False, key=f"actual_add_{id_dt}")
                         fin_periodo_dt = st.date_input("Fin", value=date.today(), format="DD/MM/YYYY", disabled=periodo_actual_dt, key=f"fin_add_{id_dt}")
@@ -6227,6 +6367,7 @@ if st.session_state["menu"] == "Directores Técnicos":
                                 ptc_calculado,
                                 dfg_calculado,
                                 observaciones_periodo,
+                                formacion_dt,
                             ]
                             agregar_fila("Periodo DT", fila_periodo)
                             st.session_state["toast_guardado_periodo_dt"] = True
@@ -6275,6 +6416,12 @@ if st.session_state["menu"] == "Directores Técnicos":
                                     opciones_paises_dt,
                                     index=opciones_paises_dt.index(periodo_edicion.get("Pais")) if periodo_edicion.get("Pais") in opciones_paises_dt else 0,
                                     key=f"pais_edit_{id_periodo_edicion}",
+                                )
+                                formacion_dt = st.selectbox(
+                                    "Formación",
+                                    CATALOGO_FORMACIONES,
+                                    index=CATALOGO_FORMACIONES.index(periodo_edicion.get("Formación_DT")) if periodo_edicion.get("Formación_DT") in CATALOGO_FORMACIONES else 0,
+                                    key=f"formacion_edit_{id_periodo_edicion}",
                                 )
                                 inicio_periodo_dt = st.date_input("Inicio", value=inicio_edicion.to_pydatetime(), format="DD/MM/YYYY", key=f"inicio_edit_{id_periodo_edicion}")
                                 periodo_actual_dt = st.checkbox(
@@ -6331,6 +6478,7 @@ if st.session_state["menu"] == "Directores Técnicos":
                                         ptc_calculado,
                                         dfg_calculado,
                                         observaciones_periodo,
+                                        formacion_dt,
                                     ]
                                     if actualizar_fila_en_hoja("Periodo DT", "ID_periodo_DT", id_periodo_edicion, fila_periodo, PERIODO_DT_COLUMNAS):
                                         st.session_state["toast_guardado_periodo_dt"] = True
@@ -6367,6 +6515,12 @@ if st.session_state["menu"] == "Directores Técnicos":
                 st.plotly_chart(fig_porcentajes_dt, use_container_width=True)
             else:
                 st.info("No hay datos suficientes para graficar la distribucion de resultados por periodo.")
+
+        fig_formaciones_dt = crear_grafico_formaciones_tecnico(periodos_dt, tecnico.get("Nombre_DT", "Tecnico"))
+        if fig_formaciones_dt is not None:
+            st.plotly_chart(fig_formaciones_dt, use_container_width=True)
+        else:
+            st.info("No hay formaciones cargadas todavia para visualizar la evolucion tactica del entrenador.")
 
         st.markdown("---")
         if st.button("📝 Generar informe DT", key=f"generar_pdf_dt_{id_dt}"):

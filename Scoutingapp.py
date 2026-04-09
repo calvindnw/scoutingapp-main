@@ -1364,6 +1364,20 @@ POSICION_ESTADISTICAS_CLAVE = {
     ],
 }
 
+ORDEN_POSICIONES_LISTA_EXPRESS = [
+    "Arquero",
+    "Defensor central izquierdo",
+    "Defensor central derecho",
+    "Lateral izquierdo",
+    "Lateral derecho",
+    "Mediocampista defensivo",
+    "Mediocampista mixto",
+    "Mediocampista ofensivo",
+    "Extremo izquierdo",
+    "Extremo derecho",
+    "Delantero",
+]
+
 
 def normalizar_clave_estadistica(valor):
     if valor is None or pd.isna(valor):
@@ -1622,6 +1636,237 @@ def preparar_datos_graficos_estadisticas(tabla_estadisticas: pd.DataFrame):
         fila_referencia = filas_liga.sort_values("_anio", ascending=False).iloc[0]
 
     return df_long, fila_referencia, referencia_jugador
+
+
+def construir_opciones_lista_express(df_players, ids_excluidos=None, current_id=""):
+    ids_excluidos = {str(valor) for valor in (ids_excluidos or set()) if str(valor).strip()}
+    df_base = df_players.copy()
+    df_base["ID_Jugador"] = df_base["ID_Jugador"].astype(str)
+
+    if ids_excluidos:
+        df_base = df_base[~df_base["ID_Jugador"].isin(ids_excluidos)]
+
+    if current_id:
+        fila_actual = df_players[df_players["ID_Jugador"].astype(str) == str(current_id)]
+        if not fila_actual.empty:
+            df_base = pd.concat([df_base, fila_actual], ignore_index=True)
+
+    if df_base.empty:
+        return [""], {}
+
+    df_base = df_base.drop_duplicates(subset=["ID_Jugador"]).copy()
+    df_base["_label_express"] = df_base.apply(
+        lambda fila: f"{fila.get('Nombre', 'Sin nombre')} - {fila.get('Club', 'Sin club')} - {fila.get('Posición', 'Sin posición')}",
+        axis=1,
+    )
+    df_base = df_base.sort_values("_label_express")
+
+    etiquetas = dict(zip(df_base["ID_Jugador"], df_base["_label_express"]))
+    opciones = [""] + df_base["ID_Jugador"].tolist()
+    return opciones, etiquetas
+
+
+def obtener_estadisticas_clave_jugador_express(jugador, df_data_jugadores):
+    posicion = str(jugador.get("Posición", "") or "").strip()
+    metricas = POSICION_ESTADISTICAS_CLAVE.get(posicion, [])
+    if not metricas:
+        return []
+
+    fila_jugador = obtener_fila_estadisticas_jugador(
+        df_data_jugadores,
+        jugador.get("nombre_wyscout", ""),
+    )
+    if fila_jugador is None:
+        return []
+
+    estadisticas = []
+    for etiqueta, aliases in metricas:
+        columna = obtener_columna_por_aliases(df_data_jugadores, aliases)
+        valor = fila_jugador.get(columna) if columna else None
+        valor_formateado = formatear_valor_estadistica(valor)
+        if valor_formateado != "-":
+            estadisticas.append((etiqueta, valor_formateado))
+    return estadisticas
+
+
+def construir_ficha_jugador_express(jugador, df_data_jugadores):
+    edad = calcular_edad(jugador.get("Fecha_Nac"))
+    edad_texto = f"{edad} años" if str(edad) != "?" else "-"
+    altura = valor_campo_pdf(jugador.get("Altura"))
+    if altura != "-":
+        altura = f"{altura} cm"
+
+    return {
+        "id": str(jugador.get("ID_Jugador", "") or "").strip(),
+        "nombre": str(jugador.get("Nombre", "Jugador") or "Jugador").strip(),
+        "edad": edad_texto,
+        "posicion": str(jugador.get("Posición", "-") or "-").strip() or "-",
+        "equipo": str(jugador.get("Club", "-") or "-").strip() or "-",
+        "liga": str(jugador.get("Liga", "-") or "-").strip() or "-",
+        "pie": str(jugador.get("Pie_Hábil", "-") or "-").strip() or "-",
+        "altura": altura,
+        "foto": normalizar_url_foto(jugador.get("URL_Foto", "")),
+        "perfil": str(jugador.get("URL_Perfil", "") or "").strip(),
+        "estadisticas": obtener_estadisticas_clave_jugador_express(jugador, df_data_jugadores),
+    }
+
+
+def agrupar_jugadores_lista_express(jugadores_express):
+    grupos = {}
+    for jugador in jugadores_express:
+        posicion = str(jugador.get("posicion", "Sin posición") or "Sin posición").strip() or "Sin posición"
+        grupos.setdefault(posicion, []).append(jugador)
+
+    orden_posiciones = {
+        normalizar_clave_estadistica(posicion): indice
+        for indice, posicion in enumerate(ORDEN_POSICIONES_LISTA_EXPRESS)
+    }
+
+    aliases_posiciones = {
+        "defensa_central_izquierdo": orden_posiciones.get("defensor_central_izquierdo", 999),
+        "defensa_central_derecho": orden_posiciones.get("defensor_central_derecho", 999),
+    }
+
+    def clave_orden(item):
+        posicion = str(item[0] or "").strip()
+        posicion_normalizada = normalizar_clave_estadistica(posicion)
+        indice = orden_posiciones.get(
+            posicion_normalizada,
+            aliases_posiciones.get(posicion_normalizada, 999),
+        )
+        return (indice, posicion)
+
+    return dict(sorted(grupos.items(), key=clave_orden))
+
+
+def generar_pdf_lista_corta_express(jugadores_express):
+    if not jugadores_express:
+        return None
+
+    try:
+        pdf = FPDF_SEGURO("P", "mm", "A4")
+        pdf.set_margins(left=10, top=12, right=10)
+        pdf.set_auto_page_break(auto=True, margin=12)
+        pdf.alias_nb_pages()
+        pdf.add_page()
+
+        color_panel = (11, 18, 24)
+        color_panel_alt = (17, 25, 31)
+        color_acento = (102, 140, 128)
+        color_texto = (246, 247, 248)
+        color_texto_muted = (213, 219, 221)
+        color_borde = (118, 138, 132)
+
+        hero_y = 14
+        hero_h = 22
+        hero_w = pdf.w - pdf.l_margin - pdf.r_margin
+        pdf.set_fill_color(*color_panel)
+        pdf.set_draw_color(*color_borde)
+        pdf.rect(pdf.l_margin, hero_y, hero_w, hero_h, "DF")
+        pdf.set_fill_color(*color_acento)
+        pdf.rect(pdf.l_margin, hero_y, 3.2, hero_h, "F")
+        pdf.set_xy(pdf.l_margin + 5, hero_y + 3)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(*color_acento)
+        pdf.cell(0, 4, "SCOUTING DOSSIER", ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "B", 17)
+        pdf.set_text_color(*color_texto)
+        pdf.cell(0, 6, "Lista corta express", ln=True)
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", "", 8.8)
+        pdf.set_text_color(*color_texto_muted)
+        pdf.cell(
+            0,
+            4.5,
+            f"Fecha: {datetime.today().strftime('%d/%m/%Y')} · Jugadores: {len(jugadores_express)} · Formato: resumen rápido por posición",
+            ln=True,
+        )
+
+        pdf.set_y(hero_y + hero_h + 6)
+        grupos = agrupar_jugadores_lista_express(jugadores_express)
+
+        for posicion, jugadores_posicion in grupos.items():
+            dibujar_titulo_seccion_pdf(
+                pdf,
+                sanitizar_texto_pdf(posicion),
+                f"{len(jugadores_posicion)} jugador(es) seleccionado(s)",
+                espacio_posterior_minimo=18,
+            )
+
+            for jugador in jugadores_posicion:
+                foto_buffer = descargar_foto_para_pdf(jugador.get("foto", ""), max_size=(280, 280)) if jugador.get("foto") else None
+                cantidad_stats = max(1, len(jugador.get("estadisticas", [])))
+                alto_stats = max(12, cantidad_stats * 4.6)
+                card_h = max(34, alto_stats + 16)
+                asegurar_espacio_pdf(pdf, card_h + 4)
+
+                x = pdf.l_margin
+                y = pdf.get_y()
+                w = pdf.w - pdf.l_margin - pdf.r_margin
+                foto_w = 26
+                gap = 4
+                info_x = x + foto_w + gap
+                info_w = w - foto_w - gap - 4
+
+                pdf.set_fill_color(*color_panel_alt)
+                pdf.set_draw_color(*color_borde)
+                pdf.rect(x, y, w, card_h, "DF")
+                pdf.set_fill_color(*color_acento)
+                pdf.rect(x, y, 2.6, card_h, "F")
+
+                if foto_buffer is not None:
+                    pdf.image(foto_buffer, x=x + 4, y=y + 4, w=foto_w - 4, h=foto_w - 4)
+                else:
+                    pdf.set_fill_color(25, 37, 33)
+                    pdf.rect(x + 4, y + 4, foto_w - 4, foto_w - 4, "F")
+                    pdf.set_xy(x + 4, y + 11)
+                    pdf.set_font("Arial", "B", 6)
+                    pdf.set_text_color(*color_texto_muted)
+                    pdf.cell(foto_w - 4, 4, "Sin foto", align="C")
+
+                pdf.set_xy(info_x, y + 4)
+                pdf.set_font("Arial", "B", 11)
+                pdf.set_text_color(*color_texto)
+                pdf.cell(info_w, 5, sanitizar_texto_pdf(jugador.get("nombre", "Jugador")), ln=True)
+
+                meta = [
+                    f"Edad: {jugador.get('edad', '-')}",
+                    f"Equipo: {jugador.get('equipo', '-')}",
+                    f"Liga: {jugador.get('liga', '-')}",
+                    f"Pie: {jugador.get('pie', '-')}",
+                    f"Altura: {jugador.get('altura', '-')}",
+                ]
+                pdf.set_x(info_x)
+                pdf.set_font("Arial", "", 7.8)
+                pdf.set_text_color(*color_texto_muted)
+                pdf.multi_cell(info_w, 4, " | ".join(meta))
+
+                pdf.set_x(info_x)
+                pdf.set_font("Arial", "B", 7.2)
+                pdf.set_text_color(*color_acento)
+                pdf.cell(info_w, 4, "ESTADISTICAS CLAVE", ln=True)
+                pdf.set_x(info_x)
+                pdf.set_font("Arial", "", 7.6)
+                pdf.set_text_color(*color_texto)
+
+                estadisticas = jugador.get("estadisticas", [])
+                if estadisticas:
+                    for etiqueta, valor in estadisticas:
+                        pdf.set_x(info_x)
+                        pdf.multi_cell(info_w, 4.1, f"- {sanitizar_texto_pdf(etiqueta)}: {sanitizar_texto_pdf(valor)}")
+                else:
+                    pdf.multi_cell(info_w, 4.1, "- Sin estadísticas específicas disponibles para este jugador.")
+
+                pdf.set_y(y + card_h + 4)
+
+        buffer = BytesIO()
+        pdf.output(buffer)
+        buffer.seek(0)
+        return buffer
+    except Exception as e:
+        st.error(f"⚠️ Error al generar PDF express: {e}")
+        return None
 
 
 ANALYST_SCORE_METRICS = [
@@ -7136,10 +7381,6 @@ if st.session_state["menu"] == "Lista corta":
     df_short = df_short_user.copy()          # decisiones (todas; privacidad luego)
     df_players = df_players_all.copy()       # base completa de jugadores
 
-    if df_short.empty:
-        st.info("No hay jugadores cargados en la lista corta actualmente.")
-        st.stop()
-
     # =========================================================
     # FILTRO DE PRIVACIDAD POR USUARIO
     # =========================================================
@@ -7170,6 +7411,171 @@ if st.session_state["menu"] == "Lista corta":
         </div>
         """
     )
+
+    vista_lista_corta = st.radio(
+        "Modo de trabajo",
+        ["Lista corta táctica", "Lista corta express"],
+        horizontal=True,
+        key="lista_corta_subvista",
+    )
+
+    if vista_lista_corta == "Lista corta express":
+        df_players_express = df_players_all.copy()
+        df_players_express["ID_Jugador"] = df_players_express["ID_Jugador"].astype(str)
+
+        ids_express = st.session_state.setdefault("lista_corta_express_ids", [])
+        ids_validos = set(df_players_express["ID_Jugador"].astype(str))
+        ids_express = [str(jugador_id) for jugador_id in ids_express if str(jugador_id) in ids_validos]
+        st.session_state["lista_corta_express_ids"] = ids_express
+
+        render_html_block(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Formato</span>
+                    <span class="alab-mini-value">Express</span>
+                    <span class="alab-mini-copy">Armá una lista puntual y descargala en PDF sin usar informes de partido.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Base disponible</span>
+                    <span class="alab-mini-value">{df_players_express['ID_Jugador'].nunique()}</span>
+                    <span class="alab-mini-copy">Jugadores listos para ser buscados y agregados en el momento.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Seleccionados</span>
+                    <span class="alab-mini-value">{len(ids_express)}</span>
+                    <span class="alab-mini-copy">La lista se agrupa automáticamente por posición a medida que agregás nombres.</span>
+                </div>
+            </div>
+            """
+        )
+
+        section_header("Buscador de jugadores")
+        opciones_ids, etiquetas_ids = construir_opciones_lista_express(
+            df_players_express,
+            ids_excluidos=set(ids_express),
+        )
+
+        buscador_col, accion_col = st.columns([5, 1.2])
+        with buscador_col:
+            jugador_express_id = st.selectbox(
+                "🔍 Buscar y seleccionar jugador",
+                opciones_ids,
+                format_func=lambda valor, etiquetas_ids=etiquetas_ids: "Seleccionar jugador" if not valor else etiquetas_ids.get(valor, valor),
+                key="lista_corta_express_selector",
+            )
+        with accion_col:
+            st.write("")
+            st.write("")
+            if st.button(
+                "Agregar",
+                use_container_width=True,
+                disabled=not jugador_express_id,
+                key="lista_corta_express_agregar",
+            ):
+                if jugador_express_id and jugador_express_id not in st.session_state["lista_corta_express_ids"]:
+                    st.session_state["lista_corta_express_ids"].append(jugador_express_id)
+                    st.rerun()
+
+        if ids_express:
+            acciones_express_col1, acciones_express_col2 = st.columns([1.3, 4.7])
+            with acciones_express_col1:
+                if st.button("Limpiar selección", use_container_width=True, key="lista_corta_express_limpiar"):
+                    st.session_state["lista_corta_express_ids"] = []
+                    st.rerun()
+            with acciones_express_col2:
+                section_note("La lista express usa la ficha base del jugador y sus estadísticas clave por posición. No incorpora informes de partido.")
+
+        if not ids_express:
+            st.info("Seleccioná jugadores desde el buscador para construir la lista express y generar el PDF.")
+            st.stop()
+
+        df_data_jugadores = cargar_datos_estadisticas()[1]
+        jugadores_express = []
+        for jugador_id in ids_express:
+            jugador = obtener_jugador_por_id(df_players_express, jugador_id)
+            if jugador is not None:
+                jugadores_express.append(construir_ficha_jugador_express(jugador, df_data_jugadores))
+
+        grupos_express = agrupar_jugadores_lista_express(jugadores_express)
+
+        st.markdown("---")
+        section_header("Lista generada automáticamente")
+
+        for posicion, jugadores_posicion in grupos_express.items():
+            st.markdown(f"### {posicion}")
+            for jugador in jugadores_posicion:
+                foto_html = (
+                    f"<img src='{jugador['foto']}' alt='Foto de {escape_html(jugador['nombre'])}' class='alab-player-photo alab-compare-photo' loading='lazy' referrerpolicy='no-referrer'/>"
+                    if jugador.get("foto")
+                    else "<div class='alab-player-photo-placeholder alab-compare-photo-placeholder'>Sin foto</div>"
+                )
+                perfil_html = (
+                    f"<a href='{jugador['perfil']}' target='_blank'>Ver perfil</a>"
+                    if str(jugador.get("perfil", "")).startswith("http")
+                    else ""
+                )
+                estadisticas_html = "".join(
+                    f"<div class='alab-detail-item'><span class='alab-detail-label'>{escape_html(etiqueta)}</span><span class='alab-detail-value'>{escape_html(valor)}</span></div>"
+                    for etiqueta, valor in jugador.get("estadisticas", [])
+                )
+                if not estadisticas_html:
+                    estadisticas_html = "<div class='alab-detail-item'><span class='alab-detail-label'>Estadísticas clave</span><span class='alab-detail-value'>Sin datos disponibles</span></div>"
+
+                render_html_block(
+                    f"""
+                    <div class="alab-player-panel alab-compare-card" style="margin-bottom:0.9rem;">
+                        <div class="alab-compare-name">{escape_html(jugador['nombre'])}</div>
+                        <div class="alab-compare-photo-wrap">{foto_html}</div>
+                        <div class="alab-detail-grid">
+                            <div class="alab-detail-item"><span class="alab-detail-label">Edad</span><span class="alab-detail-value">{escape_html(jugador['edad'])}</span></div>
+                            <div class="alab-detail-item"><span class="alab-detail-label">Posición</span><span class="alab-detail-value">{escape_html(jugador['posicion'])}</span></div>
+                            <div class="alab-detail-item"><span class="alab-detail-label">Equipo</span><span class="alab-detail-value">{escape_html(jugador['equipo'])}</span></div>
+                            <div class="alab-detail-item"><span class="alab-detail-label">Liga</span><span class="alab-detail-value">{escape_html(jugador['liga'])}</span></div>
+                            <div class="alab-detail-item"><span class="alab-detail-label">Pie</span><span class="alab-detail-value">{escape_html(jugador['pie'])}</span></div>
+                            <div class="alab-detail-item"><span class="alab-detail-label">Altura</span><span class="alab-detail-value">{escape_html(jugador['altura'])}</span></div>
+                        </div>
+                        <div class="alab-compare-description" style="margin-top:0.6rem;">{perfil_html}</div>
+                        <div class="alab-detail-grid" style="margin-top:0.6rem;">{estadisticas_html}</div>
+                    </div>
+                    """
+                )
+
+                acciones_jugador_col1, acciones_jugador_col2 = st.columns([1.3, 4.7])
+                with acciones_jugador_col1:
+                    if st.button(
+                        f"Quitar {jugador['nombre']}",
+                        key=f"lista_corta_express_quitar_{jugador['id']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state["lista_corta_express_ids"] = [
+                            jugador_id for jugador_id in st.session_state["lista_corta_express_ids"] if str(jugador_id) != str(jugador["id"])
+                        ]
+                        st.rerun()
+                with acciones_jugador_col2:
+                    st.write("")
+
+        pdf_express_buffer = generar_pdf_lista_corta_express(jugadores_express)
+
+        st.markdown("---")
+        section_header("Exportación")
+        if pdf_express_buffer is None:
+            st.warning("No se pudo preparar el PDF express con la selección actual.")
+        else:
+            st.download_button(
+                "Generar lista express",
+                pdf_express_buffer,
+                file_name=f"Lista_corta_express_{datetime.today().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="lista_corta_express_descargar",
+            )
+
+        st.stop()
+
+    if df_short.empty:
+        st.info("No hay jugadores cargados en la lista corta actualmente.")
+        st.stop()
 
     # =========================================================
     # NORMALIZAR FECHA / AÑO / SEMESTRE (LISTA CORTA)

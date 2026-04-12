@@ -5753,6 +5753,14 @@ if st.session_state["menu"] == "Jugadores":
                     ]
                 )
 
+                st.caption(
+                    "1 - Observación (Jugador aun sin posibilidades de puntuar)\n"
+                    "2 - Desarrollo (Jugador que aun se encuentra en proceso de adaptación a la categoría o bien aun requiere de tiempo para evolucionar en su desempeño)\n"
+                    "3 - Acorde (Jugador que mantiene su nivel acorde a la categoría)\n"
+                    "4 - Destacado (Jugador que se destaca por arriba de la media en la categoría)\n"
+                    "5 - Exponencial (Jugador en condiciones de jugar en categorías superiores)"
+                )
+
                 with st.expander("🎯 Habilidades técnicas"):
                     col1, col2, col3 = st.columns(3)
 

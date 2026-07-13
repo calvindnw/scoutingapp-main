@@ -13,6 +13,20 @@ Este proyecto ya tiene un entorno virtual en `.venv`. En este equipo, los alias 
 
 ### 2. Iniciar la app
 
+Opción recomendada en Windows:
+
+```powershell
+.\run_app.ps1
+```
+
+Ese script:
+
+- libera el puerto `8502` si quedó una instancia vieja de Streamlit
+- abre una sola URL estable en el navegador
+- arranca la app con el `.venv` correcto
+
+Opción manual:
+
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run Scoutingapp.py
 ```

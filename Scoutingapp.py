@@ -166,21 +166,42 @@ def obtener_secret_google_service_account_json():
 
 def parsear_google_service_account_secret(secret_value) -> dict:
     if isinstance(secret_value, dict):
-        return dict(secret_value)
+        creds_dict = dict(secret_value)
+    else:
+        if secret_value is None:
+            raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
 
-    if secret_value is None:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
+        secret_text = str(secret_value).strip()
+        if not secret_text:
+            raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
 
-    secret_text = str(secret_value).strip()
-    if not secret_text:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
+        try:
+            creds_dict = json.loads(secret_text)
+        except json.JSONDecodeError:
+            # Streamlit Cloud puede persistir el bloque TOML con saltos reales
+            # dentro de private_key; strict=False evita que eso rompa el parseo.
+            creds_dict = json.loads(secret_text, strict=False)
 
-    try:
-        return json.loads(secret_text)
-    except json.JSONDecodeError:
-        # Streamlit Cloud puede persistir el bloque TOML con saltos reales
-        # dentro de private_key; strict=False evita que eso rompa el parseo.
-        return json.loads(secret_text, strict=False)
+    private_key = creds_dict.get("private_key")
+    if isinstance(private_key, str):
+        private_key = private_key.strip().strip('"').replace("\r\n", "\n").replace("\r", "\n")
+        private_key = private_key.replace("\\n", "\n")
+
+        begin_marker = "-----BEGIN PRIVATE KEY-----"
+        end_marker = "-----END PRIVATE KEY-----"
+        begin_index = private_key.find(begin_marker)
+        end_index = private_key.rfind(end_marker)
+
+        if begin_index != -1 and end_index != -1:
+            end_index += len(end_marker)
+            private_key = private_key[begin_index:end_index]
+
+        if not private_key.endswith("\n"):
+            private_key += "\n"
+
+        creds_dict["private_key"] = private_key
+
+    return creds_dict
 
 
 def describir_configuracion_google() -> str:

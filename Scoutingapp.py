@@ -144,14 +144,47 @@ SCOPE = [
 SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
 CREDS_PATH = os.path.join("credentials", "credentials.json")
 
+LOCAL_DATA_FILES = {
+    "Jugadores": "jugadores.csv",
+    "Informes": "informes.csv",
+    "Lista corta": "lista_corta.csv",
+}
+
+
+def obtener_secret_google_service_account_json():
+    try:
+        return st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    except Exception:
+        return None
+
+
+def sheets_configuradas() -> bool:
+    return bool(obtener_secret_google_service_account_json()) or os.path.exists(CREDS_PATH)
+
+
+def cargar_csv_local(nombre_archivo: str, columnas_base: list | None = None) -> pd.DataFrame:
+    if not nombre_archivo or not os.path.exists(nombre_archivo):
+        return pd.DataFrame(columns=columnas_base or [])
+
+    try:
+        df_local = pd.read_csv(nombre_archivo, dtype=str).fillna("")
+    except Exception:
+        return pd.DataFrame(columns=columnas_base or [])
+
+    df_local = alinear_columnas_dataframe(df_local, columnas_base)
+    if df_local.empty and columnas_base:
+        return pd.DataFrame(columns=columnas_base)
+    return df_local
+
 # =========================================================
 # CONEXIÓN
 # =========================================================
 @st.cache_resource(show_spinner=False)
 def conectar_sheets():
     try:
-        if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
-            creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+        secret_json = obtener_secret_google_service_account_json()
+        if secret_json:
+            creds_dict = json.loads(secret_json)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:
             if not os.path.exists(CREDS_PATH):
@@ -1446,6 +1479,9 @@ def formatear_valor_estadistica(valor):
 
 @st.cache_data(ttl=120)
 def cargar_datos_estadisticas():
+    if not sheets_configuradas():
+        return pd.DataFrame(), pd.DataFrame()
+
     df_promedios = cargar_datos_sheets("Promedios de Liga", conservar_texto=True)
     df_data_jugadores = cargar_datos_sheets("Data Jugadores", conservar_texto=True)
     return df_promedios, df_data_jugadores
@@ -5047,11 +5083,22 @@ def cargar_datos():
     columnas_dt = DT_COLUMNAS.copy()
     columnas_periodo_dt = PERIODO_DT_COLUMNAS.copy()
 
-    df_players = cargar_datos_sheets("Jugadores", columnas_jug)
-    df_reports = cargar_datos_sheets("Informes", columnas_inf)
-    df_short   = cargar_datos_sheets("Lista corta", columnas_short)
-    df_dt = cargar_datos_sheets("DT", columnas_dt)
-    df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
+    if sheets_configuradas():
+        df_players = cargar_datos_sheets("Jugadores", columnas_jug)
+        df_reports = cargar_datos_sheets("Informes", columnas_inf)
+        df_short = cargar_datos_sheets("Lista corta", columnas_short)
+        df_dt = cargar_datos_sheets("DT", columnas_dt)
+        df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
+    else:
+        if not st.session_state.get("aviso_modo_local_csv_mostrado"):
+            st.warning("Modo local activo: no se encontraron credenciales de Google Sheets. Se cargan los CSV locales disponibles.")
+            st.session_state["aviso_modo_local_csv_mostrado"] = True
+
+        df_players = cargar_csv_local(LOCAL_DATA_FILES.get("Jugadores"), columnas_jug)
+        df_reports = cargar_csv_local(LOCAL_DATA_FILES.get("Informes"), columnas_inf)
+        df_short = cargar_csv_local(LOCAL_DATA_FILES.get("Lista corta"), columnas_short)
+        df_dt = pd.DataFrame(columns=columnas_dt)
+        df_dt_periods = pd.DataFrame(columns=columnas_periodo_dt)
 
     # Normalización de IDs
     for df in (df_players, df_reports, df_short):

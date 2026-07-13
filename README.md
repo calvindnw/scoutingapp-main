@@ -17,11 +17,12 @@ Este proyecto ya tiene un entorno virtual en `.venv`. En este equipo, los alias 
 .\.venv\Scripts\python.exe -m streamlit run Scoutingapp.py
 ```
 
+El proyecto ahora fija Streamlit en `http://localhost:8502` mediante `.streamlit/config.toml`, para evitar que el navegador quede apuntando a un puerto distinto.
+
 ### 3. Abrir la URL local
 
-Normalmente Streamlit levanta en una de estas URLs:
+Abrí esta URL fija:
 
-- `http://localhost:8501`
 - `http://localhost:8502`
 
 ## Si aparece la pantalla "Oh no"
@@ -37,3 +38,5 @@ Volve a iniciar la app con este comando:
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run Scoutingapp.py
 ```
+
+Si alguna vez `8502` esta ocupado, cerrá la otra app que lo esté usando o cambiá el puerto en `.streamlit/config.toml`.

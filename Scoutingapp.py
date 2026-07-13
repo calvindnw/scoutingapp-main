@@ -150,12 +150,32 @@ LOCAL_DATA_FILES = {
     "Lista corta": "lista_corta.csv",
 }
 
+LOCAL_SECRETS_PATH = os.path.join(".streamlit", "secrets.toml")
+
 
 def obtener_secret_google_service_account_json():
     try:
-        return st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+        secret_json = st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if secret_json:
+            return secret_json
     except Exception:
-        return None
+        pass
+
+    return os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+
+def describir_configuracion_google() -> str:
+    rutas = [
+        os.path.abspath(CREDS_PATH),
+        os.path.abspath(LOCAL_SECRETS_PATH),
+    ]
+    return (
+        "Configurá una de estas opciones locales:\n"
+        f"- Archivo JSON de service account en: {rutas[0]}\n"
+        f"- Secreto GOOGLE_SERVICE_ACCOUNT_JSON en: {rutas[1]}\n"
+        "- O variable de entorno GOOGLE_SERVICE_ACCOUNT_JSON\n"
+        "Además, compartí la planilla de Google Sheets con el email del service account."
+    )
 
 
 def sheets_configuradas() -> bool:
@@ -188,14 +208,20 @@ def conectar_sheets():
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:
             if not os.path.exists(CREDS_PATH):
-                st.error("❌ Falta credentials.json o secreto en Streamlit Cloud.")
+                st.error(
+                    "❌ No hay credenciales locales de Google Sheets.\n\n"
+                    + describir_configuracion_google()
+                )
                 st.stop()
             creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
 
         client = gspread.authorize(creds)
         return client.open_by_key(SHEET_ID)
     except Exception as e:
-        st.error(f"⚠️ No se pudo conectar con Google Sheets: {e}")
+        st.error(
+            f"⚠️ No se pudo conectar con Google Sheets: {e}\n\n"
+            + describir_configuracion_google()
+        )
         st.stop()
 
 

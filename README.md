@@ -19,6 +19,24 @@ Este proyecto ya tiene un entorno virtual en `.venv`. En este equipo, los alias 
 
 El proyecto ahora fija Streamlit en `http://localhost:8502` mediante `.streamlit/config.toml`, para evitar que el navegador quede apuntando a un puerto distinto.
 
+## Leer Google Sheets en local
+
+`localhost` si puede leer Google Drive y Google Sheets. Lo que necesita no es otro host, sino credenciales validas del service account.
+
+Tenés tres opciones soportadas por el codigo:
+
+1. Guardar el JSON del service account en `credentials/credentials.json`
+2. Crear `.streamlit/secrets.toml` con la clave `GOOGLE_SERVICE_ACCOUNT_JSON`
+3. Definir la variable de entorno `GOOGLE_SERVICE_ACCOUNT_JSON`
+
+Ejemplo de `.streamlit/secrets.toml`:
+
+```toml
+GOOGLE_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"tu-service-account@tu-proyecto.iam.gserviceaccount.com","client_id":"...","token_uri":"https://oauth2.googleapis.com/token"}'
+```
+
+Ademas, la planilla `Scouting_DB` tiene que estar compartida con el `client_email` de ese service account. Si no esta compartida, Streamlit arranca pero Google rechaza la lectura.
+
 ### 3. Abrir la URL local
 
 Abrí esta URL fija:

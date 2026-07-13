@@ -41,4 +41,4 @@ Start-Job -Name 'streamlit-browser-launcher' -ScriptBlock {
 } -ArgumentList $healthUrl, $appUrl | Out-Null
 
 Write-Host "Esperando que Streamlit quede disponible en $appUrl"
-& $python -m streamlit run Scoutingapp.py
+& $python -m streamlit run Scoutingapp.py --server.headless true --server.address localhost --server.port $port --browser.serverAddress localhost --browser.serverPort $port

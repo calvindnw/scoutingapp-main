@@ -16,6 +16,12 @@ Este proyecto ya tiene un entorno virtual en `.venv`. En este equipo, los alias 
 Opción recomendada en Windows:
 
 ```powershell
+./run_app.cmd
+```
+
+Si preferis PowerShell y tu equipo permite ejecutar scripts:
+
+```powershell
 .\run_app.ps1
 ```
 
@@ -24,6 +30,8 @@ Ese script:
 - libera el puerto `8502` si quedó una instancia vieja de Streamlit
 - abre una sola URL estable en el navegador
 - arranca la app con el `.venv` correcto
+
+`run_app.cmd` hace el mismo arranque sin depender de la Execution Policy de PowerShell.
 
 Opción manual:
 
@@ -50,6 +58,22 @@ GOOGLE_SERVICE_ACCOUNT_JSON = '{"type":"service_account","project_id":"...","pri
 ```
 
 Ademas, la planilla `Scouting_DB` tiene que estar compartida con el `client_email` de ese service account. Si no esta compartida, Streamlit arranca pero Google rechaza la lectura.
+
+## Deploy en Streamlit Community Cloud
+
+La app publica `https://scoutingapp-eoc.streamlit.app/` puede fallar con `Oh no.` si el entorno remoto cambia o si los secretos del deploy se vacian o quedan invalidos.
+
+Este repo ahora fija Python en `3.11` con `runtime.txt`, para evitar que Community Cloud use automaticamente una version mas nueva sin validacion previa.
+
+Para volver a levantar la URL publica:
+
+1. Entrá a la app en Streamlit Community Cloud.
+2. Abrí `Settings` > `Secrets`.
+3. Pegá el contenido de tu secreto `GOOGLE_SERVICE_ACCOUNT_JSON` en formato TOML.
+4. Guardá los cambios.
+5. Ejecutá `Reboot app` o redeploy desde el repo.
+
+Importante: `.streamlit/secrets.toml` no debe commitearse al repo. Para el deploy remoto, los secretos viven en la configuracion de la app en Streamlit Cloud, no en GitHub.
 
 ### 3. Abrir la URL local
 

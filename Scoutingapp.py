@@ -164,6 +164,25 @@ def obtener_secret_google_service_account_json():
     return os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
 
 
+def parsear_google_service_account_secret(secret_value) -> dict:
+    if isinstance(secret_value, dict):
+        return dict(secret_value)
+
+    if secret_value is None:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
+
+    secret_text = str(secret_value).strip()
+    if not secret_text:
+        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
+
+    try:
+        return json.loads(secret_text)
+    except json.JSONDecodeError:
+        # Streamlit Cloud puede persistir el bloque TOML con saltos reales
+        # dentro de private_key; strict=False evita que eso rompa el parseo.
+        return json.loads(secret_text, strict=False)
+
+
 def describir_configuracion_google() -> str:
     rutas = [
         os.path.abspath(CREDS_PATH),
@@ -204,7 +223,7 @@ def conectar_sheets():
     try:
         secret_json = obtener_secret_google_service_account_json()
         if secret_json:
-            creds_dict = json.loads(secret_json)
+            creds_dict = parsear_google_service_account_secret(secret_json)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:
             if not os.path.exists(CREDS_PATH):

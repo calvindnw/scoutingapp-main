@@ -130,10 +130,6 @@ def obtener_fecha_buenos_aires() -> datetime:
 # =========================================================
 
 import os, json, time
-try:
-    import tomllib
-except ModuleNotFoundError:
-    tomllib = None
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -148,211 +144,25 @@ SCOPE = [
 SHEET_ID = "1UU96mYjfLLBZt7vCkhEAe5pNJ0P2e9bp9eIggosZB-g"
 CREDS_PATH = os.path.join("credentials", "credentials.json")
 
-LOCAL_DATA_FILES = {
-    "Jugadores": "jugadores.csv",
-    "Informes": "informes.csv",
-    "Lista corta": "lista_corta.csv",
-}
-
-LOCAL_SECRETS_PATH = os.path.join(".streamlit", "secrets.toml")
-GOOGLE_SERVICE_ACCOUNT_FIELDS = [
-    "type",
-    "project_id",
-    "private_key_id",
-    "private_key",
-    "client_email",
-    "client_id",
-    "auth_uri",
-    "token_uri",
-    "auth_provider_x509_cert_url",
-    "client_x509_cert_url",
-    "universe_domain",
-]
-
-
-def cargar_secrets_locales_desde_toml() -> dict:
-    if tomllib is None or not os.path.exists(LOCAL_SECRETS_PATH):
-        return {}
-
-    try:
-        with open(LOCAL_SECRETS_PATH, "rb") as secrets_file:
-            secrets_data = tomllib.load(secrets_file)
-        return secrets_data if isinstance(secrets_data, dict) else {}
-    except Exception:
-        return {}
-
-
-def obtener_secret_google_service_account_json():
-    try:
-        secret_json = st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-        if secret_json:
-            return secret_json
-    except Exception:
-        pass
-
-    secret_json_local = cargar_secrets_locales_desde_toml().get("GOOGLE_SERVICE_ACCOUNT_JSON")
-    if secret_json_local:
-        return secret_json_local
-
-    return os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
-
-
-def obtener_google_service_account_desde_streamlit_secrets():
-    try:
-        for section_name in ["google_service_account", "gcp_service_account"]:
-            section = st.secrets.get(section_name)
-            if section:
-                creds_dict = {
-                    campo: section.get(campo)
-                    for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
-                    if section.get(campo) is not None
-                }
-                if creds_dict:
-                    return creds_dict
-
-        creds_dict = {
-            campo: st.secrets.get(campo)
-            for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
-            if st.secrets.get(campo) is not None
-        }
-        if creds_dict:
-            return creds_dict
-    except Exception:
-        pass
-
-    local_secrets = cargar_secrets_locales_desde_toml()
-    for section_name in ["google_service_account", "gcp_service_account"]:
-        section = local_secrets.get(section_name)
-        if isinstance(section, dict):
-            creds_dict = {
-                campo: section.get(campo)
-                for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
-                if section.get(campo) is not None
-            }
-            if creds_dict:
-                return creds_dict
-
-    creds_dict = {
-        campo: local_secrets.get(campo)
-        for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
-        if local_secrets.get(campo) is not None
-    }
-    if creds_dict:
-        return creds_dict
-
-    return None
-
-
-def parsear_google_service_account_secret(secret_value) -> dict:
-    if isinstance(secret_value, dict):
-        creds_dict = dict(secret_value)
-    else:
-        if secret_value is None:
-            raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
-
-        secret_text = str(secret_value).strip()
-        if not secret_text:
-            raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON está vacío")
-
-        try:
-            creds_dict = json.loads(secret_text)
-        except json.JSONDecodeError:
-            # Streamlit Cloud puede persistir el bloque TOML con saltos reales
-            # dentro de private_key; strict=False evita que eso rompa el parseo.
-            creds_dict = json.loads(secret_text, strict=False)
-
-    private_key = creds_dict.get("private_key")
-    if isinstance(private_key, str):
-        private_key = private_key.strip().strip('"').strip("'").replace("\r\n", "\n").replace("\r", "\n")
-        private_key = private_key.replace("\\n", "\n")
-
-        begin_marker = "-----BEGIN PRIVATE KEY-----"
-        end_marker = "-----END PRIVATE KEY-----"
-        begin_index = private_key.find(begin_marker)
-        end_index = private_key.rfind(end_marker)
-
-        if begin_index != -1 and end_index != -1:
-            end_index += len(end_marker)
-            private_key = private_key[begin_index:end_index]
-        else:
-            cuerpo = re.sub(r"\s+", "", private_key).strip(".")
-            if cuerpo and re.fullmatch(r"[A-Za-z0-9+/=]+", cuerpo):
-                private_key = f"{begin_marker}\n{cuerpo}\n{end_marker}"
-
-        if not private_key.endswith("\n"):
-            private_key += "\n"
-
-        creds_dict["private_key"] = private_key
-
-    return creds_dict
-
-
-def describir_configuracion_google() -> str:
-    rutas = [
-        os.path.abspath(CREDS_PATH),
-        os.path.abspath(LOCAL_SECRETS_PATH),
-    ]
-    return (
-        "Configurá una de estas opciones locales:\n"
-        f"- Archivo JSON de service account en: {rutas[0]}\n"
-        f"- Secreto GOOGLE_SERVICE_ACCOUNT_JSON en: {rutas[1]}\n"
-        "- O variable de entorno GOOGLE_SERVICE_ACCOUNT_JSON\n"
-        "Además, compartí la planilla de Google Sheets con el email del service account."
-    )
-
-
-def sheets_configuradas() -> bool:
-    return bool(
-        obtener_google_service_account_desde_streamlit_secrets()
-        or obtener_secret_google_service_account_json()
-        or os.path.exists(CREDS_PATH)
-    )
-
-
-def cargar_csv_local(nombre_archivo: str, columnas_base: list | None = None) -> pd.DataFrame:
-    if not nombre_archivo or not os.path.exists(nombre_archivo):
-        return pd.DataFrame(columns=columnas_base or [])
-
-    try:
-        df_local = pd.read_csv(nombre_archivo, dtype=str).fillna("")
-    except Exception:
-        return pd.DataFrame(columns=columnas_base or [])
-
-    df_local = alinear_columnas_dataframe(df_local, columnas_base)
-    if df_local.empty and columnas_base:
-        return pd.DataFrame(columns=columnas_base)
-    return df_local
-
 # =========================================================
 # CONEXIÓN
 # =========================================================
 @st.cache_resource(show_spinner=False)
 def conectar_sheets():
     try:
-        creds_info = obtener_google_service_account_desde_streamlit_secrets()
-        secret_json = obtener_secret_google_service_account_json()
-        if creds_info:
-            creds_dict = parsear_google_service_account_secret(creds_info)
-            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
-        elif secret_json:
-            creds_dict = parsear_google_service_account_secret(secret_json)
+        if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
+            creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:
             if not os.path.exists(CREDS_PATH):
-                st.error(
-                    "❌ No hay credenciales locales de Google Sheets.\n\n"
-                    + describir_configuracion_google()
-                )
+                st.error("❌ Falta credentials.json o secreto en Streamlit Cloud.")
                 st.stop()
             creds = Credentials.from_service_account_file(CREDS_PATH, scopes=SCOPE)
 
         client = gspread.authorize(creds)
         return client.open_by_key(SHEET_ID)
     except Exception as e:
-        st.error(
-            f"⚠️ No se pudo conectar con Google Sheets: {e}\n\n"
-            + describir_configuracion_google()
-        )
+        st.error(f"⚠️ No se pudo conectar con Google Sheets: {e}")
         st.stop()
 
 
@@ -1636,9 +1446,6 @@ def formatear_valor_estadistica(valor):
 
 @st.cache_data(ttl=120)
 def cargar_datos_estadisticas():
-    if not sheets_configuradas():
-        return pd.DataFrame(), pd.DataFrame()
-
     df_promedios = cargar_datos_sheets("Promedios de Liga", conservar_texto=True)
     df_data_jugadores = cargar_datos_sheets("Data Jugadores", conservar_texto=True)
     return df_promedios, df_data_jugadores
@@ -5240,22 +5047,11 @@ def cargar_datos():
     columnas_dt = DT_COLUMNAS.copy()
     columnas_periodo_dt = PERIODO_DT_COLUMNAS.copy()
 
-    if sheets_configuradas():
-        df_players = cargar_datos_sheets("Jugadores", columnas_jug)
-        df_reports = cargar_datos_sheets("Informes", columnas_inf)
-        df_short = cargar_datos_sheets("Lista corta", columnas_short)
-        df_dt = cargar_datos_sheets("DT", columnas_dt)
-        df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
-    else:
-        if not st.session_state.get("aviso_modo_local_csv_mostrado"):
-            st.warning("Modo local activo: no se encontraron credenciales de Google Sheets. Se cargan los CSV locales disponibles.")
-            st.session_state["aviso_modo_local_csv_mostrado"] = True
-
-        df_players = cargar_csv_local(LOCAL_DATA_FILES.get("Jugadores"), columnas_jug)
-        df_reports = cargar_csv_local(LOCAL_DATA_FILES.get("Informes"), columnas_inf)
-        df_short = cargar_csv_local(LOCAL_DATA_FILES.get("Lista corta"), columnas_short)
-        df_dt = pd.DataFrame(columns=columnas_dt)
-        df_dt_periods = pd.DataFrame(columns=columnas_periodo_dt)
+    df_players = cargar_datos_sheets("Jugadores", columnas_jug)
+    df_reports = cargar_datos_sheets("Informes", columnas_inf)
+    df_short   = cargar_datos_sheets("Lista corta", columnas_short)
+    df_dt = cargar_datos_sheets("DT", columnas_dt)
+    df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
 
     # Normalización de IDs
     for df in (df_players, df_reports, df_short):

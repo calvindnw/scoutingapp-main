@@ -151,6 +151,19 @@ LOCAL_DATA_FILES = {
 }
 
 LOCAL_SECRETS_PATH = os.path.join(".streamlit", "secrets.toml")
+GOOGLE_SERVICE_ACCOUNT_FIELDS = [
+    "type",
+    "project_id",
+    "private_key_id",
+    "private_key",
+    "client_email",
+    "client_id",
+    "auth_uri",
+    "token_uri",
+    "auth_provider_x509_cert_url",
+    "client_x509_cert_url",
+    "universe_domain",
+]
 
 
 def obtener_secret_google_service_account_json():
@@ -162,6 +175,32 @@ def obtener_secret_google_service_account_json():
         pass
 
     return os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+
+def obtener_google_service_account_desde_streamlit_secrets():
+    try:
+        for section_name in ["google_service_account", "gcp_service_account"]:
+            section = st.secrets.get(section_name)
+            if section:
+                creds_dict = {
+                    campo: section.get(campo)
+                    for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
+                    if section.get(campo) is not None
+                }
+                if creds_dict:
+                    return creds_dict
+
+        creds_dict = {
+            campo: st.secrets.get(campo)
+            for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
+            if st.secrets.get(campo) is not None
+        }
+        if creds_dict:
+            return creds_dict
+    except Exception:
+        pass
+
+    return None
 
 
 def parsear_google_service_account_secret(secret_value) -> dict:
@@ -184,7 +223,7 @@ def parsear_google_service_account_secret(secret_value) -> dict:
 
     private_key = creds_dict.get("private_key")
     if isinstance(private_key, str):
-        private_key = private_key.strip().strip('"').replace("\r\n", "\n").replace("\r", "\n")
+        private_key = private_key.strip().strip('"').strip("'").replace("\r\n", "\n").replace("\r", "\n")
         private_key = private_key.replace("\\n", "\n")
 
         begin_marker = "-----BEGIN PRIVATE KEY-----"
@@ -195,6 +234,10 @@ def parsear_google_service_account_secret(secret_value) -> dict:
         if begin_index != -1 and end_index != -1:
             end_index += len(end_marker)
             private_key = private_key[begin_index:end_index]
+        else:
+            cuerpo = re.sub(r"\s+", "", private_key).strip(".")
+            if cuerpo and re.fullmatch(r"[A-Za-z0-9+/=]+", cuerpo):
+                private_key = f"{begin_marker}\n{cuerpo}\n{end_marker}"
 
         if not private_key.endswith("\n"):
             private_key += "\n"
@@ -242,8 +285,12 @@ def cargar_csv_local(nombre_archivo: str, columnas_base: list | None = None) -> 
 @st.cache_resource(show_spinner=False)
 def conectar_sheets():
     try:
+        creds_info = obtener_google_service_account_desde_streamlit_secrets()
         secret_json = obtener_secret_google_service_account_json()
-        if secret_json:
+        if creds_info:
+            creds_dict = parsear_google_service_account_secret(creds_info)
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
+        elif secret_json:
             creds_dict = parsear_google_service_account_secret(secret_json)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:

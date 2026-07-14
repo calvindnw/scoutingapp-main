@@ -130,6 +130,10 @@ def obtener_fecha_buenos_aires() -> datetime:
 # =========================================================
 
 import os, json, time
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -166,6 +170,18 @@ GOOGLE_SERVICE_ACCOUNT_FIELDS = [
 ]
 
 
+def cargar_secrets_locales_desde_toml() -> dict:
+    if tomllib is None or not os.path.exists(LOCAL_SECRETS_PATH):
+        return {}
+
+    try:
+        with open(LOCAL_SECRETS_PATH, "rb") as secrets_file:
+            secrets_data = tomllib.load(secrets_file)
+        return secrets_data if isinstance(secrets_data, dict) else {}
+    except Exception:
+        return {}
+
+
 def obtener_secret_google_service_account_json():
     try:
         secret_json = st.secrets.get("GOOGLE_SERVICE_ACCOUNT_JSON")
@@ -173,6 +189,10 @@ def obtener_secret_google_service_account_json():
             return secret_json
     except Exception:
         pass
+
+    secret_json_local = cargar_secrets_locales_desde_toml().get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if secret_json_local:
+        return secret_json_local
 
     return os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
 
@@ -199,6 +219,26 @@ def obtener_google_service_account_desde_streamlit_secrets():
             return creds_dict
     except Exception:
         pass
+
+    local_secrets = cargar_secrets_locales_desde_toml()
+    for section_name in ["google_service_account", "gcp_service_account"]:
+        section = local_secrets.get(section_name)
+        if isinstance(section, dict):
+            creds_dict = {
+                campo: section.get(campo)
+                for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
+                if section.get(campo) is not None
+            }
+            if creds_dict:
+                return creds_dict
+
+    creds_dict = {
+        campo: local_secrets.get(campo)
+        for campo in GOOGLE_SERVICE_ACCOUNT_FIELDS
+        if local_secrets.get(campo) is not None
+    }
+    if creds_dict:
+        return creds_dict
 
     return None
 
@@ -262,7 +302,11 @@ def describir_configuracion_google() -> str:
 
 
 def sheets_configuradas() -> bool:
-    return bool(obtener_secret_google_service_account_json()) or os.path.exists(CREDS_PATH)
+    return bool(
+        obtener_google_service_account_desde_streamlit_secrets()
+        or obtener_secret_google_service_account_json()
+        or os.path.exists(CREDS_PATH)
+    )
 
 
 def cargar_csv_local(nombre_archivo: str, columnas_base: list | None = None) -> pd.DataFrame:

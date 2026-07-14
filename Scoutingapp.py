@@ -153,6 +153,9 @@ def conectar_sheets():
         if "GOOGLE_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
+        elif "google_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["google_service_account"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPE)
         else:
             if not os.path.exists(CREDS_PATH):
                 st.error("❌ Falta credentials.json o secreto en Streamlit Cloud.")

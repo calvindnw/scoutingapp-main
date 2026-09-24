@@ -5182,12 +5182,88 @@ if st.session_state["menu"] == "Jugadores":
     opciones_paises = CATALOGO_PAISES.copy()
 
     opciones_caracteristicas = [
-        "agresivo", "completo", "tiempista", "dinámico", "velocista", "goleador",
-        "juego de espalda", "líder defensivo", "versátil", "posicional",
-        "habilidoso", "táctico", "aguerrido", "resolutivo", "creativo",
-        "preciso", "criterioso", "aplomado", "potente", "temperamental",
-        "técnico", "conductor", "proyección"
+        "Primer control", "Control orientado", "Dominio técnico", "Conducción",
+        "Conducción progresiva", "Conducción en velocidad", "Regate",
+        "Cambio de dirección con pelota", "Cambio de ritmo con pelota", "Protección de balón",
+        "Giro", "Recepción perfilada", "Juego de primera", "Uso de ambos perfiles",
+        "Pie no hábil funcional", "Coordinación técnica", "Técnica bajo presión",
+        "Control aéreo", "Volea", "Cabeceo", "Pase corto", "Pase medio", "Pase largo",
+        "Pase vertical", "Pase progresivo", "Pase filtrado", "Pase entre líneas",
+        "Pase al espacio", "Pase de ruptura", "Cambio de orientación", "Diagonal larga",
+        "Circulación rápida", "Circulación segura", "Juego asociativo", "Descarga",
+        "Pared", "Apoyo en circulación", "Continuidad de juego", "Distribución",
+        "Cambio de ritmo mediante pase", "Salida limpia", "Salida bajo presión",
+        "Ruptura de línea con pase", "Ruptura de línea con conducción",
+        "Progresión por conducción", "Progresión por pase", "Construcción desde atrás",
+        "Salida por dentro", "Salida por fuera", "Atracción de presión", "Fijación con pelota",
+        "Superación de presión", "Conservación bajo presión", "Salida individual", "Creatividad",
+        "Último pase", "Pase clave", "Visión ofensiva", "Generación de ventajas",
+        "Juego entre líneas", "Recepción entre líneas", "Giro entre líneas",
+        "Asociación interior", "Asociación exterior", "Centro", "Centro preciso",
+        "Centro en carrera", "Centro temprano", "Pase atrás", "Desborde",
+        "Uno contra uno ofensivo", "Desequilibrio individual", "Finalización", "Remate",
+        "Precisión de remate", "Potencia de remate", "Remate de media distancia",
+        "Remate de primera", "Definición en área", "Definición mano a mano",
+        "Finalización bajo presión", "Cabeceo ofensivo", "Juego aéreo ofensivo",
+        "Ataque del rebote", "Olfato goleador", "Desmarque de apoyo", "Desmarque de ruptura",
+        "Ataque al espacio", "Ataque de profundidad", "Ruptura sin pelota",
+        "Movilidad ofensiva", "Movilidad entre líneas", "Llegada al área", "Ataque al área",
+        "Ataque al primer palo", "Ataque al segundo palo", "Ataque del punto penal",
+        "Ocupación de intervalos", "Ocupación de espacios", "Amplitud", "Fijación", "Arrastre",
+        "Apoyo ofensivo", "Proyección ofensiva", "Cambio de altura",
+        "Generación de línea de pase", "Juego de espaldas", "Fijación de centrales",
+        "Apoyo frontal", "Anticipación", "Intercepción", "Marcaje", "Marcaje individual",
+        "Defensa del 1v1", "Entrada", "Tackle", "Temporización defensiva",
+        "Orientación defensiva", "Uso del cuerpo defensivo", "Defensa lateral",
+        "Defensa frontal", "Defensa en carrera", "Bloqueo", "Despeje", "Cobertura",
+        "Permuta", "Control de profundidad", "Defensa hacia adelante", "Defensa del área",
+        "Defensa de centros", "Defensa del segundo palo", "Defensa del espacio",
+        "Defensa de espacios amplios", "Basculación", "Ajuste defensivo", "Cierre defensivo",
+        "Repliegue", "Retorno defensivo", "Balance defensivo", "Vigilancia defensiva",
+        "Protección del carril central", "Protección del área", "Presión", "Presión alta",
+        "Presión individual", "Presión orientada", "Salto de presión", "Contrapresión",
+        "Recuperación inmediata", "Recuperación de balón", "Robo", "Lectura de pase rival",
+        "Agresividad defensiva", "Duelo defensivo", "Duelo ofensivo", "Duelo terrestre",
+        "Duelo aéreo", "Juego aéreo defensivo", "Timing aéreo", "Fuerza en duelo",
+        "Protección en duelo", "Segunda pelota", "Lectura de juego", "Anticipación táctica",
+        "Toma de decisiones", "Velocidad de decisión", "Escaneo", "Orientación corporal",
+        "Posicionamiento", "Interpretación de espacios", "Gestión del espacio",
+        "Timing ofensivo", "Timing defensivo", "Comprensión táctica", "Comprensión colectiva",
+        "Disciplina posicional", "Versatilidad táctica", "Adaptabilidad táctica",
+        "Interpretación de superioridades", "Reconocimiento de ventajas", "Gestión del riesgo",
+        "Control del ritmo", "Transición ofensiva", "Transición defensiva", "Salida de transición",
+        "Conducción en transición", "Pase en transición", "Ataque del espacio en transición",
+        "Reacción tras pérdida", "Reacción tras recuperación", "Retorno en transición",
+        "Aceleración", "Velocidad", "Velocidad larga", "Explosividad", "Potencia", "Fuerza",
+        "Fuerza en contacto", "Equilibrio", "Agilidad", "Cambio de dirección",
+        "Coordinación", "Resistencia", "Capacidad de repetición", "Recuperación física",
+        "Zancada", "Envergadura", "Salto", "Movilidad", "Elasticidad corporal",
+        "Competitividad", "Agresividad competitiva", "Concentración", "Atención", "Compostura",
+        "Confianza", "Determinación", "Persistencia", "Reacción al error", "Iniciativa",
+        "Personalidad con pelota", "Responsabilidad defensiva", "Compromiso colectivo",
+        "Intensidad", "Regularidad", "Paciencia", "Valentía", "Comunicación",
+        "Comunicación defensiva", "Comunicación ofensiva", "Liderazgo", "Liderazgo funcional",
+        "Organización colectiva", "Capacidad de mando", "Atajada", "Reflejos", "Reacción",
+        "Control de rebote", "Blocaje", "Desvío", "Estirada", "Posicionamiento de arco",
+        "Ajuste de posición", "Achique", "Uno contra uno", "Segunda acción",
+        "Recuperación post-atajada", "Defensa de remates lejanos",
+        "Defensa de remates cercanos", "Salida aérea", "Dominio del área",
+        "Lectura de centros", "Timing de salida", "Blocaje aéreo", "Despeje de puños",
+        "Ataque de pelota aérea", "Control del espacio aéreo", "Defensa de balón parado",
+        "Juego fuera del área", "Lectura de profundidad", "Salida en profundidad",
+        "Arquero adelantado", "Cobertura de espalda defensiva", "Intercepción fuera del área",
+        "Juego con los pies", "Primer control de arquero", "Salida corta", "Salida media",
+        "Salida larga", "Pase vertical de arquero", "Cambio de orientación de arquero",
+        "Juego bajo presión de arquero", "Elección de salida", "Participación en construcción",
+        "Atracción de presión de arquero", "Pase largo preciso", "Saque rápido",
+        "Distribución manual", "Lectura del juego de arquero", "Toma de decisiones de arquero",
+        "Compostura de arquero", "Reacción al error de arquero", "Comunicación de arquero",
+        "Organización defensiva de arquero", "Autoridad en el área",
+        "Concentración de arquero", "Penales"
     ]
+    opciones_caracteristicas_por_clave = {
+        opcion.strip().lower(): opcion for opcion in opciones_caracteristicas
+    }
 
     # ---------------------------------------------------------
     # BUSCADOR DE JUGADORES
@@ -5655,9 +5731,9 @@ if st.session_state["menu"] == "Jugadores":
                         "Características",
                         opciones_caracteristicas,
                         default=[
-                            c.strip().lower()
+                            opciones_caracteristicas_por_clave[c.strip().lower()]
                             for c in car_val.split(",")
-                            if c.strip().lower() in [o.lower() for o in opciones_caracteristicas]
+                            if c.strip().lower() in opciones_caracteristicas_por_clave
                         ]
                     )
                     e_foto = st.text_input("URL de foto", value=str(jugador.get("URL_Foto", "") or ""))

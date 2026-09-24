@@ -572,7 +572,7 @@ st.sidebar.markdown(f"<b>Rol:</b> {CURRENT_ROLE}", unsafe_allow_html=True)
 if st.sidebar.button("Cerrar sesión"):
     st.session_state["user"] = None
     st.session_state["role"] = None
-    for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag"]:
+    for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag", "df_player_profile"]:
         st.session_state.pop(clave, None)
     st.rerun()
 
@@ -580,11 +580,11 @@ if st.sidebar.button("Cerrar sesión"):
 def inicializar_datasets_sesion():
     if all(
         clave in st.session_state
-        for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag"]
+        for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag", "df_player_profile"]
     ):
         return
 
-    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag, df_player_profile = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
 
@@ -601,11 +601,12 @@ def inicializar_datasets_sesion():
     st.session_state["df_dt"] = df_dt.copy()
     st.session_state["df_dt_periods"] = df_dt_periods.copy()
     st.session_state["df_tag"] = df_tag.copy()
+    st.session_state["df_player_profile"] = df_player_profile.copy()
 
 
 def refrescar_datasets_sesion():
     st.cache_data.clear()
-    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag, df_player_profile = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
 
@@ -622,6 +623,7 @@ def refrescar_datasets_sesion():
     st.session_state["df_dt"] = df_dt.copy()
     st.session_state["df_dt_periods"] = df_dt_periods.copy()
     st.session_state["df_tag"] = df_tag.copy()
+    st.session_state["df_player_profile"] = df_player_profile.copy()
 
 def calcular_edad(fecha_nac):
     try:
@@ -5058,6 +5060,7 @@ def cargar_datos():
     df_dt = cargar_datos_sheets("DT", columnas_dt)
     df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
     df_tag = cargar_datos_sheets("TAG", conservar_texto=True)
+    df_player_profile = cargar_datos_sheets("Perfil de jugador", conservar_texto=True)
 
     # Normalización de IDs
     for df in (df_players, df_reports, df_short):
@@ -5072,7 +5075,7 @@ def cargar_datos():
         if "ID_DT" in df_dt_periods.columns:
             df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].map(normalizar_id_texto)
 
-    return df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag
+    return df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag, df_player_profile
 
 # ---------------------------------------------------------
 # INICIALIZACIÓN
@@ -5119,6 +5122,7 @@ else:
     df_players_user = df_players_all.copy()
 
 df_tag_all = st.session_state["df_tag"].copy()
+df_player_profile_all = st.session_state["df_player_profile"].copy()
 
 # -----------------------------
 # Menú principal
@@ -7042,6 +7046,25 @@ if st.session_state["menu"] == "Glosario":
         section_header("Listado de tags", centered=True)
         st.dataframe(
             df_glosario,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.markdown("---")
+
+    df_player_profile = df_player_profile_all.copy()
+    df_player_profile = df_player_profile.dropna(how="all")
+    df_player_profile = df_player_profile.loc[
+        :,
+        [columna for columna in df_player_profile.columns if str(columna).strip()]
+    ]
+
+    if df_player_profile.empty:
+        st.info("La hoja Perfil de jugador no tiene registros disponibles para mostrar.")
+    else:
+        section_header("Perfil de jugador", centered=True)
+        st.dataframe(
+            df_player_profile,
             use_container_width=True,
             hide_index=True,
         )

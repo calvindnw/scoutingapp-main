@@ -1419,6 +1419,37 @@ PLAYER_PROFILE_ALIASES = [
 ]
 
 
+def limpiar_perfil_jugador_para_ui(valor, fallback=""):
+    if valor is None:
+        return fallback
+
+    texto = " ".join(str(valor).strip().split())
+    if not texto or texto.lower() in {"nan", "none", "-", "—"}:
+        return fallback
+
+    texto_limpio = html.unescape(texto)
+    texto_limpio = re.sub(r"<[^>]+>", " ", texto_limpio)
+    texto_limpio = " ".join(texto_limpio.split())
+
+    indicadores_markup = [
+        "alab-player-",
+        "alab-detail-",
+        "player-link",
+        "player-panel",
+        "href=",
+        "class=",
+        "</div",
+        "<div",
+        "</span",
+        "<span",
+    ]
+    texto_control = texto.casefold()
+    if any(indicador in texto_control for indicador in indicadores_markup):
+        return fallback
+
+    return texto_limpio or fallback
+
+
 def obtener_valor_registro_por_aliases(registro, aliases, fallback=""):
     if registro is None:
         return fallback
@@ -5542,10 +5573,10 @@ if st.session_state["menu"] == "Jugadores":
         foto_url = normalizar_url_foto(jugador.get("URL_Foto", ""))
         club_actual = jugador.get("Club", "-") or "-"
         posicion_actual = jugador.get("Posición", "-") or "-"
-        perfil_jugador = str(
-            obtener_valor_registro_por_aliases(jugador, PLAYER_PROFILE_ALIASES, "") or ""
-        ).strip()
-        perfil_jugador_display = " ".join(perfil_jugador.split())
+        perfil_jugador = limpiar_perfil_jugador_para_ui(
+            obtener_valor_registro_por_aliases(jugador, PLAYER_PROFILE_ALIASES, "")
+        )
+        perfil_jugador_display = " ".join(str(perfil_jugador).split())
         perfil_jugador_safe = html.escape(perfil_jugador_display, quote=True).replace("`", "&#96;")
         perfil_jugador_bloque = (
             f"<div class='alab-player-meta-row'><span class='alab-player-meta-pill'>Perfil de jugador: {perfil_jugador_safe}</span></div>"

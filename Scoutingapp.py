@@ -1411,6 +1411,47 @@ def obtener_columna_por_aliases(df, aliases):
     return None
 
 
+PLAYER_PROFILE_ALIASES = [
+    "perfil de jugador",
+    "Perfil de jugador",
+    "Perfil del jugador",
+    "perfil_jugador",
+]
+
+
+def obtener_valor_registro_por_aliases(registro, aliases, fallback=""):
+    if registro is None:
+        return fallback
+
+    try:
+        columnas = list(registro.index) if isinstance(registro, pd.Series) else list(registro.keys())
+    except Exception:
+        return fallback
+
+    columnas_normalizadas = {
+        normalizar_clave_estadistica(columna): columna for columna in columnas
+    }
+    for alias in aliases:
+        columna_real = columnas_normalizadas.get(normalizar_clave_estadistica(alias))
+        if columna_real is not None:
+            valor = registro.get(columna_real, fallback)
+            if valor is None or pd.isna(valor):
+                return fallback
+            return valor
+    return fallback
+
+
+def construir_fila_por_encabezados(encabezados, valores_por_columna):
+    mapa_normalizado = {
+        normalizar_clave_estadistica(clave): valor
+        for clave, valor in valores_por_columna.items()
+    }
+    return [
+        mapa_normalizado.get(normalizar_clave_estadistica(columna), "")
+        for columna in encabezados
+    ]
+
+
 def convertir_valor_numerico(valor):
     if valor is None or pd.isna(valor):
         return None
@@ -5034,9 +5075,9 @@ def cargar_datos():
     columnas_jug = [
         "ID_Jugador","Nombre","Fecha_Nac","Nacionalidad","Segunda_Nacionalidad",
         "Altura","Pie_Hábil","Posición","Caracteristica","Club","Liga",
-        "Descripcion",  # NUEVO CAMPO
+        "Descripcion", "perfil de jugador",
         "Sexo","URL_Foto","URL_Perfil","Instagram","Fecha_Fin_Contrato",
-        "video_url","telefono","representante"
+        "video_url","telefono","representante","nombre_wyscout"
     ]
 
     columnas_inf = ["ID_Informe","ID_Jugador","Scout","Fecha_Partido","Fecha_Informe",
@@ -5396,29 +5437,38 @@ if st.session_state["menu"] == "Jugadores":
 
                         car_str = ", ".join(nueva_caracteristica) if nueva_caracteristica else ""
 
-                        fila = [
-                            nuevo_id,                                 # 0 ID_Jugador
-                            nuevo_nombre or "",                       # 1 Nombre
-                            nueva_fecha or "",                        # 2 Fecha_Nac
-                            nueva_nacionalidad or "",                # 3 Nacionalidad
-                            nueva_seg_nac or "",                      # 4 Segunda nacionalidad
-                            nueva_altura if nueva_altura else 175,     # 5 Altura
-                            nuevo_pie or opciones_pies[0],             # 6 Pie hábil
-                            nueva_posicion or opciones_posiciones[0],  # 7 Posición
-                            car_str,                                   # 8 Caracteristica
-                            nuevo_club or "",                         # 9 Club
-                            nueva_liga or opciones_ligas[0],           # 10 Liga
-                            nueva_descripcion or "",                  # 11 Descripcion
-                            "",                                       # 12 Sexo
-                            nueva_url_foto or "",                     # 13 URL_Foto
-                            nueva_url_perfil or "",                   # 14 URL_Perfil
-                            nueva_instagram or "",                    # 15 Instagram
-                            nueva_fecha_fin_contrato or "",           # 16 Fin de contrato
-                            nueva_video or "",                        # 17 URL Video
-                            nuevo_telefono or "",                     # 18 Teléfono
-                            nuevo_representante or "",                # 19 Representante
-                            nombre_wyscout or ""                      # 20 nombre_wyscout
+                        encabezados_jugadores = ws.row_values(1) or list(df_sheet.columns) or [
+                            "ID_Jugador", "Nombre", "Fecha_Nac", "Nacionalidad", "Segunda_Nacionalidad",
+                            "Altura", "Pie_Hábil", "Posición", "Caracteristica", "Club", "Liga",
+                            "Descripcion", "perfil de jugador", "Sexo", "URL_Foto", "URL_Perfil",
+                            "Instagram", "Fecha_Fin_Contrato", "video_url", "telefono",
+                            "representante", "nombre_wyscout",
                         ]
+                        valores_jugador = {
+                            "ID_Jugador": nuevo_id,
+                            "Nombre": nuevo_nombre or "",
+                            "Fecha_Nac": nueva_fecha or "",
+                            "Nacionalidad": nueva_nacionalidad or "",
+                            "Segunda_Nacionalidad": nueva_seg_nac or "",
+                            "Altura": nueva_altura if nueva_altura else 175,
+                            "Pie_Hábil": nuevo_pie or opciones_pies[0],
+                            "Posición": nueva_posicion or opciones_posiciones[0],
+                            "Caracteristica": car_str,
+                            "Club": nuevo_club or "",
+                            "Liga": nueva_liga or opciones_ligas[0],
+                            "Descripcion": nueva_descripcion or "",
+                            "perfil de jugador": "",
+                            "Sexo": "",
+                            "URL_Foto": nueva_url_foto or "",
+                            "URL_Perfil": nueva_url_perfil or "",
+                            "Instagram": nueva_instagram or "",
+                            "Fecha_Fin_Contrato": nueva_fecha_fin_contrato or "",
+                            "video_url": nueva_video or "",
+                            "telefono": nuevo_telefono or "",
+                            "representante": nuevo_representante or "",
+                            "nombre_wyscout": nombre_wyscout or "",
+                        }
+                        fila = construir_fila_por_encabezados(encabezados_jugadores, valores_jugador)
                         # Convertir todos los valores numpy.int64 a int antes de guardar
                         import numpy as np
                         fila = [int(x) if isinstance(x, np.integer) else x for x in fila]
@@ -5492,6 +5542,15 @@ if st.session_state["menu"] == "Jugadores":
         foto_url = normalizar_url_foto(jugador.get("URL_Foto", ""))
         club_actual = jugador.get("Club", "-") or "-"
         posicion_actual = jugador.get("Posición", "-") or "-"
+        perfil_jugador = str(
+            obtener_valor_registro_por_aliases(jugador, PLAYER_PROFILE_ALIASES, "") or ""
+        ).strip()
+        perfil_jugador_html = html.escape(perfil_jugador)
+        perfil_jugador_bloque = (
+            f"<div class='alab-player-meta-row'><span class='alab-player-meta-pill'>Perfil de jugador: {perfil_jugador_html}</span></div>"
+            if perfil_jugador
+            else ""
+        )
         perfil_subtitulo = " · ".join(
             valor for valor in [club_actual, posicion_actual] if str(valor).strip() and str(valor).strip() != "-"
         ) or "Perfil principal"
@@ -5530,6 +5589,7 @@ if st.session_state["menu"] == "Jugadores":
                                 <div class="alab-player-subtitle">{perfil_subtitulo}</div>
                                 <div class="alab-player-context">{perfil_contexto}</div>
                             </div>
+                            {perfil_jugador_bloque}
                             <div class="alab-player-link-row alab-player-link-row-inline">{links_row}</div>
                         </div>
                     </div>
@@ -5569,6 +5629,10 @@ if st.session_state["menu"] == "Jugadores":
                         <div class="alab-detail-item">
                             <span class="alab-detail-label">Pie hábil</span>
                             <span class="alab-detail-value">{jugador.get('Pie_Hábil', '-')}</span>
+                        </div>
+                        <div class="alab-detail-item">
+                            <span class="alab-detail-label">Perfil de jugador</span>
+                            <span class="alab-detail-value">{perfil_jugador or '-'}</span>
                         </div>
                         <div class="alab-detail-item">
                             <span class="alab-detail-label">Fin de contrato</span>
@@ -5666,15 +5730,19 @@ if st.session_state["menu"] == "Jugadores":
                                 CURRENT_USER,
                                 hoy.strftime("%d/%m/%Y")
                             ]
-                            nueva_fila = [
-                                int(x) if isinstance(x, (np.integer,)) else
-                                float(x) if isinstance(x, (np.floating,)) else
-                                str(x) if x is not None else ""
-                                for x in nueva_fila
-                            ]
-                            ws_short.append_row(nueva_fila, value_input_option="USER_ENTERED")
-                            st.toast("⭐ Jugador agregado a Lista Corta", icon="⭐")
+                            fila_short = []
+                            for valor in nueva_fila:
+                                if isinstance(valor, np.integer):
+                                    fila_short.append(int(valor))
+                                elif isinstance(valor, np.floating):
+                                    fila_short.append(float(valor))
+                                else:
+                                    fila_short.append(valor)
+                            ws_short.append_row(fila_short)
+
                             refrescar_datasets_sesion()
+                            st.success(f"✅ {jugador['Nombre']} agregado a tu lista corta ({ANIO_ACTUAL} S{SEMESTRE_ACTUAL})")
+                            st.rerun()
 
                     except Exception as e:
                         st.error(f"Error al agregar a lista corta: {e}")
@@ -5774,31 +5842,34 @@ if st.session_state["menu"] == "Jugadores":
                         if not index_row.empty:
                             row_number = index_row[0] + 2
                             e_car_str = ", ".join(e_car) if e_car else ""
-                            valores = [
-                                id_jugador,           # 0
-                                e_nombre,             # 1
-                                e_fecha,              # 2
-                                e_nac,                # 3
-                                e_seg,                # 4
-                                e_altura,             # 5
-                                e_pie,                # 6
-                                e_pos,                # 7
-                                e_car_str,            # 8
-                                e_club,               # 9
-                                e_liga,               # 10
-                                e_descripcion,        # 11 (NUEVO)
-                                "",                  # 12 (Sexo, si se usa)
-                                e_foto,               # 13
-                                e_link,               # 14
-                                e_instagram,          # 15
-                                e_fin_contrato,       # 16
-                                e_video,              # 17
-                                e_telefono,           # 18
-                                e_representante,      # 19
-                                e_nombre_wyscout      # 20
-                            ]
+                            encabezados_jugadores = ws.row_values(1) or list(df_actual.columns)
+                            fila_actual = df_actual.loc[index_row[0]].to_dict()
+                            fila_actualizada = {
+                                **fila_actual,
+                                "ID_Jugador": id_jugador,
+                                "Nombre": e_nombre,
+                                "Fecha_Nac": e_fecha,
+                                "Nacionalidad": e_nac,
+                                "Segunda_Nacionalidad": e_seg,
+                                "Altura": e_altura,
+                                "Pie_Hábil": e_pie,
+                                "Posición": e_pos,
+                                "Caracteristica": e_car_str,
+                                "Club": e_club,
+                                "Liga": e_liga,
+                                "Descripcion": e_descripcion,
+                                "URL_Foto": e_foto,
+                                "URL_Perfil": e_link,
+                                "Instagram": e_instagram,
+                                "Fecha_Fin_Contrato": e_fin_contrato,
+                                "video_url": e_video,
+                                "telefono": e_telefono,
+                                "representante": e_representante,
+                                "nombre_wyscout": e_nombre_wyscout,
+                            }
+                            valores = construir_fila_por_encabezados(encabezados_jugadores, fila_actualizada)
 
-                            last_col = col_letter(len(valores))
+                            last_col = col_letter(len(encabezados_jugadores))
                             ws.update(f"A{row_number}:{last_col}{row_number}", [valores])
 
                             refrescar_datasets_sesion()

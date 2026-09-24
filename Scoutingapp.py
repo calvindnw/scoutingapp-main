@@ -5545,10 +5545,11 @@ if st.session_state["menu"] == "Jugadores":
         perfil_jugador = str(
             obtener_valor_registro_por_aliases(jugador, PLAYER_PROFILE_ALIASES, "") or ""
         ).strip()
-        perfil_jugador_html = html.escape(perfil_jugador)
+        perfil_jugador_display = " ".join(perfil_jugador.split())
+        perfil_jugador_safe = html.escape(perfil_jugador_display, quote=True).replace("`", "&#96;")
         perfil_jugador_bloque = (
-            f"<div class='alab-player-meta-row'><span class='alab-player-meta-pill'>Perfil de jugador: {perfil_jugador_html}</span></div>"
-            if perfil_jugador
+            f"<div class='alab-player-meta-row'><span class='alab-player-meta-pill'>Perfil de jugador: {perfil_jugador_safe}</span></div>"
+            if perfil_jugador_display
             else ""
         )
         perfil_subtitulo = " · ".join(
@@ -5632,7 +5633,7 @@ if st.session_state["menu"] == "Jugadores":
                         </div>
                         <div class="alab-detail-item">
                             <span class="alab-detail-label">Perfil de jugador</span>
-                            <span class="alab-detail-value">{perfil_jugador or '-'}</span>
+                            <span class="alab-detail-value">{perfil_jugador_safe or '-'}</span>
                         </div>
                         <div class="alab-detail-item">
                             <span class="alab-detail-label">Fin de contrato</span>

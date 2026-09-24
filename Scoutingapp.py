@@ -5422,8 +5422,6 @@ if st.session_state["menu"] == "Buscador":
     else:
         edades_validas = pd.to_numeric(df_buscador["Edad_calculada"], errors="coerce").dropna()
         altura_validas = pd.to_numeric(df_buscador["Altura_num"], errors="coerce").dropna()
-        contratos_validos = df_buscador["Fecha_Fin_Contrato_dt"].dropna()
-
         edad_min_global = int(edades_validas.min()) if not edades_validas.empty else 15
         edad_max_global = int(edades_validas.max()) if not edades_validas.empty else 45
         altura_min_global = int(altura_validas.min()) if not altura_validas.empty else 150
@@ -5458,25 +5456,10 @@ if st.session_state["menu"] == "Buscador":
                     ],
                 )
 
-            contrato_desde = None
-            contrato_hasta = None
-            if not contratos_validos.empty:
-                contrato_col1, contrato_col2 = st.columns(2)
-                contrato_min = contratos_validos.min().date()
-                contrato_max = contratos_validos.max().date()
-                with contrato_col1:
-                    contrato_desde = st.date_input("Contrato desde", value=contrato_min, min_value=contrato_min, max_value=contrato_max)
-                with contrato_col2:
-                    contrato_hasta = st.date_input("Contrato hasta", value=contrato_max, min_value=contrato_min, max_value=contrato_max)
-            else:
-                st.caption("No hay fechas de contrato cargadas para aplicar ese filtro.")
-
         if edad_min > edad_max:
             edad_min, edad_max = edad_max, edad_min
         if altura_min > altura_max:
             altura_min, altura_max = altura_max, altura_min
-        if contrato_desde and contrato_hasta and contrato_desde > contrato_hasta:
-            contrato_desde, contrato_hasta = contrato_hasta, contrato_desde
 
         df_filtrado = df_buscador.copy()
         df_filtrado = df_filtrado[
@@ -5500,10 +5483,6 @@ if st.session_state["menu"] == "Buscador":
             df_filtrado = df_filtrado[df_filtrado["perfil de jugador"].isin(perfiles_sel)]
         if caracteristica_sel:
             df_filtrado = filtrar_jugadores_por_caracteristica(df_filtrado, caracteristica_sel)
-        if contrato_desde and contrato_hasta:
-            fechas_contrato = pd.to_datetime(df_filtrado["Fecha_Fin_Contrato_dt"], errors="coerce")
-            mascara_contrato = fechas_contrato.between(pd.Timestamp(contrato_desde), pd.Timestamp(contrato_hasta), inclusive="both")
-            df_filtrado = df_filtrado[mascara_contrato]
 
         if orden_sel == "Score promedio (mayor a menor)":
             df_filtrado = df_filtrado.sort_values(["Score_Promedio", "Nombre"], ascending=[False, True], na_position="last")
@@ -5546,17 +5525,12 @@ if st.session_state["menu"] == "Buscador":
             columnas_resultado = [
                 "Nombre",
                 "Edad_calculada",
-                "Nacionalidad",
                 "Altura_num",
-                "Pie_Hábil",
                 "Posición",
-                "Caracteristica",
                 "Club",
                 "Liga",
-                "Fecha_Fin_Contrato",
                 "perfil de jugador",
                 "Score_Promedio",
-                "Informes_Visibles",
             ]
             columnas_resultado = [columna for columna in columnas_resultado if columna in df_filtrado.columns]
 
@@ -5566,9 +5540,6 @@ if st.session_state["menu"] == "Buscador":
                 "Altura_num": "Altura",
                 "perfil de jugador": "Perfil de jugador",
                 "Score_Promedio": "Score promedio",
-                "Informes_Visibles": "Informes visibles",
-                "Fecha_Fin_Contrato": "Contrato",
-                "Pie_Hábil": "Pie hábil",
             })
             if "Altura" in df_resultados.columns:
                 df_resultados["Altura"] = df_resultados["Altura"].round(0).astype("Int64")

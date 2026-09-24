@@ -572,7 +572,7 @@ st.sidebar.markdown(f"<b>Rol:</b> {CURRENT_ROLE}", unsafe_allow_html=True)
 if st.sidebar.button("Cerrar sesión"):
     st.session_state["user"] = None
     st.session_state["role"] = None
-    for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods"]:
+    for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag"]:
         st.session_state.pop(clave, None)
     st.rerun()
 
@@ -580,11 +580,11 @@ if st.sidebar.button("Cerrar sesión"):
 def inicializar_datasets_sesion():
     if all(
         clave in st.session_state
-        for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods"]
+        for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag"]
     ):
         return
 
-    df_players, df_reports, df_short, df_dt, df_dt_periods = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
 
@@ -600,11 +600,12 @@ def inicializar_datasets_sesion():
     st.session_state["df_short"] = df_short.copy()
     st.session_state["df_dt"] = df_dt.copy()
     st.session_state["df_dt_periods"] = df_dt_periods.copy()
+    st.session_state["df_tag"] = df_tag.copy()
 
 
 def refrescar_datasets_sesion():
     st.cache_data.clear()
-    df_players, df_reports, df_short, df_dt, df_dt_periods = cargar_datos()
+    df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag = cargar_datos()
     if "nombre_wyscout" not in df_players.columns:
         df_players["nombre_wyscout"] = ""
 
@@ -620,6 +621,7 @@ def refrescar_datasets_sesion():
     st.session_state["df_short"] = df_short.copy()
     st.session_state["df_dt"] = df_dt.copy()
     st.session_state["df_dt_periods"] = df_dt_periods.copy()
+    st.session_state["df_tag"] = df_tag.copy()
 
 def calcular_edad(fecha_nac):
     try:
@@ -5055,6 +5057,7 @@ def cargar_datos():
     df_short   = cargar_datos_sheets("Lista corta", columnas_short)
     df_dt = cargar_datos_sheets("DT", columnas_dt)
     df_dt_periods = cargar_datos_sheets("Periodo DT", columnas_periodo_dt)
+    df_tag = cargar_datos_sheets("TAG", conservar_texto=True)
 
     # Normalización de IDs
     for df in (df_players, df_reports, df_short):
@@ -5069,7 +5072,7 @@ def cargar_datos():
         if "ID_DT" in df_dt_periods.columns:
             df_dt_periods["ID_DT"] = df_dt_periods["ID_DT"].map(normalizar_id_texto)
 
-    return df_players, df_reports, df_short, df_dt, df_dt_periods
+    return df_players, df_reports, df_short, df_dt, df_dt_periods, df_tag
 
 # ---------------------------------------------------------
 # INICIALIZACIÓN
@@ -5115,6 +5118,8 @@ else:
     df_short_user   = df_short_all.copy()
     df_players_user = df_players_all.copy()
 
+df_tag_all = st.session_state["df_tag"].copy()
+
 # -----------------------------
 # Menú principal
 # -----------------------------
@@ -5129,6 +5134,7 @@ menu_options = [
     "Estadísticas Jugadores",
     "Comparativa Jugadores",
     "Comparativa de Técnicos",
+    "Glosario",
 ]
 
 if st.session_state.get("menu") not in menu_options:
@@ -6959,6 +6965,86 @@ if st.session_state["menu"] == "Comparativa de Técnicos":
                 fig_ligas_dt = crear_grafico_ligas_tecnicos(dataset_dt, metrica_liga_dt)
                 if fig_ligas_dt is not None:
                     st.plotly_chart(fig_ligas_dt, use_container_width=True)
+
+
+
+# =========================================================
+# BLOQUE GLOSARIO — TAG y definiciones
+# =========================================================
+
+if st.session_state["menu"] == "Glosario":
+
+    df_tag = df_tag_all.copy()
+    df_tag = df_tag.dropna(how="all")
+    df_tag = df_tag.loc[
+        :,
+        [columna for columna in df_tag.columns if str(columna).strip()]
+    ]
+
+    render_html_block(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Referencia</div>
+            <h1 class="alab-dashboard-hero-title">Glosario</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Fuente</strong> Hoja TAG</span>
+                <span class="alab-dashboard-chip"><strong>Registros</strong> {len(df_tag)}</span>
+            </div>
+        </div>
+        """
+    )
+
+    if df_tag.empty:
+        st.info("La hoja TAG no tiene registros disponibles para mostrar.")
+    else:
+        columnas_visibles = list(df_tag.columns)
+        columnas_normalizadas = {columna: normalizar_nombre_hoja(columna) for columna in columnas_visibles}
+
+        columna_tag = next(
+            (
+                columna
+                for columna, clave in columnas_normalizadas.items()
+                if clave in {"tag", "tags", "termino", "terminos"}
+            ),
+            columnas_visibles[0],
+        )
+        columna_definicion = next(
+            (
+                columna
+                for columna, clave in columnas_normalizadas.items()
+                if clave in {"definicion", "definiciones", "descripcion", "detalle", "concepto"}
+                and columna != columna_tag
+            ),
+            columnas_visibles[1] if len(columnas_visibles) > 1 else None,
+        )
+
+        columnas_tabla = [columna_tag]
+        if columna_definicion:
+            columnas_tabla.append(columna_definicion)
+        columnas_tabla.extend(
+            columna for columna in columnas_visibles
+            if columna not in columnas_tabla
+        )
+
+        df_glosario = df_tag[columnas_tabla].copy()
+        df_glosario = df_glosario.rename(columns={
+            columna_tag: "Tag",
+            **({columna_definicion: "Definición"} if columna_definicion else {}),
+        })
+
+        if "Tag" in df_glosario.columns:
+            df_glosario["Tag"] = df_glosario["Tag"].astype(str).str.strip()
+            df_glosario = df_glosario[df_glosario["Tag"] != ""]
+
+        if "Definición" in df_glosario.columns:
+            df_glosario["Definición"] = df_glosario["Definición"].astype(str).str.strip()
+
+        section_header("Listado de tags", centered=True)
+        st.dataframe(
+            df_glosario,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 

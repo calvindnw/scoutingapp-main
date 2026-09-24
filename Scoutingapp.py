@@ -5620,8 +5620,7 @@ if st.session_state["menu"] == "Jugadores":
                             <div class="alab-player-identity-block alab-player-identity-block-compact">
                                 <div class="alab-player-subtitle">{perfil_subtitulo}</div>
                                 <div class="alab-player-context">{perfil_contexto}</div>
-                            </div>
-                            {perfil_jugador_bloque}
+                            </div>{perfil_jugador_bloque}
                             <div class="alab-player-link-row alab-player-link-row-inline">{links_row}</div>
                         </div>
                     </div>

@@ -2094,6 +2094,151 @@ def construir_dataset_scores_jugador(df_reports, id_jugador):
     }
 
 
+def desglosar_valores_texto(valor) -> list[str]:
+    if valor is None:
+        return []
+    try:
+        if pd.isna(valor):
+            return []
+    except TypeError:
+        pass
+
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nan", "none", "nat", "<na>", "-", "—"}:
+        return []
+
+    partes = re.split(r"[,;\n\r|]+", texto)
+    return [parte.strip() for parte in partes if parte and parte.strip()]
+
+
+def calcular_edades_jugadores(df_players: pd.DataFrame) -> pd.Series:
+    if df_players.empty or "Fecha_Nac" not in df_players.columns:
+        return pd.Series(dtype="Int64")
+
+    fechas_nac = pd.to_datetime(df_players["Fecha_Nac"], errors="coerce", dayfirst=True)
+    hoy = obtener_fecha_buenos_aires().date()
+
+    edades = fechas_nac.apply(
+        lambda fecha: hoy.year - fecha.year - ((hoy.month, hoy.day) < (fecha.month, fecha.day))
+        if pd.notna(fecha) else pd.NA
+    )
+    return edades.astype("Int64")
+
+
+def obtener_opciones_texto(df: pd.DataFrame, columna: str) -> list[str]:
+    if df.empty or columna not in df.columns:
+        return []
+
+    serie = df[columna].astype(str).str.strip()
+    serie = serie[~serie.isin(["", "nan", "None", "NaT", "<NA>", "-", "—"])]
+    return sorted(serie.unique().tolist())
+
+
+def obtener_opciones_catalogo(df_catalogo: pd.DataFrame, aliases: list[str]) -> list[str]:
+    if df_catalogo.empty:
+        return []
+
+    columna = obtener_columna_por_aliases(df_catalogo, aliases)
+    if columna is None:
+        columna = df_catalogo.columns[0]
+
+    return obtener_opciones_texto(df_catalogo, columna)
+
+
+def construir_dataset_buscador_jugadores(df_players, df_reports):
+    if df_players.empty:
+        return pd.DataFrame()
+
+    df_base = df_players.copy()
+    df_base["ID_Jugador"] = df_base["ID_Jugador"].astype(str)
+    df_base["Edad_calculada"] = calcular_edades_jugadores(df_base)
+    df_base["Altura_num"] = pd.to_numeric(
+        df_base.get("Altura", pd.Series(index=df_base.index, dtype="object"))
+        .astype(str)
+        .str.replace(",", ".", regex=False),
+        errors="coerce",
+    )
+    df_base["Fecha_Fin_Contrato_dt"] = pd.to_datetime(
+        df_base.get("Fecha_Fin_Contrato", pd.Series(index=df_base.index, dtype="object")),
+        errors="coerce",
+        dayfirst=True,
+    )
+
+    if df_reports.empty or "ID_Jugador" not in df_reports.columns:
+        df_base["Score_Promedio"] = np.nan
+        df_base["Informes_Visibles"] = 0
+        return df_base
+
+    df_scores = normalizar_dataframe_scores(df_reports, ANALYST_SCORE_METRICS)
+    df_scores["ID_Jugador"] = df_scores["ID_Jugador"].astype(str)
+    df_scores["Score"] = df_scores[ANALYST_SCORE_METRICS].mean(axis=1).round(2)
+    df_scores = (
+        df_scores.groupby("ID_Jugador", dropna=False)
+        .agg(
+            Score_Promedio=("Score", "mean"),
+            Informes_Visibles=("Score", "size"),
+        )
+        .reset_index()
+    )
+    df_scores["Score_Promedio"] = df_scores["Score_Promedio"].round(2)
+
+    return df_base.merge(df_scores, on="ID_Jugador", how="left")
+
+
+def filtrar_jugadores_por_caracteristica(df: pd.DataFrame, caracteristica: str) -> pd.DataFrame:
+    if not caracteristica or df.empty or "Caracteristica" not in df.columns:
+        return df
+
+    caracteristica_objetivo = normalizar_clave_estadistica(caracteristica)
+    mascara = df["Caracteristica"].apply(
+        lambda valor: caracteristica_objetivo in {
+            normalizar_clave_estadistica(item) for item in desglosar_valores_texto(valor)
+        }
+    )
+    return df[mascara].copy()
+
+
+def obtener_opciones_caracteristicas(df_players: pd.DataFrame, df_tag: pd.DataFrame) -> list[str]:
+    opciones = []
+
+    for valor in obtener_opciones_catalogo(df_tag, ["Tag", "Tags", "Termino", "Terminos"]):
+        opciones.extend(desglosar_valores_texto(valor))
+
+    if not df_players.empty and "Caracteristica" in df_players.columns:
+        for valor in df_players["Caracteristica"].tolist():
+            opciones.extend(desglosar_valores_texto(valor))
+
+    mapa = {}
+    for opcion in opciones:
+        clave = normalizar_clave_estadistica(opcion)
+        if clave and clave not in mapa:
+            mapa[clave] = opcion.strip()
+
+    return sorted(mapa.values())
+
+
+def obtener_opciones_perfiles(df_players: pd.DataFrame, df_player_profile: pd.DataFrame) -> list[str]:
+    opciones = []
+
+    if not df_players.empty and "perfil de jugador" in df_players.columns:
+        opciones.extend(obtener_opciones_texto(df_players, "perfil de jugador"))
+
+    opciones.extend(
+        obtener_opciones_catalogo(
+            df_player_profile,
+            ["Perfil de jugador", "perfil de jugador", "Perfil", "Tipo de perfil"],
+        )
+    )
+
+    mapa = {}
+    for opcion in opciones:
+        clave = normalizar_clave_estadistica(opcion)
+        if clave and clave not in mapa:
+            mapa[clave] = opcion.strip()
+
+    return sorted(mapa.values())
+
+
 def crear_grafico_scores_jugador(dataset_scores, nombre_jugador):
     if not dataset_scores or dataset_scores["historial"].empty:
         return None
@@ -5203,6 +5348,7 @@ menu_options = [
     "Panel General",
     "Agenda",
     "Jugadores",
+    "Buscador",
     "Directores Técnicos",
     "Informes Jugadores",
     "Lista corta",
@@ -5233,6 +5379,205 @@ if clicked_menu_option and clicked_menu_option != st.session_state["menu"]:
     st.rerun()
 
 menu = st.session_state["menu"]
+
+
+# =========================================================
+# BLOQUE BUSCADOR — Filtros avanzados de jugadores
+# =========================================================
+
+if st.session_state["menu"] == "Buscador":
+    df_players = df_players_all.copy()
+    df_reports = df_reports_user.copy()
+    df_buscador = construir_dataset_buscador_jugadores(df_players, df_reports)
+
+    opciones_nacionalidad = obtener_opciones_texto(df_buscador, "Nacionalidad")
+    opciones_pie_habil = obtener_opciones_texto(df_buscador, "Pie_Hábil")
+    opciones_posicion = obtener_opciones_texto(df_buscador, "Posición")
+    opciones_club = obtener_opciones_texto(df_buscador, "Club")
+    opciones_liga = obtener_opciones_texto(df_buscador, "Liga")
+    opciones_caracteristicas = obtener_opciones_caracteristicas(df_players, df_tag_all)
+    opciones_perfil = obtener_opciones_perfiles(df_players, df_player_profile_all)
+
+    scores_validos = pd.to_numeric(df_buscador.get("Score_Promedio"), errors="coerce")
+    score_promedio_general = round(float(scores_validos.dropna().mean()), 2) if scores_validos.notna().any() else 0
+    alcance_buscador = "Base completa" if CURRENT_ROLE == "admin" else "Jugadores vinculados"
+
+    render_html_block(
+        f"""
+        <div class="alab-dashboard-hero">
+            <div class="alab-dashboard-hero-kicker">Scouting</div>
+            <h1 class="alab-dashboard-hero-title">Buscador</h1>
+            <div class="alab-dashboard-chip-row">
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> {alcance_buscador}</span>
+                <span class="alab-dashboard-chip"><strong>Jugadores</strong> {df_buscador['ID_Jugador'].nunique() if not df_buscador.empty else 0}</span>
+                <span class="alab-dashboard-chip"><strong>Informes visibles</strong> {len(df_reports)}</span>
+                <span class="alab-dashboard-chip"><strong>Score promedio visible</strong> {score_promedio_general:.2f}</span>
+            </div>
+        </div>
+        """
+    )
+
+    if df_buscador.empty:
+        st.info("No hay jugadores disponibles para aplicar filtros.")
+    else:
+        edades_validas = pd.to_numeric(df_buscador["Edad_calculada"], errors="coerce").dropna()
+        altura_validas = pd.to_numeric(df_buscador["Altura_num"], errors="coerce").dropna()
+        contratos_validos = df_buscador["Fecha_Fin_Contrato_dt"].dropna()
+
+        edad_min_global = int(edades_validas.min()) if not edades_validas.empty else 15
+        edad_max_global = int(edades_validas.max()) if not edades_validas.empty else 45
+        altura_min_global = int(altura_validas.min()) if not altura_validas.empty else 150
+        altura_max_global = int(altura_validas.max()) if not altura_validas.empty else 210
+
+        section_header("Filtros avanzados", centered=True)
+        with st.expander("Configurar búsqueda", expanded=True):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                edad_min = st.number_input("Edad mínima", min_value=edad_min_global, max_value=edad_max_global, value=edad_min_global, step=1)
+                nacionalidades_sel = st.multiselect("Nacionalidad", opciones_nacionalidad)
+                posiciones_sel = st.multiselect("Posición", opciones_posicion)
+                clubes_sel = st.multiselect("Club", opciones_club)
+            with c2:
+                edad_max = st.number_input("Edad máxima", min_value=edad_min_global, max_value=edad_max_global, value=edad_max_global, step=1)
+                altura_min = st.number_input("Altura mínima (cm)", min_value=altura_min_global, max_value=altura_max_global, value=altura_min_global, step=1)
+                pies_sel = st.multiselect("Pie hábil", opciones_pie_habil)
+                ligas_sel = st.multiselect("Liga", opciones_liga)
+            with c3:
+                altura_max = st.number_input("Altura máxima (cm)", min_value=altura_min_global, max_value=altura_max_global, value=altura_max_global, step=1)
+                caracteristica_sel = st.selectbox("Característica", [""] + opciones_caracteristicas)
+                perfiles_sel = st.multiselect("Perfil de jugador", opciones_perfil)
+                orden_sel = st.selectbox(
+                    "Ordenar por",
+                    [
+                        "Score promedio (mayor a menor)",
+                        "Score promedio (menor a mayor)",
+                        "Edad (menor a mayor)",
+                        "Edad (mayor a menor)",
+                        "Altura (mayor a menor)",
+                        "Nombre (A-Z)",
+                    ],
+                )
+
+            contrato_desde = None
+            contrato_hasta = None
+            if not contratos_validos.empty:
+                contrato_col1, contrato_col2 = st.columns(2)
+                contrato_min = contratos_validos.min().date()
+                contrato_max = contratos_validos.max().date()
+                with contrato_col1:
+                    contrato_desde = st.date_input("Contrato desde", value=contrato_min, min_value=contrato_min, max_value=contrato_max)
+                with contrato_col2:
+                    contrato_hasta = st.date_input("Contrato hasta", value=contrato_max, min_value=contrato_min, max_value=contrato_max)
+            else:
+                st.caption("No hay fechas de contrato cargadas para aplicar ese filtro.")
+
+        if edad_min > edad_max:
+            edad_min, edad_max = edad_max, edad_min
+        if altura_min > altura_max:
+            altura_min, altura_max = altura_max, altura_min
+        if contrato_desde and contrato_hasta and contrato_desde > contrato_hasta:
+            contrato_desde, contrato_hasta = contrato_hasta, contrato_desde
+
+        df_filtrado = df_buscador.copy()
+        df_filtrado = df_filtrado[
+            pd.to_numeric(df_filtrado["Edad_calculada"], errors="coerce").between(edad_min, edad_max, inclusive="both")
+        ]
+        df_filtrado = df_filtrado[
+            pd.to_numeric(df_filtrado["Altura_num"], errors="coerce").between(altura_min, altura_max, inclusive="both")
+        ]
+
+        if nacionalidades_sel:
+            df_filtrado = df_filtrado[df_filtrado["Nacionalidad"].isin(nacionalidades_sel)]
+        if pies_sel:
+            df_filtrado = df_filtrado[df_filtrado["Pie_Hábil"].isin(pies_sel)]
+        if posiciones_sel:
+            df_filtrado = df_filtrado[df_filtrado["Posición"].isin(posiciones_sel)]
+        if clubes_sel:
+            df_filtrado = df_filtrado[df_filtrado["Club"].isin(clubes_sel)]
+        if ligas_sel:
+            df_filtrado = df_filtrado[df_filtrado["Liga"].isin(ligas_sel)]
+        if perfiles_sel and "perfil de jugador" in df_filtrado.columns:
+            df_filtrado = df_filtrado[df_filtrado["perfil de jugador"].isin(perfiles_sel)]
+        if caracteristica_sel:
+            df_filtrado = filtrar_jugadores_por_caracteristica(df_filtrado, caracteristica_sel)
+        if contrato_desde and contrato_hasta:
+            fechas_contrato = pd.to_datetime(df_filtrado["Fecha_Fin_Contrato_dt"], errors="coerce")
+            mascara_contrato = fechas_contrato.between(pd.Timestamp(contrato_desde), pd.Timestamp(contrato_hasta), inclusive="both")
+            df_filtrado = df_filtrado[mascara_contrato]
+
+        if orden_sel == "Score promedio (mayor a menor)":
+            df_filtrado = df_filtrado.sort_values(["Score_Promedio", "Nombre"], ascending=[False, True], na_position="last")
+        elif orden_sel == "Score promedio (menor a mayor)":
+            df_filtrado = df_filtrado.sort_values(["Score_Promedio", "Nombre"], ascending=[True, True], na_position="last")
+        elif orden_sel == "Edad (menor a mayor)":
+            df_filtrado = df_filtrado.sort_values(["Edad_calculada", "Nombre"], ascending=[True, True], na_position="last")
+        elif orden_sel == "Edad (mayor a menor)":
+            df_filtrado = df_filtrado.sort_values(["Edad_calculada", "Nombre"], ascending=[False, True], na_position="last")
+        elif orden_sel == "Altura (mayor a menor)":
+            df_filtrado = df_filtrado.sort_values(["Altura_num", "Nombre"], ascending=[False, True], na_position="last")
+        else:
+            df_filtrado = df_filtrado.sort_values(["Nombre"], ascending=[True], na_position="last")
+
+        render_html_block(
+            f"""
+            <div class="alab-mini-grid">
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Jugadores encontrados</span>
+                    <span class="alab-mini-value">{len(df_filtrado)}</span>
+                    <span class="alab-mini-copy">Resultado actual de la combinación de filtros seleccionada.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Clubes representados</span>
+                    <span class="alab-mini-value">{df_filtrado['Club'].nunique() if 'Club' in df_filtrado.columns and not df_filtrado.empty else 0}</span>
+                    <span class="alab-mini-copy">Volumen de clubes presentes en la lista filtrada.</span>
+                </div>
+                <div class="alab-mini-stat">
+                    <span class="alab-mini-label">Score promedio visible</span>
+                    <span class="alab-mini-value">{(round(float(pd.to_numeric(df_filtrado['Score_Promedio'], errors='coerce').dropna().mean()), 2) if not df_filtrado.empty and pd.to_numeric(df_filtrado['Score_Promedio'], errors='coerce').notna().any() else 0):.2f}</span>
+                    <span class="alab-mini-copy">Promedio del score calculado con los informes visibles para tu rol.</span>
+                </div>
+            </div>
+            """
+        )
+
+        if df_filtrado.empty:
+            st.warning("No hay jugadores que coincidan con los filtros seleccionados.")
+        else:
+            columnas_resultado = [
+                "Nombre",
+                "Edad_calculada",
+                "Nacionalidad",
+                "Altura_num",
+                "Pie_Hábil",
+                "Posición",
+                "Caracteristica",
+                "Club",
+                "Liga",
+                "Fecha_Fin_Contrato",
+                "perfil de jugador",
+                "Score_Promedio",
+                "Informes_Visibles",
+            ]
+            columnas_resultado = [columna for columna in columnas_resultado if columna in df_filtrado.columns]
+
+            df_resultados = df_filtrado[columnas_resultado].copy()
+            df_resultados = df_resultados.rename(columns={
+                "Edad_calculada": "Edad",
+                "Altura_num": "Altura",
+                "perfil de jugador": "Perfil de jugador",
+                "Score_Promedio": "Score promedio",
+                "Informes_Visibles": "Informes visibles",
+                "Fecha_Fin_Contrato": "Contrato",
+                "Pie_Hábil": "Pie hábil",
+            })
+            if "Altura" in df_resultados.columns:
+                df_resultados["Altura"] = df_resultados["Altura"].round(0).astype("Int64")
+
+            st.dataframe(
+                df_resultados,
+                use_container_width=True,
+                hide_index=True,
+            )
 
 
 # =========================================================

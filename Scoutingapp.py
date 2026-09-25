@@ -1525,9 +1525,9 @@ def formatear_valor_estadistica(valor):
 
 @st.cache_data(ttl=120)
 def cargar_datos_estadisticas():
-    df_promedios = cargar_datos_sheets("Promedios de Liga", conservar_texto=True)
+    df_franjas = cargar_datos_sheets("Franja de liga", conservar_texto=True)
     df_data_jugadores = cargar_datos_sheets("Data Jugadores", conservar_texto=True)
-    return df_promedios, df_data_jugadores
+    return df_franjas, df_data_jugadores
 
 
 def obtener_fila_estadisticas_jugador(df_data_jugadores, nombre_wyscout):
@@ -1602,7 +1602,45 @@ def obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores):
     }
 
 
-def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
+def normalizar_tipo_franja(valor):
+    clave = normalizar_clave_estadistica(valor)
+    if clave.startswith("min"):
+        return "minimo"
+    if clave.startswith("max"):
+        return "maximo"
+    return clave
+
+
+def obtener_filas_franja_liga(df_franjas, posicion, liga):
+    if df_franjas.empty:
+        return None, None
+
+    col_posicion = obtener_columna_por_aliases(df_franjas, ["Posición", "Posicion"])
+    col_liga = obtener_columna_por_aliases(df_franjas, ["Liga"])
+    col_franja = obtener_columna_por_aliases(df_franjas, ["Franja"])
+    if not all([col_posicion, col_liga, col_franja]):
+        return None, None
+
+    posicion_objetivo = normalizar_clave_estadistica(posicion)
+    liga_objetivo = normalizar_clave_estadistica(liga)
+    df_filtrado = df_franjas[
+        (df_franjas[col_posicion].astype(str).map(normalizar_clave_estadistica) == posicion_objetivo)
+        & (df_franjas[col_liga].astype(str).map(normalizar_clave_estadistica) == liga_objetivo)
+    ].copy()
+
+    if df_filtrado.empty:
+        return None, None
+
+    df_filtrado["_franja_normalizada"] = df_filtrado[col_franja].map(normalizar_tipo_franja)
+    fila_minima = df_filtrado[df_filtrado["_franja_normalizada"] == "minimo"]
+    fila_maxima = df_filtrado[df_filtrado["_franja_normalizada"] == "maximo"]
+    return (
+        fila_minima.iloc[0] if not fila_minima.empty else None,
+        fila_maxima.iloc[0] if not fila_maxima.empty else None,
+    )
+
+
+def construir_tabla_estadisticas(jugador, df_franjas, df_data_jugadores):
     posicion = str(jugador.get("Posición", "")).strip()
     liga = str(jugador.get("Liga", "")).strip()
     nombre_wyscout = str(jugador.get("nombre_wyscout", "")).strip()
@@ -1618,7 +1656,7 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
     if fila_jugador is None:
         return None, "jugador_sin_estadisticas"
 
-    fila_comparativa = {"Jugador / Promedio de liga": jugador.get("Nombre", "Jugador")}
+    fila_comparativa = {"Jugador / Franja de liga": jugador.get("Nombre", "Jugador")}
     estadisticas_encontradas = 0
 
     for etiqueta, aliases in metricas:
@@ -1633,47 +1671,23 @@ def construir_tabla_estadisticas(jugador, df_promedios, df_data_jugadores):
 
     filas = [fila_comparativa]
 
-    if df_promedios.empty:
-        return pd.DataFrame(filas), "sin_promedios"
+    fila_minima, fila_maxima = obtener_filas_franja_liga(df_franjas, posicion, liga)
+    if fila_minima is None and fila_maxima is None:
+        return pd.DataFrame(filas), "sin_franja"
 
-    col_posicion = obtener_columna_por_aliases(df_promedios, ["Posición", "Posicion"])
-    col_liga = obtener_columna_por_aliases(df_promedios, ["Liga"])
-    col_anio = obtener_columna_por_aliases(df_promedios, ["Año", "Ano", "Temporada", "Year"])
+    for etiqueta_referencia, fila_franja in [
+        ("Franja mínima de liga", fila_minima),
+        ("Franja máxima de liga", fila_maxima),
+    ]:
+        if fila_franja is None:
+            continue
 
-    if not all([col_posicion, col_liga, col_anio]):
-        return pd.DataFrame(filas), "sin_promedios"
-
-    posicion_objetivo = normalizar_clave_estadistica(posicion)
-    liga_objetivo = normalizar_clave_estadistica(liga)
-
-    df_filtrado = df_promedios[
-        (df_promedios[col_posicion].astype(str).map(normalizar_clave_estadistica) == posicion_objetivo)
-        & (df_promedios[col_liga].astype(str).map(normalizar_clave_estadistica) == liga_objetivo)
-    ].copy()
-
-    if df_filtrado.empty:
-        return pd.DataFrame(filas), "sin_promedios"
-
-    df_filtrado["_anio_orden"] = pd.to_numeric(df_filtrado[col_anio], errors="coerce")
-    df_filtrado = df_filtrado.dropna(subset=["_anio_orden"])
-
-    if df_filtrado.empty:
-        return pd.DataFrame(filas), "sin_promedios"
-
-    df_filtrado = (
-        df_filtrado.sort_values("_anio_orden", ascending=False)
-        .drop_duplicates(subset=[col_anio], keep="first")
-    )
-
-    for _, fila_promedio in df_filtrado.iterrows():
-        fila_anual = {
-            "Jugador / Promedio de liga": f"Promedio de liga {int(fila_promedio['_anio_orden'])}"
-        }
+        fila_rango = {"Jugador / Franja de liga": etiqueta_referencia}
         for etiqueta, aliases in metricas:
-            columna = obtener_columna_por_aliases(df_promedios, aliases)
-            valor = fila_promedio.get(columna) if columna else None
-            fila_anual[etiqueta] = formatear_valor_estadistica(valor)
-        filas.append(fila_anual)
+            columna = obtener_columna_por_aliases(df_franjas, aliases)
+            valor = fila_franja.get(columna) if columna else None
+            fila_rango[etiqueta] = formatear_valor_estadistica(valor)
+        filas.append(fila_rango)
 
     return pd.DataFrame(filas), "ok"
 
@@ -1701,20 +1715,59 @@ def preparar_datos_graficos_estadisticas(tabla_estadisticas: pd.DataFrame):
     ).dropna(subset=["Valor"])
 
     if df_long.empty:
-        return None, None, None
-
-    def extraer_anio(etiqueta):
-        match = re.search(r"(20\d{2})", str(etiqueta))
-        return int(match.group(1)) if match else -1
+        return None, None, None, None
 
     referencia_jugador = str(df_chart.iloc[0][etiqueta_columna])
-    filas_liga = df_chart[df_chart[etiqueta_columna] != referencia_jugador].copy()
-    fila_referencia = None
-    if not filas_liga.empty:
-        filas_liga["_anio"] = filas_liga[etiqueta_columna].apply(extraer_anio)
-        fila_referencia = filas_liga.sort_values("_anio", ascending=False).iloc[0]
+    filas_referencia = df_chart[df_chart[etiqueta_columna] != referencia_jugador].copy()
+    fila_minima = None
+    fila_maxima = None
+    for _, fila in filas_referencia.iterrows():
+        etiqueta_normalizada = normalizar_clave_estadistica(fila.get(etiqueta_columna))
+        if "minim" in etiqueta_normalizada and fila_minima is None:
+            fila_minima = fila
+        elif "maxim" in etiqueta_normalizada and fila_maxima is None:
+            fila_maxima = fila
 
-    return df_long, fila_referencia, referencia_jugador
+    return df_long, fila_minima, fila_maxima, referencia_jugador
+
+
+def construir_datos_franja_estadisticas(tabla_estadisticas, fila_franja_minima, fila_franja_maxima, invertir_orden=False):
+    if (
+        tabla_estadisticas is None
+        or tabla_estadisticas.empty
+        or fila_franja_minima is None
+        or fila_franja_maxima is None
+    ):
+        return pd.DataFrame()
+
+    etiqueta_columna = tabla_estadisticas.columns[0]
+    metricas = [columna for columna in tabla_estadisticas.columns if columna != etiqueta_columna]
+    if invertir_orden:
+        metricas = list(reversed(metricas))
+
+    filas = []
+    for metrica in metricas:
+        valor_jugador = convertir_valor_numerico(tabla_estadisticas.iloc[0].get(metrica))
+        valor_minimo = convertir_valor_numerico(fila_franja_minima.get(metrica))
+        valor_maximo = convertir_valor_numerico(fila_franja_maxima.get(metrica))
+        if valor_jugador is None and valor_minimo is None and valor_maximo is None:
+            continue
+        if valor_minimo is None or valor_maximo is None:
+            continue
+        if valor_minimo > valor_maximo:
+            valor_minimo, valor_maximo = valor_maximo, valor_minimo
+
+        filas.append(
+            {
+                "Métrica": metrica,
+                "Jugador": valor_jugador,
+                "Minimo": valor_minimo,
+                "Maximo": valor_maximo,
+                "Dentro_franja": valor_jugador is not None and valor_minimo <= valor_jugador <= valor_maximo,
+            }
+        )
+
+    return pd.DataFrame(filas)
 
 
 def construir_opciones_lista_express(df_players, ids_excluidos=None, current_id=""):
@@ -3528,7 +3581,7 @@ def generar_pdf_comparativa(jugadores, dataset_comparativa):
 
 def abreviar_titulo_estadistica_pdf(texto):
     equivalencias = {
-        "Jugador / Promedio de liga": "Jugador / Prom. liga",
+        "Jugador / Franja de liga": "Jugador / Franja",
         "Goles recibidos / 90": "Goles rec./90",
         "Remates en contra / 90": "Remates c./90",
         "Porcentaje de paradas": "% paradas",
@@ -4254,55 +4307,49 @@ def crear_radar_valoracion_pdf(promedios_grupos):
     return crear_buffer_figura_pdf(fig)
 
 
-def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqueta_jugador):
+def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_franja_minima, fila_franja_maxima, etiqueta_jugador):
     import matplotlib.pyplot as plt
 
-    if tabla_estadisticas is None or tabla_estadisticas.empty or fila_liga_referencia is None:
+    df_franja = construir_datos_franja_estadisticas(
+        tabla_estadisticas,
+        fila_franja_minima,
+        fila_franja_maxima,
+        invertir_orden=True,
+    )
+    if df_franja.empty:
         return None
 
-    etiqueta_columna = tabla_estadisticas.columns[0]
-    metricas = [columna for columna in tabla_estadisticas.columns if columna != etiqueta_columna]
-    metricas_orden = list(reversed(metricas))
-    nombre_referencia = valor_campo_pdf(fila_liga_referencia.get(etiqueta_columna), "Promedio de liga")
-
-    valores_jugador = []
-    valores_liga = []
-    etiquetas_validas = []
-    for metrica in metricas_orden:
-        valor_jugador = convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica])
-        valor_liga = convertir_valor_numerico(fila_liga_referencia.get(metrica))
-        if valor_jugador is None and valor_liga is None:
-            continue
-        etiquetas_validas.append(metrica)
-        valores_jugador.append(valor_jugador or 0)
-        valores_liga.append(valor_liga or 0)
-
-    if not etiquetas_validas:
-        return None
-
-    posiciones = np.arange(len(etiquetas_validas))
-    alto_barra = 0.34
+    posiciones = np.arange(len(df_franja))
+    minimos = df_franja["Minimo"].tolist()
+    amplitudes = (df_franja["Maximo"] - df_franja["Minimo"]).tolist()
+    jugadores = [valor if valor is not None else np.nan for valor in df_franja["Jugador"].tolist()]
+    colores_jugador = ["#19e28f" if dentro else "#f3bf4c" for dentro in df_franja["Dentro_franja"].tolist()]
 
     fig, ax = plt.subplots(figsize=(7.8, 3.15))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
-    barras_jugador = ax.barh(
-        posiciones + alto_barra / 2,
-        valores_jugador,
-        height=alto_barra,
-        color="#19e28f",
-        label=abreviar_leyenda_grafico_pdf(etiqueta_jugador, 24),
-    )
-    barras_liga = ax.barh(
-        posiciones - alto_barra / 2,
-        valores_liga,
-        height=alto_barra,
+    ax.barh(
+        posiciones,
+        amplitudes,
+        left=minimos,
+        height=0.36,
         color="#8fd3b4",
-        label=abreviar_leyenda_grafico_pdf(nombre_referencia, 24),
+        alpha=0.35,
+        label="Franja de liga",
+    )
+    ax.scatter(
+        jugadores,
+        posiciones,
+        s=54,
+        color=colores_jugador,
+        edgecolors="#f7fbf8",
+        linewidths=0.8,
+        zorder=3,
+        label=abreviar_leyenda_grafico_pdf(etiqueta_jugador, 24),
     )
 
     ax.set_yticks(posiciones)
-    ax.set_yticklabels(etiquetas_validas, color="#edf5f0", fontsize=8.5)
+    ax.set_yticklabels(df_franja["Métrica"].tolist(), color="#edf5f0", fontsize=8.5)
     ax.tick_params(axis="x", colors="#b7cec2", labelsize=8)
     ax.invert_yaxis()
     ax.grid(axis="x", color="#254637", alpha=0.65)
@@ -4311,6 +4358,7 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     ax.spines["left"].set_color("#335e4c")
     ax.spines["bottom"].set_color("#335e4c")
     ax.set_xlabel("Valor", color="#d6e4dc", fontsize=9)
+    ax.set_title("Jugador vs franja de liga", color="#edf5f0", fontsize=10.5, loc="left", pad=10)
     ax.legend(
         loc="upper center",
         bbox_to_anchor=(0.5, 1.09),
@@ -4323,12 +4371,13 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     )
     plt.subplots_adjust(top=0.82, bottom=0.19, left=0.25, right=0.96)
 
-    for barra in list(barras_jugador) + list(barras_liga):
-        ancho = barra.get_width()
+    for posicion, fila in enumerate(df_franja.itertuples(index=False)):
+        if pd.isna(fila.Jugador):
+            continue
         ax.text(
-            ancho + 0.08,
-            barra.get_y() + barra.get_height() / 2,
-            f"{ancho:.2f}",
+            fila.Jugador + 0.08,
+            posicion,
+            f"{fila.Jugador:.2f}",
             va="center",
             ha="left",
             color="#edf5f0",
@@ -4338,29 +4387,35 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiq
     return crear_buffer_figura_pdf(fig)
 
 
-def crear_radar_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqueta_jugador):
+def crear_radar_estadisticas_pdf(tabla_estadisticas, fila_franja_minima, fila_franja_maxima, etiqueta_jugador):
     import matplotlib.pyplot as plt
 
-    if tabla_estadisticas is None or tabla_estadisticas.empty or fila_liga_referencia is None:
+    df_franja = construir_datos_franja_estadisticas(
+        tabla_estadisticas,
+        fila_franja_minima,
+        fila_franja_maxima,
+    )
+    if df_franja.empty:
         return None
 
-    etiqueta_columna = tabla_estadisticas.columns[0]
-    metricas = [columna for columna in tabla_estadisticas.columns if columna != etiqueta_columna]
+    metricas = df_franja["Métrica"].tolist()
     if not metricas:
         return None
 
-    valores_jugador = [convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0 for metrica in metricas]
-    valores_liga = [convertir_valor_numerico(fila_liga_referencia.get(metrica)) or 0 for metrica in metricas]
+    valores_jugador = [valor if valor is not None else 0 for valor in df_franja["Jugador"].tolist()]
+    valores_minimos = df_franja["Minimo"].tolist()
+    valores_maximos = df_franja["Maximo"].tolist()
     angulos = np.linspace(0, 2 * np.pi, len(metricas), endpoint=False).tolist()
     angulos += angulos[:1]
 
     fig, ax = plt.subplots(figsize=(5.3, 5.0), subplot_kw=dict(polar=True))
     fig.patch.set_facecolor("#081510")
     ax.set_facecolor("#0d2019")
+    ax.plot(angulos, valores_minimos + valores_minimos[:1], color="#6aa88d", linewidth=1.5, linestyle="--", label="Franja mínima")
+    ax.plot(angulos, valores_maximos + valores_maximos[:1], color="#8fd3b4", linewidth=2, label="Franja máxima")
+    ax.fill(angulos, valores_maximos + valores_maximos[:1], color="#8fd3b4", alpha=0.08)
     ax.plot(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", linewidth=2.2, label=abreviar_leyenda_grafico_pdf(etiqueta_jugador, 22))
     ax.fill(angulos, valores_jugador + valores_jugador[:1], color="#19e28f", alpha=0.18)
-    ax.plot(angulos, valores_liga + valores_liga[:1], color="#8fd3b4", linewidth=2, label=abreviar_leyenda_grafico_pdf(fila_liga_referencia.get(etiqueta_columna), 22))
-    ax.fill(angulos, valores_liga + valores_liga[:1], color="#8fd3b4", alpha=0.12)
     ax.set_xticks(angulos[:-1])
     ax.set_xticklabels(metricas, color="#edf5f0", fontsize=8)
     ax.tick_params(axis="y", colors="#a8c0b3", labelsize=7)
@@ -4388,22 +4443,22 @@ def agregar_estadisticas_pdf(
     color_gris_oscuro,
     color_texto,
 ):
-    df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+    df_franjas, df_data_jugadores = cargar_datos_estadisticas()
     resumen_estadistico = obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores)
     tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
         jugador,
-        df_promedios,
+        df_franjas,
         df_data_jugadores,
     )
 
-    df_long_stats, fila_liga_referencia, etiqueta_jugador = preparar_datos_graficos_estadisticas(
+    df_long_stats, fila_franja_minima, fila_franja_maxima, etiqueta_jugador = preparar_datos_graficos_estadisticas(
         tabla_estadisticas
     )
 
     dibujar_titulo_seccion_pdf(
         pdf,
         "Comparativa estadística",
-        "Incluye referencia de liga más reciente, radar comparativo y la tabla consolidada del jugador.",
+        "Incluye la franja de liga, el radar comparativo y la tabla consolidada del jugador.",
         espacio_posterior_minimo=30,
     )
 
@@ -4433,7 +4488,7 @@ def agregar_estadisticas_pdf(
         mensajes_estado = {
             "jugador_sin_estadisticas": "Jugador sin estadísticas disponibles",
             "posicion_no_configurada": "Sin estadísticas configuradas para la posición",
-            "sin_promedios": "No hay promedios de liga disponibles",
+            "sin_franja": "No hay franja de liga disponible",
         }
         mensaje = mensajes_estado.get(estado_estadisticas, "Sin estadísticas disponibles")
         pdf.set_font("Arial", "I", 9.5)
@@ -4444,9 +4499,9 @@ def agregar_estadisticas_pdf(
 
     grafico_barras = None
     grafico_radar = None
-    if df_long_stats is not None and fila_liga_referencia is not None:
-        grafico_barras = crear_barras_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqueta_jugador)
-        grafico_radar = crear_radar_estadisticas_pdf(tabla_estadisticas, fila_liga_referencia, etiqueta_jugador)
+    if df_long_stats is not None and fila_franja_minima is not None and fila_franja_maxima is not None:
+        grafico_barras = crear_barras_estadisticas_pdf(tabla_estadisticas, fila_franja_minima, fila_franja_maxima, etiqueta_jugador)
+        grafico_radar = crear_radar_estadisticas_pdf(tabla_estadisticas, fila_franja_minima, fila_franja_maxima, etiqueta_jugador)
 
     if grafico_barras is not None:
         ancho_barras = pdf.w - pdf.l_margin - pdf.r_margin - 6
@@ -6391,14 +6446,14 @@ if st.session_state["menu"] == "Jugadores":
 
 
 # =========================================================
-# BLOQUE ESTADÍSTICAS — Comparativo jugador vs promedio de liga
+# BLOQUE ESTADÍSTICAS — Comparativo jugador vs franja de liga
 # =========================================================
 
 if st.session_state["menu"] == "Estadísticas Jugadores":
 
     st.subheader("Estadísticas comparativas")
     section_header(
-        "Comparativa jugador vs promedio de liga",
+        "Comparativa jugador vs franja de liga",
         eyebrow="Estadísticas",
         caption="Consultá la referencia competitiva del jugador seleccionado sin intervenir los widgets nativos de exploración.",
     )
@@ -6421,7 +6476,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
         id_jugador = str(opciones[seleccion_jug])
         jugador = df_players[df_players["ID_Jugador"].astype(str) == id_jugador].iloc[0]
 
-        df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+        df_franjas, df_data_jugadores = cargar_datos_estadisticas()
         resumen_estadistico = obtener_resumen_estadisticas_jugador(jugador, df_data_jugadores)
 
         st.markdown(
@@ -6436,7 +6491,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
 
         tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
             jugador,
-            df_promedios,
+            df_franjas,
             df_data_jugadores,
         )
 
@@ -6445,8 +6500,8 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
         elif estado_estadisticas == "posicion_no_configurada":
             st.warning("No hay estadísticas clave configuradas para la posición seleccionada.")
         else:
-            if estado_estadisticas == "sin_promedios":
-                st.warning("No hay promedios de liga disponibles para la posición y liga seleccionadas.")
+            if estado_estadisticas == "sin_franja":
+                st.warning("No hay franja de liga disponible para la posición y liga seleccionadas.")
 
             st.dataframe(
                 tabla_estadisticas,
@@ -6454,7 +6509,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                 hide_index=True,
             )
 
-            df_long_stats, fila_liga_referencia, etiqueta_jugador = preparar_datos_graficos_estadisticas(
+            df_long_stats, fila_franja_minima, fila_franja_maxima, etiqueta_jugador = preparar_datos_graficos_estadisticas(
                 tabla_estadisticas
             )
 
@@ -6462,111 +6517,123 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                 st.markdown("---")
                 section_header("Visualizaciones comparativas")
 
-                if fila_liga_referencia is not None:
-                    nombre_referencia = str(fila_liga_referencia[tabla_estadisticas.columns[0]])
-                    metricas_radar = [
-                        columna
-                        for columna in tabla_estadisticas.columns
-                        if columna != tabla_estadisticas.columns[0]
-                    ]
-                    metricas_orden = list(reversed(metricas_radar))
-
-                    df_comparacion_directa = df_long_stats[
-                        df_long_stats[tabla_estadisticas.columns[0]].isin([etiqueta_jugador, nombre_referencia])
-                    ].copy()
-                    df_comparacion_directa["Métrica"] = pd.Categorical(
-                        df_comparacion_directa["Métrica"],
-                        categories=metricas_orden,
-                        ordered=True,
+                if fila_franja_minima is not None and fila_franja_maxima is not None:
+                    df_franja_chart = construir_datos_franja_estadisticas(
+                        tabla_estadisticas,
+                        fila_franja_minima,
+                        fila_franja_maxima,
+                        invertir_orden=True,
                     )
-                    df_comparacion_directa = df_comparacion_directa.sort_values("Métrica")
 
-                    fig_metricas = px.bar(
-                        df_comparacion_directa,
-                        x="Valor",
-                        y="Métrica",
-                        color=tabla_estadisticas.columns[0],
-                        orientation="h",
-                        barmode="group",
-                        text="Valor",
-                        title="Jugador vs promedio de liga más reciente",
-                    )
-                    fig_metricas.update_traces(
-                        texttemplate="%{text:.2f}",
-                        textposition="outside",
-                        hovertemplate="<b>%{fullData.name}</b><br>%{y}: %{x:.2f}<extra></extra>",
-                    )
-                    fig_metricas.update_layout(
-                        xaxis_title="Valor",
-                        yaxis_title="",
-                        legend_title_text="Referencia",
-                        bargap=0.34,
-                    )
-                    fig_metricas.update_xaxes(showgrid=True, zeroline=False)
-                    fig_metricas.update_yaxes(categoryorder="array", categoryarray=metricas_orden)
-                    apply_glass_plotly(fig_metricas)
-                    st.plotly_chart(fig_metricas, use_container_width=True)
-
-                    section_header("Radar comparativo")
-                    valores_jugador = [
-                        convertir_valor_numerico(tabla_estadisticas.iloc[0][metrica]) or 0
-                        for metrica in metricas_radar
-                    ]
-                    valores_liga = [
-                        convertir_valor_numerico(fila_liga_referencia.get(metrica)) or 0
-                        for metrica in metricas_radar
-                    ]
-
-                    fig_radar = go.Figure()
-                    fig_radar.add_trace(
-                        go.Scatterpolar(
-                            r=valores_jugador + valores_jugador[:1],
-                            theta=metricas_radar + metricas_radar[:1],
-                            fill="toself",
-                            name=etiqueta_jugador,
-                            line=dict(color="#19e28f", width=3),
-                            fillcolor="rgba(25, 226, 143, 0.22)",
-                            hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                    if not df_franja_chart.empty:
+                        fig_metricas = go.Figure()
+                        fig_metricas.add_trace(
+                            go.Bar(
+                                x=(df_franja_chart["Maximo"] - df_franja_chart["Minimo"]).tolist(),
+                                base=df_franja_chart["Minimo"].tolist(),
+                                y=df_franja_chart["Métrica"].tolist(),
+                                orientation="h",
+                                name="Franja de liga",
+                                marker=dict(color="rgba(143, 211, 180, 0.34)"),
+                                customdata=np.column_stack((df_franja_chart["Minimo"], df_franja_chart["Maximo"])),
+                                hovertemplate="<b>Franja de liga</b><br>%{y}: %{customdata[0]:.2f} - %{customdata[1]:.2f}<extra></extra>",
+                            )
                         )
-                    )
-                    fig_radar.add_trace(
-                        go.Scatterpolar(
-                            r=valores_liga + valores_liga[:1],
-                            theta=metricas_radar + metricas_radar[:1],
-                            fill="toself",
-                            name=nombre_referencia,
-                            line=dict(color="#8fd3b4", width=2),
-                            fillcolor="rgba(143, 211, 180, 0.12)",
-                            hovertemplate="<b>" + nombre_referencia + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                        fig_metricas.add_trace(
+                            go.Scatter(
+                                x=df_franja_chart["Jugador"].tolist(),
+                                y=df_franja_chart["Métrica"].tolist(),
+                                mode="markers+text",
+                                name=etiqueta_jugador,
+                                text=[
+                                    f"{valor:.2f}" if valor is not None and not pd.isna(valor) else ""
+                                    for valor in df_franja_chart["Jugador"].tolist()
+                                ],
+                                textposition="middle right",
+                                marker=dict(
+                                    size=11,
+                                    color=["#19e28f" if dentro else "#f3bf4c" for dentro in df_franja_chart["Dentro_franja"].tolist()],
+                                    line=dict(color="#f4faf6", width=1),
+                                ),
+                                hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{y}: %{x:.2f}<extra></extra>",
+                            )
                         )
-                    )
-                    fig_radar.update_layout(
-                        title="Radar vs promedio de liga más reciente",
-                        hovermode="closest",
-                        hoverlabel=dict(
-                            bgcolor="rgba(10,26,20,0.96)",
-                            bordercolor="rgba(25,226,143,0.34)",
-                            font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
-                        ),
-                        polar=dict(
-                            bgcolor="rgba(0,0,0,0)",
-                            radialaxis=dict(
-                                showline=False,
-                                gridcolor="rgba(255,255,255,0.08)",
-                                tickfont=dict(color="rgba(226,236,231,0.74)"),
+                        fig_metricas.update_layout(
+                            title="Jugador vs franja de liga",
+                            xaxis_title="Valor",
+                            yaxis_title="",
+                            legend_title_text="Referencia",
+                            bargap=0.34,
+                        )
+                        fig_metricas.update_xaxes(showgrid=True, zeroline=False)
+                        fig_metricas.update_yaxes(categoryorder="array", categoryarray=df_franja_chart["Métrica"].tolist())
+                        apply_glass_plotly(fig_metricas)
+                        st.plotly_chart(fig_metricas, use_container_width=True)
+
+                        section_header("Radar comparativo")
+                        metricas_radar = list(reversed(df_franja_chart["Métrica"].tolist()))
+                        df_radar = df_franja_chart.set_index("Métrica").loc[metricas_radar].reset_index()
+                        valores_jugador = [valor if valor is not None and not pd.isna(valor) else 0 for valor in df_radar["Jugador"].tolist()]
+
+                        fig_radar = go.Figure()
+                        fig_radar.add_trace(
+                            go.Scatterpolar(
+                                r=df_radar["Minimo"].tolist() + df_radar["Minimo"].tolist()[:1],
+                                theta=metricas_radar + metricas_radar[:1],
+                                name="Franja mínima",
+                                line=dict(color="#6aa88d", width=2, dash="dot"),
+                                hovertemplate="<b>Franja mínima</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                            )
+                        )
+                        fig_radar.add_trace(
+                            go.Scatterpolar(
+                                r=df_radar["Maximo"].tolist() + df_radar["Maximo"].tolist()[:1],
+                                theta=metricas_radar + metricas_radar[:1],
+                                fill="toself",
+                                name="Franja máxima",
+                                line=dict(color="#8fd3b4", width=2),
+                                fillcolor="rgba(143, 211, 180, 0.10)",
+                                hovertemplate="<b>Franja máxima</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                            )
+                        )
+                        fig_radar.add_trace(
+                            go.Scatterpolar(
+                                r=valores_jugador + valores_jugador[:1],
+                                theta=metricas_radar + metricas_radar[:1],
+                                fill="toself",
+                                name=etiqueta_jugador,
+                                line=dict(color="#19e28f", width=3),
+                                fillcolor="rgba(25, 226, 143, 0.22)",
+                                hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{theta}: %{r:.2f}<extra></extra>",
+                            )
+                        )
+                        fig_radar.update_layout(
+                            title="Radar vs franja de liga",
+                            hovermode="closest",
+                            hoverlabel=dict(
+                                bgcolor="rgba(10,26,20,0.96)",
+                                bordercolor="rgba(25,226,143,0.34)",
+                                font=dict(color="#ffffff", family="Manrope, sans-serif", size=12),
                             ),
-                            angularaxis=dict(
-                                gridcolor="rgba(255,255,255,0.06)",
-                                tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
+                            polar=dict(
+                                bgcolor="rgba(0,0,0,0)",
+                                radialaxis=dict(
+                                    showline=False,
+                                    gridcolor="rgba(255,255,255,0.08)",
+                                    tickfont=dict(color="rgba(226,236,231,0.74)"),
+                                ),
+                                angularaxis=dict(
+                                    gridcolor="rgba(255,255,255,0.06)",
+                                    tickfont=dict(color="rgba(226,236,231,0.82)", size=11),
+                                ),
                             ),
-                        ),
-                        showlegend=True,
-                        margin=dict(l=30, r=30, t=56, b=24),
-                    )
-                    apply_glass_plotly(fig_radar)
-                    st.plotly_chart(fig_radar, use_container_width=True)
+                            showlegend=True,
+                            margin=dict(l=30, r=30, t=56, b=24),
+                        )
+                        apply_glass_plotly(fig_radar)
+                        st.plotly_chart(fig_radar, use_container_width=True)
                 else:
-                    st.info("No hay suficientes promedios de liga para construir la comparación gráfica.")
+                    st.info("No hay suficientes datos de franja de liga para construir la comparación gráfica.")
 
         st.markdown("---")
         section_header("Scores del equipo de analistas")
@@ -6687,10 +6754,10 @@ if st.session_state["menu"] == "Comparativa Jugadores":
         if len(posiciones_seleccionadas) > 1:
             st.warning("La comparativa solo admite jugadores de la misma posición.")
         else:
-            df_promedios, df_data_jugadores = cargar_datos_estadisticas()
+            df_franjas, df_data_jugadores = cargar_datos_estadisticas()
             dataset_comparativa, mensajes_comparativa = construir_dataset_comparativa_estadistica(
                 jugadores_seleccionados,
-                df_promedios,
+                df_franjas,
                 df_data_jugadores,
             )
 

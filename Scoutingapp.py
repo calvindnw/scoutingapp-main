@@ -1757,6 +1757,15 @@ def construir_datos_franja_estadisticas(tabla_estadisticas, fila_franja_minima, 
         if valor_minimo > valor_maximo:
             valor_minimo, valor_maximo = valor_maximo, valor_minimo
 
+        estado_franja = "sin_dato"
+        if valor_jugador is not None:
+            if valor_jugador < valor_minimo:
+                estado_franja = "debajo"
+            elif valor_jugador > valor_maximo:
+                estado_franja = "encima"
+            else:
+                estado_franja = "dentro"
+
         filas.append(
             {
                 "Métrica": metrica,
@@ -1764,6 +1773,7 @@ def construir_datos_franja_estadisticas(tabla_estadisticas, fila_franja_minima, 
                 "Minimo": valor_minimo,
                 "Maximo": valor_maximo,
                 "Dentro_franja": valor_jugador is not None and valor_minimo <= valor_jugador <= valor_maximo,
+                "Estado_franja": estado_franja,
             }
         )
 
@@ -4323,7 +4333,13 @@ def crear_barras_estadisticas_pdf(tabla_estadisticas, fila_franja_minima, fila_f
     minimos = df_franja["Minimo"].tolist()
     amplitudes = (df_franja["Maximo"] - df_franja["Minimo"]).tolist()
     jugadores = [valor if valor is not None else np.nan for valor in df_franja["Jugador"].tolist()]
-    colores_jugador = ["#19e28f" if dentro else "#f3bf4c" for dentro in df_franja["Dentro_franja"].tolist()]
+    mapa_colores_estado = {
+        "debajo": "#ff6b6b",
+        "dentro": "#f3bf4c",
+        "encima": "#19e28f",
+        "sin_dato": "#c6d3cc",
+    }
+    colores_jugador = [mapa_colores_estado.get(estado, "#c6d3cc") for estado in df_franja["Estado_franja"].tolist()]
 
     fig, ax = plt.subplots(figsize=(7.8, 3.15))
     fig.patch.set_facecolor("#081510")
@@ -6526,6 +6542,12 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                     )
 
                     if not df_franja_chart.empty:
+                        mapa_colores_estado = {
+                            "debajo": "#ff6b6b",
+                            "dentro": "#f3bf4c",
+                            "encima": "#19e28f",
+                            "sin_dato": "#c6d3cc",
+                        }
                         fig_metricas = go.Figure()
                         fig_metricas.add_trace(
                             go.Bar(
@@ -6552,7 +6574,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                                 textposition="middle right",
                                 marker=dict(
                                     size=11,
-                                    color=["#19e28f" if dentro else "#f3bf4c" for dentro in df_franja_chart["Dentro_franja"].tolist()],
+                                    color=[mapa_colores_estado.get(estado, "#c6d3cc") for estado in df_franja_chart["Estado_franja"].tolist()],
                                     line=dict(color="#f4faf6", width=1),
                                 ),
                                 hovertemplate="<b>" + etiqueta_jugador + "</b><br>%{y}: %{x:.2f}<extra></extra>",
@@ -6569,6 +6591,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                         fig_metricas.update_yaxes(categoryorder="array", categoryarray=df_franja_chart["Métrica"].tolist())
                         apply_glass_plotly(fig_metricas)
                         st.plotly_chart(fig_metricas, use_container_width=True)
+                        st.caption("Rojo: por debajo de la franja. Amarillo: dentro de la franja. Verde: por encima de la franja.")
 
                         section_header("Radar comparativo")
                         metricas_radar = list(reversed(df_franja_chart["Métrica"].tolist()))
@@ -6634,6 +6657,20 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                         st.plotly_chart(fig_radar, use_container_width=True)
                 else:
                     st.info("No hay suficientes datos de franja de liga para construir la comparación gráfica.")
+
+            st.markdown("---")
+            section_header("Informe del jugador")
+            if st.button("📝 Generar informe de estadísticas", key=f"estadisticas_pdf_{id_jugador}"):
+                buffer = generar_pdf_reporte_completo(jugador, df_reports_estadisticas)
+                if buffer:
+                    pdf_file_name = f"Reporte_Scouting_{str(jugador.get('Nombre', 'Jugador')).replace(' ', '_')}.pdf"
+                    st.download_button(
+                        "⬇️ Descargar PDF",
+                        buffer,
+                        file_name=pdf_file_name,
+                        mime="application/pdf",
+                        key=f"estadisticas_pdf_descarga_{id_jugador}",
+                    )
 
         st.markdown("---")
         section_header("Scores del equipo de analistas")

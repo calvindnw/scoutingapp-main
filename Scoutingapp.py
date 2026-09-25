@@ -1780,6 +1780,35 @@ def construir_datos_franja_estadisticas(tabla_estadisticas, fila_franja_minima, 
     return pd.DataFrame(filas)
 
 
+def construir_mensaje_estadisticas_whatsapp(jugador, resumen_estadistico, df_franja_estadisticas):
+    if df_franja_estadisticas is None or df_franja_estadisticas.empty:
+        return ""
+
+    nombre = str(jugador.get("Nombre", "Jugador") or "Jugador").strip()
+    posicion = str(jugador.get("Posición", "-") or "-").strip() or "-"
+    equipo = str(jugador.get("Club", "-") or "-").strip() or "-"
+    liga = str(jugador.get("Liga", "-") or "-").strip() or "-"
+    minutos = str(resumen_estadistico.get("minutos_jugados", "-") or "-").strip() or "-"
+    partidos = str(resumen_estadistico.get("partidos_jugados", "-") or "-").strip() or "-"
+
+    lineas = [
+        f'{nombre} ({posicion} - {equipo})',
+        "",
+        f'{liga}: {minutos} ({partidos})',
+        "",
+    ]
+
+    for fila in df_franja_estadisticas.itertuples(index=False):
+        if fila.Jugador is None or pd.isna(fila.Jugador):
+            continue
+        promedio_liga = (fila.Minimo + fila.Maximo) / 2
+        lineas.append(
+            f'{fila.Métrica}: {formatear_valor_estadistica(fila.Jugador)} (Promedio de liga: {formatear_valor_estadistica(promedio_liga)})'
+        )
+
+    return "\n".join(lineas).strip()
+
+
 def construir_opciones_lista_express(df_players, ids_excluidos=None, current_id=""):
     ids_excluidos = {str(valor) for valor in (ids_excluidos or set()) if str(valor).strip()}
     df_base = df_players.copy()
@@ -6516,6 +6545,7 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
         elif estado_estadisticas == "posicion_no_configurada":
             st.warning("No hay estadísticas clave configuradas para la posición seleccionada.")
         else:
+            df_franja_whatsapp = pd.DataFrame()
             if estado_estadisticas == "sin_franja":
                 st.warning("No hay franja de liga disponible para la posición y liga seleccionadas.")
 
@@ -6539,6 +6569,11 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                         fila_franja_minima,
                         fila_franja_maxima,
                         invertir_orden=True,
+                    )
+                    df_franja_whatsapp = construir_datos_franja_estadisticas(
+                        tabla_estadisticas,
+                        fila_franja_minima,
+                        fila_franja_maxima,
                     )
 
                     if not df_franja_chart.empty:
@@ -6671,6 +6706,21 @@ if st.session_state["menu"] == "Estadísticas Jugadores":
                         mime="application/pdf",
                         key=f"estadisticas_pdf_descarga_{id_jugador}",
                     )
+
+            if not df_franja_whatsapp.empty:
+                st.markdown("---")
+                section_header("Mensaje para WhatsApp")
+                mensaje_whatsapp = construir_mensaje_estadisticas_whatsapp(
+                    jugador,
+                    resumen_estadistico,
+                    df_franja_whatsapp,
+                )
+                st.text_area(
+                    "Texto listo para copiar",
+                    value=mensaje_whatsapp,
+                    height=220,
+                    key=f"estadisticas_whatsapp_{id_jugador}",
+                )
 
         st.markdown("---")
         section_header("Scores del equipo de analistas")

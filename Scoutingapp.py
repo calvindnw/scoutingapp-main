@@ -1794,7 +1794,7 @@ def construir_mensaje_estadisticas_whatsapp(jugador, resumen_estadistico, df_fra
     lineas = [
         f'{nombre} ({posicion} - {equipo})',
         "",
-        f'{liga}: {minutos} ({partidos})',
+        f'{liga}: {minutos} minutos ({partidos} partidos jugados)',
         "",
     ]
 

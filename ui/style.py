@@ -842,9 +842,9 @@ def load_custom_css():
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 0.8rem;
-            margin-bottom: 0.55rem;
-            padding: 0.88rem 0.98rem;
+            gap: 0.7rem;
+            margin-bottom: 0.45rem;
+            padding: 0.78rem 0.86rem;
             border-radius: var(--alab-radius-md);
             border: 1px solid var(--alab-border);
             background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
@@ -854,24 +854,28 @@ def load_custom_css():
         .alab-rank-left,
         .rank-left {
             display: flex;
-            gap: 0.8rem;
+            gap: 0.7rem;
             align-items: center;
+            min-width: 0;
         }
 
         .alab-rank-num,
         .rank-num {
-            width: 34px;
+            width: 28px;
             color: var(--alab-warning);
             font-family: 'Sora', sans-serif;
             font-weight: 700;
             text-align: center;
+            font-size: 0.88rem;
+            line-height: 1;
         }
 
         .alab-rank-name,
         .rank-name {
             color: var(--alab-text-1);
-            font-size: 0.92rem;
+            font-size: 0.84rem;
             font-weight: 700;
+            line-height: 1.25;
         }
 
         .alab-rank-score,
@@ -879,7 +883,42 @@ def load_custom_css():
             color: #8ce0af;
             font-family: 'Sora', sans-serif;
             font-weight: 700;
-            font-size: 0.98rem;
+            font-size: 0.92rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .alab-top-rank-group {
+            margin-bottom: 0.8rem;
+        }
+
+        .alab-panel-title.alab-top-rank-title,
+        .panel-title.alab-top-rank-title {
+            margin: 0 0 0.55rem;
+            padding: 0.68rem 0.8rem;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .alab-rank-card.alab-rank-card-compact,
+        .rank-card.alab-rank-card-compact {
+            min-height: 0;
+            padding: 0.72rem 0.78rem;
+            border-radius: 10px;
+        }
+
+        .alab-rank-card-compact .alab-rank-name,
+        .alab-rank-card-compact .rank-name {
+            font-size: 0.8rem;
+        }
+
+        .alab-rank-card-compact .alab-rank-score,
+        .alab-rank-card-compact .rank-score {
+            font-size: 0.9rem;
         }
 
         .alab-player-panel {
@@ -1262,9 +1301,9 @@ def load_custom_css():
             color: var(--alab-brand);
             font-family: 'Sora', sans-serif;
             font-weight: 700;
-            font-size: 0.86rem;
+            font-size: 0.8rem;
             letter-spacing: 0.08em;
-            margin: 0.1rem 0 0.6rem;
+            margin: 0.08rem 0 0.45rem;
             text-align: left;
         }
 
@@ -1419,56 +1458,112 @@ def load_custom_css():
         }
 
         .alab-footer {
-            margin-top: 1.35rem;
-            padding: 1.1rem 0 0.2rem;
+            margin-top: 1.1rem;
+            padding-top: 0.95rem;
             border-top: 1px solid var(--alab-border);
-            text-align: center;
+        }
+
+        .alab-footer-inner {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.9rem 1rem;
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(18, 22, 29, 0.92), rgba(15, 18, 24, 0.98));
+        }
+
+        .alab-footer-main {
+            min-width: 0;
+        }
+
+        .alab-footer-side {
+            flex: 0 0 auto;
+            text-align: right;
         }
 
         .alab-footer-title {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 0.98rem;
+            font-size: 0.92rem;
             font-weight: 700;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.2rem;
         }
 
         .alab-footer-copy {
             color: var(--alab-text-2);
-            font-size: 0.82rem;
-            margin: 0.12rem 0;
+            font-size: 0.78rem;
+            margin: 0.08rem 0;
         }
 
         .alab-footer-meta {
             color: var(--alab-text-4);
-            font-size: 0.74rem;
-            margin-top: 0.35rem;
+            font-size: 0.72rem;
+            margin-top: 0.08rem;
+        }
+
+        .alab-badge-vencido,
+        .vencido {
+            background-color: rgba(239, 98, 98, 0.12);
+            border-color: rgba(239, 98, 98, 0.24);
+            color: #ffd0d0;
         }
 
         .alab-badge-hoy,
         .hoy {
-            background-color: rgba(255, 215, 0, 0.94);
-            color: #000000;
+            background-color: rgba(228, 182, 76, 0.12);
+            border-color: rgba(228, 182, 76, 0.24);
+            color: #ffe3a0;
         }
 
         .alab-badge-proximo,
         .proximo {
-                margin-bottom: 0.95rem;
+            background-color: rgba(37, 184, 106, 0.12);
+            border-color: rgba(37, 184, 106, 0.24);
+            color: #c8f0d8;
+        }
+
+        .alab-badge-futuro,
+        .futuro {
+            background-color: rgba(78, 161, 255, 0.12);
+            border-color: rgba(78, 161, 255, 0.24);
+            color: #cfe6ff;
+        }
+
+        @media (max-width: 1024px) {
+            .alab-kpi-grid,
+            .kpi-container,
+            .alab-mini-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
 
             [data-testid="stAppViewContainer"] .block-container {
                 padding-right: 1.4rem;
                 padding-left: 1.4rem;
-        }
-
-        .alab-badge-futuro,
-        .futuro {
-            background-color: rgba(0, 68, 136, 0.88);
+            }
 
             .alab-player-media-row {
                 width: 100%;
                 justify-content: flex-start;
                 flex-wrap: wrap;
+            }
+
+            .alab-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .alab-footer-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .alab-footer-side {
+                text-align: left;
+            }
+
+            .alab-top-rank-group {
+                margin-bottom: 0.65rem;
             }
         }
 
@@ -1494,23 +1589,11 @@ def load_custom_css():
             .alab-player-photo-placeholder {
                 width: 132px;
             }
-            color: #ffffff;
-        }
 
-        @media (max-width: 1024px) {
-            .alab-kpi-grid,
-            .kpi-container,
-            .alab-mini-grid {
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            }
-
-            .alab-dashboard-hero {
-                padding: 1.2rem 1.1rem 1.1rem;
-                border-radius: 22px;
-            }
-
-            .alab-detail-grid {
-                grid-template-columns: 1fr;
+            .alab-panel-title.alab-top-rank-title,
+            .panel-title.alab-top-rank-title {
+                white-space: normal;
+                line-height: 1.25;
             }
         }
         </style>

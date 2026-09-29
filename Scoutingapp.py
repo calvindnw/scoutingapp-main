@@ -9381,13 +9381,15 @@ if st.session_state["menu"] == "Panel General":
     )
 
     def render_top(df, titulo):
-        st.markdown(f"<div class='panel-title alab-panel-title'>{titulo}</div>", unsafe_allow_html=True)
+        st.markdown("<div class='alab-top-rank-group'>", unsafe_allow_html=True)
+        st.markdown(f"<div class='panel-title alab-panel-title alab-top-rank-title'>{titulo}</div>", unsafe_allow_html=True)
         if df.empty:
             st.info("Sin datos")
+            st.markdown("</div>", unsafe_allow_html=True)
             return
         for i, r in enumerate(df.head(5).itertuples(), 1):
             st.markdown(f"""
-            <div class='rank-card alab-rank-card'>
+            <div class='rank-card alab-rank-card alab-rank-card-compact'>
                 <div class='rank-left alab-rank-left'>
                     <div class='rank-num alab-rank-num'>#{i}</div>
                     <div class='rank-name alab-rank-name'>{r.Nombre}</div>
@@ -9395,6 +9397,7 @@ if st.session_state["menu"] == "Panel General":
                 <div class='rank-score alab-rank-score'>{round(r.Score,2)}</div>
             </div>
             """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     posiciones = [
         ("Arquero","🧤 Arqueros"),
@@ -9687,10 +9690,16 @@ if st.session_state["menu"] == "Panel Scouts":
 st.markdown(
     f"""
     <div class="alab-footer">
-        <div class="alab-footer-title">ScoutingApp Profesional v2.3</div>
-        <p class="alab-footer-copy">Usuario activo: <strong>{CURRENT_USER}</strong> ({CURRENT_ROLE})</p>
-        <p class="alab-footer-copy">Area de Scouting Profesional</p>
-        <p class="alab-footer-meta">© 2025 · EOC · ScoutingApp Profesional</p>
+        <div class="alab-footer-inner">
+            <div class="alab-footer-main">
+                <div class="alab-footer-title">ScoutingApp Profesional v2.3</div>
+                <p class="alab-footer-copy">Usuario activo: <strong>{CURRENT_USER}</strong> ({CURRENT_ROLE})</p>
+            </div>
+            <div class="alab-footer-side">
+                <p class="alab-footer-copy">Area de Scouting Profesional</p>
+                <p class="alab-footer-meta">© 2025 · EOC · ScoutingApp Profesional</p>
+            </div>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,

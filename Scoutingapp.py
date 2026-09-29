@@ -75,46 +75,48 @@ def apply_glass_plotly(fig):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        colorway=["#25b86a", "#4ea1ff", "#e4b64c", "#ef6262", "#7dd3a6", "#6f8cff"],
         font=dict(
-            color="rgba(255,255,255,0.92)",
+            color="#a7afba",
             size=12,
-            family="Manrope, sans-serif"
+            family="Manrope, Inter, sans-serif"
         ),
         title=dict(
             text=titulo_actual,
-            font=dict(size=18, color="#ffffff", family="Sora, sans-serif"),
+            font=dict(size=17, color="#f4f6f8", family="Sora, sans-serif"),
             x=0,
             xanchor="left"
         ),
         legend=dict(
             bgcolor="rgba(0,0,0,0)",
             borderwidth=0,
-            font=dict(color="rgba(226,236,231,0.86)", size=11),
+            font=dict(color="#a7afba", size=10),
             orientation="h",
             yanchor="bottom",
-            y=1.02,
+            y=1.01,
             xanchor="right",
             x=1
         ),
         hoverlabel=dict(
-            bgcolor="rgba(10,26,20,0.96)",
-            bordercolor="rgba(90,154,124,0.38)",
-            font=dict(color="#ffffff", family="Manrope, sans-serif")
+            bgcolor="rgba(18,22,29,0.96)",
+            bordercolor="rgba(37,184,106,0.34)",
+            font=dict(color="#f4f6f8", family="Manrope, sans-serif")
         ),
         xaxis=dict(
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
+            gridcolor="rgba(255,255,255,0.06)",
             zeroline=False,
             showline=True,
-            linecolor="rgba(255,255,255,0.08)",
-            tickfont=dict(color="rgba(226,236,231,0.74)")
+            linecolor="rgba(255,255,255,0.12)",
+            tickfont=dict(color="#77808d")
         ),
         yaxis=dict(
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
+            gridcolor="rgba(255,255,255,0.06)",
             zeroline=False,
-            showline=False,
-            tickfont=dict(color="rgba(226,236,231,0.74)")
+            showline=True,
+            linecolor="rgba(255,255,255,0.08)",
+            tickfont=dict(color="#77808d")
         ),
         margin=dict(l=20, r=20, t=56, b=20)
     )
@@ -565,10 +567,18 @@ if not login_success:
 CURRENT_USER = st.session_state["user"]
 CURRENT_ROLE = st.session_state["role"]
 
-st.sidebar.title("🔐 Acceso de usuario")
-st.sidebar.markdown("---")
-st.sidebar.markdown(f"<b>Usuario:</b> {CURRENT_USER}", unsafe_allow_html=True)
-st.sidebar.markdown(f"<b>Rol:</b> {CURRENT_ROLE}", unsafe_allow_html=True)
+st.sidebar.markdown(
+    f"""
+    <div class="alab-sidebar-title">Acceso</div>
+    <div class="alab-sidebar-user">
+        <span class="alab-sidebar-user-label">Usuario</span>
+        <span class="alab-sidebar-user-value">{CURRENT_USER}</span>
+        <span class="alab-sidebar-user-label" style="margin-top:0.7rem;">Rol</span>
+        <span class="alab-sidebar-user-value">{CURRENT_ROLE}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 if st.sidebar.button("Cerrar sesión"):
     st.session_state["user"] = None
     st.session_state["role"] = None
@@ -5462,7 +5472,8 @@ menu_options = [
 if st.session_state.get("menu") not in menu_options:
     st.session_state["menu"] = "Panel General"
 
-st.sidebar.markdown("### Navegación")
+st.sidebar.markdown("<div class='alab-sidebar-nav-spacer'></div>", unsafe_allow_html=True)
+st.sidebar.markdown("<div class='alab-sidebar-title'>Navegacion</div>", unsafe_allow_html=True)
 clicked_menu_option = None
 for option in menu_options:
     button_key = f"menu_btn_{option.lower().replace(' ', '_')}"
@@ -9673,19 +9684,15 @@ if st.session_state["menu"] == "Panel Scouts":
 # =========================================================
 # CIERRE PROFESIONAL (footer)
 # =========================================================
-st.markdown("---")
-st.markdown(f"""
-<div style="text-align:center;color:#5a9a7c;margin-top:30px;">
-    <h4>ScoutingApp Profesional v2.3</h4>
-    <p>Usuario activo: <strong>{CURRENT_USER}</strong> ({CURRENT_ROLE})</p>
-    <p style="color:gray;font-size:13px;">
-        Área de Scouting Profesional
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
 st.markdown(
-    "<p style='text-align:center;color:gray;font-size:12px;'>© 2025 · EOC · ScoutingApp Profesional</p>",
-    unsafe_allow_html=True
+    f"""
+    <div class="alab-footer">
+        <div class="alab-footer-title">ScoutingApp Profesional v2.3</div>
+        <p class="alab-footer-copy">Usuario activo: <strong>{CURRENT_USER}</strong> ({CURRENT_ROLE})</p>
+        <p class="alab-footer-copy">Area de Scouting Profesional</p>
+        <p class="alab-footer-meta">© 2025 · EOC · ScoutingApp Profesional</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 

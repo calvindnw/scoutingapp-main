@@ -8,33 +8,53 @@ def load_custom_css():
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
 
         :root {
-            --alab-bg-0: #081310;
-            --alab-bg-1: #0f1d1a;
-            --alab-bg-2: #163029;
-            --alab-brand: #19e28f;
-            --alab-brand-soft: rgba(25, 226, 143, 0.12);
-            --alab-brand-line: rgba(25, 226, 143, 0.28);
-            --alab-panel-top: rgba(19, 30, 27, 0.94);
-            --alab-panel-bottom: rgba(8, 19, 16, 0.98);
-            --alab-text-1: rgba(255, 255, 255, 0.96);
-            --alab-text-2: rgba(221, 231, 227, 0.78);
-            --alab-text-3: rgba(174, 190, 183, 0.58);
-            --alab-warning: #f3bf4c;
-            --alab-radius-lg: 22px;
-            --alab-radius-md: 16px;
-            --alab-radius-sm: 12px;
-            --alab-shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.42);
-            --alab-shadow-md: 0 18px 44px rgba(0, 0, 0, 0.28);
-            --alab-shadow-sm: 0 12px 28px rgba(0, 0, 0, 0.2);
+            --alab-bg-0: #090b0f;
+            --alab-bg-1: #0d1015;
+            --alab-bg-2: #12161c;
+            --alab-bg-3: #171b22;
+            --alab-surface-1: #12161c;
+            --alab-surface-2: #171b22;
+            --alab-surface-3: #1c212a;
+            --alab-surface-4: #212733;
+            --alab-sidebar: #0d0f14;
+            --alab-brand: #25b86a;
+            --alab-brand-hover: #2dcc78;
+            --alab-brand-soft: rgba(37, 184, 106, 0.12);
+            --alab-brand-line: rgba(37, 184, 106, 0.32);
+            --alab-text-1: #f4f6f8;
+            --alab-text-2: #a7afba;
+            --alab-text-3: #77808d;
+            --alab-text-4: #636c78;
+            --alab-border: rgba(255, 255, 255, 0.08);
+            --alab-border-strong: rgba(255, 255, 255, 0.13);
+            --alab-info: #4ea1ff;
+            --alab-warning: #e4b64c;
+            --alab-danger: #ef6262;
+            --alab-radius-lg: 16px;
+            --alab-radius-md: 12px;
+            --alab-radius-sm: 8px;
+            --alab-shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.24);
+            --alab-shadow-md: 0 12px 28px rgba(0, 0, 0, 0.18);
+            --alab-shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.14);
+        }
+
+        html,
+        body,
+        .stApp,
+        .stApp button,
+        .stApp input,
+        .stApp select,
+        .stApp textarea {
+            font-family: 'Manrope', 'Inter', system-ui, sans-serif;
         }
 
         .stApp {
             position: relative;
+            min-height: 100vh;
             background:
-                radial-gradient(circle at 12% 10%, rgba(198, 245, 223, 0.14), transparent 24%),
-                radial-gradient(circle at 86% 16%, rgba(125, 194, 163, 0.18), transparent 24%),
-                radial-gradient(circle at 50% 100%, rgba(40, 84, 69, 0.34), transparent 34%),
-                linear-gradient(180deg, #5a8071 0%, #41685b 20%, #27483d 48%, #142f28 76%, #091410 100%);
+                radial-gradient(circle at top left, rgba(37, 184, 106, 0.05), transparent 22%),
+                radial-gradient(circle at bottom right, rgba(78, 161, 255, 0.04), transparent 20%),
+                linear-gradient(180deg, #090b0f 0%, #0b0d11 36%, #0b0e12 100%);
             background-attachment: fixed;
             color: var(--alab-text-1);
         }
@@ -45,10 +65,10 @@ def load_custom_css():
             inset: 0;
             pointer-events: none;
             background:
-                radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.08), transparent 20%),
-                radial-gradient(circle at 78% 12%, rgba(25, 226, 143, 0.08), transparent 18%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 38%, rgba(0, 0, 0, 0.18) 100%);
-            opacity: 0.9;
+                linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0) 34%),
+                radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.02), transparent 14%),
+                radial-gradient(circle at 84% 8%, rgba(37, 184, 106, 0.04), transparent 14%);
+            opacity: 1;
             z-index: 0;
         }
 
@@ -58,32 +78,10 @@ def load_custom_css():
             inset: 0;
             pointer-events: none;
             background:
-                repeating-linear-gradient(
-                    0deg,
-                    rgba(255, 255, 255, 0.04) 0,
-                    rgba(255, 255, 255, 0.04) 1px,
-                    transparent 1px,
-                    transparent 28px
-                ),
-                repeating-linear-gradient(
-                    90deg,
-                    rgba(255, 255, 255, 0.028) 0,
-                    rgba(255, 255, 255, 0.028) 1px,
-                    transparent 1px,
-                    transparent 28px
-                ),
-                repeating-linear-gradient(
-                    135deg,
-                    rgba(206, 243, 227, 0.018) 0,
-                    rgba(206, 243, 227, 0.018) 2px,
-                    transparent 2px,
-                    transparent 42px
-                ),
-                radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.05), transparent 1px),
-                radial-gradient(circle at 78% 32%, rgba(25, 226, 143, 0.06), transparent 1px);
-            background-size: 28px 28px, 28px 28px, 42px 42px, 18px 18px, 24px 24px;
-            opacity: 0.58;
-            mix-blend-mode: screen;
+                radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.025), transparent 1px),
+                radial-gradient(circle at 72% 34%, rgba(255, 255, 255, 0.02), transparent 1px);
+            background-size: 22px 22px, 26px 26px;
+            opacity: 0.22;
             z-index: 0;
         }
 
@@ -95,10 +93,10 @@ def load_custom_css():
         }
 
         [data-testid="stHeader"] {
-            background: linear-gradient(180deg, rgba(7, 14, 12, 0.98), rgba(7, 14, 12, 0.84));
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(9, 11, 15, 0.92);
+            border-bottom: 1px solid var(--alab-border);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
         }
 
         [data-testid="stToolbar"] {
@@ -123,138 +121,144 @@ def load_custom_css():
         }
 
         [data-testid="stDecoration"] {
-            background: linear-gradient(90deg, rgba(25, 226, 143, 0.78), rgba(25, 226, 143, 0.14));
+            background: linear-gradient(90deg, rgba(37, 184, 106, 0.8), rgba(37, 184, 106, 0.12));
             height: 2px;
+        }
+
+        [data-testid="stAppViewContainer"] .block-container {
+            max-width: 1380px;
+            padding-top: 1.5rem;
+            padding-right: 2rem;
+            padding-left: 2rem;
+            padding-bottom: 1.25rem;
         }
 
         .alab-dashboard-hero {
             position: relative;
             overflow: hidden;
-            margin: 0.9rem 0 1.4rem;
-            padding: 1.45rem 1.5rem 1.3rem;
-            border-radius: 26px;
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            background:
-                radial-gradient(circle at top right, rgba(25, 226, 143, 0.13), transparent 28%),
-                linear-gradient(145deg, rgba(20, 32, 29, 0.98), rgba(8, 19, 16, 0.98));
-            box-shadow: var(--alab-shadow-lg);
+            margin: 0.25rem 0 1.1rem;
+            padding: 0.35rem 0 0.1rem;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
         }
 
         .alab-dashboard-hero::before {
             content: "";
             position: absolute;
-            inset: 0 auto auto 0;
-            width: 160px;
+            inset: auto auto 0 0;
+            width: 72px;
             height: 2px;
-            background: linear-gradient(90deg, rgba(25, 226, 143, 0.95), rgba(25, 226, 143, 0));
+            background: linear-gradient(90deg, rgba(37, 184, 106, 0.85), rgba(37, 184, 106, 0));
         }
 
         .alab-dashboard-hero-kicker {
             color: var(--alab-brand);
-            font-size: 0.74rem;
-            font-weight: 800;
+            font-size: 0.68rem;
+            font-weight: 700;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.38rem;
         }
 
         .alab-dashboard-hero-title {
             margin: 0;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: clamp(1.8rem, 3vw, 2.55rem);
-            font-weight: 800;
-            line-height: 1.02;
+            font-size: clamp(2rem, 3vw, 2.45rem);
+            font-weight: 700;
+            line-height: 1.05;
         }
 
         .alab-dashboard-hero-copy {
-            max-width: 760px;
-            margin: 0.55rem 0 0;
+            max-width: 780px;
+            margin: 0.45rem 0 0;
             color: var(--alab-text-2);
-            font-size: 0.96rem;
+            font-size: 0.92rem;
             line-height: 1.55;
         }
 
         .alab-dashboard-chip-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.55rem;
-            margin-top: 0.95rem;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
         }
 
         .alab-dashboard-chip {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            min-height: 34px;
-            padding: 0.35rem 0.72rem;
+            min-height: 30px;
+            padding: 0.28rem 0.68rem;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--alab-border);
+            background: rgba(255, 255, 255, 0.02);
             color: var(--alab-text-2);
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 0.72rem;
+            font-weight: 600;
         }
 
         .alab-dashboard-chip strong {
             color: var(--alab-text-1);
-            font-weight: 800;
+            font-weight: 700;
         }
 
         .alab-login-hero {
             position: relative;
             overflow: hidden;
-            margin: 0 auto 1.6rem;
-            padding: 1.7rem 1.8rem 1.55rem;
+            margin: 0 auto 1.4rem;
+            padding: 1.45rem 1.5rem 1.35rem;
             max-width: 1180px;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--alab-radius-lg);
+            border: 1px solid var(--alab-border);
             background:
-                radial-gradient(circle at top right, rgba(25, 226, 143, 0.16), transparent 30%),
-                linear-gradient(145deg, rgba(20, 32, 29, 0.98), rgba(8, 19, 16, 0.98));
-            box-shadow: var(--alab-shadow-lg);
+                radial-gradient(circle at top right, rgba(37, 184, 106, 0.08), transparent 24%),
+                linear-gradient(180deg, rgba(18, 22, 28, 0.96), rgba(13, 16, 21, 0.98));
+            box-shadow: var(--alab-shadow-md);
         }
 
         .alab-login-top-spacer {
-            height: 1.95rem;
+            height: 1.4rem;
         }
 
         .alab-login-section-gap {
-            height: 0.55rem;
+            height: 0.35rem;
         }
 
         .alab-login-hero::before {
             content: "";
             position: absolute;
             inset: 0 auto auto 0;
-            width: 180px;
+            width: 88px;
             height: 2px;
-            background: linear-gradient(90deg, rgba(25, 226, 143, 0.95), rgba(25, 226, 143, 0));
+            background: linear-gradient(90deg, rgba(37, 184, 106, 0.92), rgba(37, 184, 106, 0));
         }
 
         .alab-login-kicker {
             color: var(--alab-brand);
-            font-size: 0.76rem;
-            font-weight: 800;
+            font-size: 0.7rem;
+            font-weight: 700;
             letter-spacing: 0.13em;
             text-transform: uppercase;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.38rem;
         }
 
         .alab-login-title {
             margin: 0;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: clamp(2rem, 3.3vw, 3rem);
-            font-weight: 800;
-            line-height: 1.02;
+            font-size: clamp(2rem, 3vw, 2.8rem);
+            font-weight: 700;
+            line-height: 1.06;
         }
 
         .alab-login-copy {
             max-width: 760px;
-            margin: 0.65rem 0 0;
+            margin: 0.55rem 0 0;
             color: var(--alab-text-2);
-            font-size: 1rem;
+            font-size: 0.96rem;
             line-height: 1.55;
         }
 
@@ -267,72 +271,71 @@ def load_custom_css():
 
         .alab-login-sidecard {
             min-height: 100%;
-            padding: 1.5rem 1.45rem 1.35rem;
-            border-radius: 22px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(155deg, rgba(22, 42, 35, 0.92), rgba(10, 26, 20, 0.94));
-            box-shadow: var(--alab-shadow-md);
+            padding: 1.2rem 1.15rem 1.1rem;
+            border-radius: var(--alab-radius-lg);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(18, 22, 28, 0.95), rgba(14, 18, 24, 0.98));
+            box-shadow: var(--alab-shadow-sm);
         }
 
         .alab-login-sidecard-title {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.15rem;
+            font-size: 1.02rem;
             font-weight: 700;
-            line-height: 1.15;
+            line-height: 1.18;
         }
 
         .alab-login-sidecard-copy {
-            margin: 0.7rem 0 0;
+            margin: 0.55rem 0 0;
             color: var(--alab-text-2);
-            font-size: 0.94rem;
-            line-height: 1.58;
+            font-size: 0.9rem;
+            line-height: 1.56;
         }
 
         .alab-login-bullet-list {
             display: flex;
             flex-direction: column;
-            gap: 0.72rem;
-            margin-top: 1.15rem;
+            gap: 0.64rem;
+            margin-top: 1rem;
         }
 
         .alab-login-bullet {
             display: inline-flex;
             align-items: center;
-            gap: 0.55rem;
+            gap: 0.5rem;
             color: var(--alab-text-1);
-            font-size: 0.86rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 600;
         }
 
         .alab-login-bullet::before {
             content: "";
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 999px;
             background: var(--alab-brand);
-            box-shadow: 0 0 0 6px rgba(25, 226, 143, 0.08);
+            box-shadow: 0 0 0 5px rgba(37, 184, 106, 0.1);
             flex: 0 0 auto;
         }
 
         .alab-login-form-head {
-            margin: 0 0 1.05rem;
+            margin: 0 0 0.85rem;
             padding: 0.15rem 0.1rem;
         }
 
         .alab-login-form-title {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.22rem;
+            font-size: 1.05rem;
             font-weight: 700;
-            line-height: 1.15;
+            line-height: 1.2;
         }
 
         .alab-login-form-copy {
-            margin: 0.45rem 0 0;
+            margin: 0.38rem 0 0;
             color: var(--alab-text-2);
-            font-size: 0.92rem;
+            font-size: 0.88rem;
             line-height: 1.5;
         }
 
@@ -348,6 +351,10 @@ def load_custom_css():
             color: var(--alab-text-2);
         }
 
+        .stApp [data-testid="stMarkdownContainer"] p {
+            line-height: 1.5;
+        }
+
         .stApp h1,
         .stApp h2,
         .stApp h3,
@@ -357,19 +364,20 @@ def load_custom_css():
         .stApp .stSubheader,
         .stApp .stHeader {
             color: var(--alab-text-1);
+            font-family: 'Sora', 'Manrope', sans-serif;
         }
 
         .stApp a,
         .stApp a:visited,
         .stApp .stMarkdown a,
         .stApp .stMarkdown a:visited {
-            color: #8fd3b4;
-            text-decoration-color: rgba(143, 211, 180, 0.55);
+            color: #8adcae;
+            text-decoration-color: rgba(138, 220, 174, 0.45);
         }
 
         .stApp a:hover,
         .stApp .stMarkdown a:hover {
-            color: #c6f5df;
+            color: #d9f7e6;
         }
 
         .stApp [data-testid="stMetric"] {
@@ -379,8 +387,10 @@ def load_custom_css():
         .stApp [data-testid="stMetricLabel"] p,
         .stApp [data-testid="stMetricLabel"] div {
             color: var(--alab-text-3);
+            font-size: 0.68rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
 
         .stApp [data-testid="stMetricValue"] div,
@@ -397,37 +407,33 @@ def load_custom_css():
 
         .stApp hr,
         .stApp [data-testid="stDivider"] {
-            border-color: rgba(255, 255, 255, 0.14);
+            border-color: var(--alab-border);
         }
 
         .stApp [data-testid="stForm"] {
-            padding: 1rem 1rem 0.4rem;
+            padding: 0.95rem 1rem 0.3rem;
             border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(145deg, rgba(21, 40, 33, 0.55), rgba(10, 26, 20, 0.42));
-        }
-
-        [data-testid="stAppViewContainer"] .block-container {
-            max-width: 1280px;
-            padding-top: 1.05rem;
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.92), rgba(17, 21, 27, 0.98));
+            box-shadow: var(--alab-shadow-sm);
         }
 
         .stApp [data-testid="stExpander"] {
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid var(--alab-border);
             border-radius: var(--alab-radius-md);
-            background: rgba(9, 21, 17, 0.38);
-            box-shadow: var(--alab-shadow-sm);
+            background: rgba(18, 22, 29, 0.92);
+            box-shadow: none;
             overflow: hidden;
         }
 
         .stApp [data-testid="stExpander"] summary {
-            background: linear-gradient(135deg, rgba(28, 52, 42, 0.92), rgba(12, 26, 20, 0.97));
+            background: rgba(20, 24, 31, 0.96);
             color: var(--alab-text-1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: 1px solid var(--alab-border);
         }
 
         .stApp [data-testid="stExpander"] summary:hover {
-            background: linear-gradient(135deg, rgba(36, 66, 54, 0.96), rgba(15, 31, 24, 0.98));
+            background: rgba(24, 29, 37, 0.98);
         }
 
         .stApp [data-testid="stExpander"] summary p,
@@ -445,7 +451,10 @@ def load_custom_css():
         .stApp .stNumberInput label p,
         .stApp .stMultiSelect label p {
             color: var(--alab-text-1);
+            font-size: 0.8rem;
             font-weight: 600;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.24rem;
         }
 
         .stApp input,
@@ -453,17 +462,18 @@ def load_custom_css():
         .stApp [data-baseweb="input"] input,
         .stApp [data-baseweb="base-input"] input,
         .stApp [data-baseweb="base-input"] textarea {
-            color: #f4fbf7 !important;
-            -webkit-text-fill-color: #f4fbf7 !important;
-            caret-color: #f4fbf7 !important;
+            color: var(--alab-text-1) !important;
+            -webkit-text-fill-color: var(--alab-text-1) !important;
+            caret-color: var(--alab-text-1) !important;
+            font-size: 0.9rem !important;
         }
 
         .stApp input::placeholder,
         .stApp textarea::placeholder,
         .stApp [data-baseweb="input"] input::placeholder,
         .stApp [data-baseweb="base-input"] textarea::placeholder {
-            color: rgba(226, 236, 231, 0.5) !important;
-            -webkit-text-fill-color: rgba(226, 236, 231, 0.5) !important;
+            color: rgba(167, 175, 186, 0.68) !important;
+            -webkit-text-fill-color: rgba(167, 175, 186, 0.68) !important;
         }
 
         .stApp [data-baseweb="input"],
@@ -471,24 +481,26 @@ def load_custom_css():
         .stApp [data-baseweb="select"] > div,
         .stApp .stDateInput > div,
         .stApp .stNumberInput > div {
-            background: rgba(13, 29, 23, 0.88) !important;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            min-height: 40px;
+            background: var(--alab-surface-2) !important;
+            border-radius: var(--alab-radius-sm);
+            border: 1px solid rgba(43, 48, 57, 1) !important;
+            box-shadow: none !important;
         }
 
         .stApp [data-baseweb="select"] * {
-            color: #f4fbf7 !important;
+            color: var(--alab-text-1) !important;
         }
 
         .stApp [data-baseweb="select"] svg,
         .stApp .stDateInput svg {
-            fill: rgba(244, 251, 247, 0.88);
+            fill: rgba(244, 246, 248, 0.78);
         }
 
         .stApp [data-baseweb="tag"] {
-            background: rgba(90, 154, 124, 0.18) !important;
-            border: 1px solid rgba(90, 154, 124, 0.34) !important;
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid var(--alab-border) !important;
+            border-radius: 999px !important;
         }
 
         .stApp [data-baseweb="tag"] span,
@@ -501,63 +513,77 @@ def load_custom_css():
         .stApp [data-baseweb="select"] > div:focus-within,
         .stApp .stDateInput > div:focus-within,
         .stApp .stNumberInput > div:focus-within {
-            border-color: rgba(143, 211, 180, 0.7) !important;
-            box-shadow: 0 0 0 1px rgba(143, 211, 180, 0.34), 0 0 0 4px rgba(143, 211, 180, 0.08);
+            border-color: rgba(37, 184, 106, 0.82) !important;
+            box-shadow: 0 0 0 1px rgba(37, 184, 106, 0.28), 0 0 0 3px rgba(37, 184, 106, 0.07) !important;
         }
 
         .stApp small,
         .stApp .stForm small {
-            color: rgba(226, 236, 231, 0.62) !important;
+            color: rgba(167, 175, 186, 0.72) !important;
         }
 
         .stApp .stButton > button,
         .stApp .stFormSubmitButton > button {
-            min-height: 42px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: linear-gradient(135deg, rgba(35, 67, 55, 0.96), rgba(10, 26, 20, 0.98));
-            color: #f6fcf8;
+            min-height: 38px;
+            border-radius: var(--alab-radius-sm);
+            border: 1px solid var(--alab-border-strong);
+            background: var(--alab-surface-2);
+            color: var(--alab-text-1);
             font-family: 'Manrope', sans-serif;
-            font-size: 0.94rem;
+            font-size: 0.86rem;
             font-weight: 700;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+            box-shadow: none;
+            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease, color 0.18s ease;
         }
 
         .stApp .stButton > button:hover,
         .stApp .stFormSubmitButton > button:hover {
-            border-color: rgba(143, 211, 180, 0.54);
-            background: linear-gradient(135deg, rgba(53, 98, 80, 0.98), rgba(14, 31, 24, 0.99));
+            border-color: rgba(255, 255, 255, 0.18);
+            background: var(--alab-surface-3);
             color: #ffffff;
             transform: translateY(-1px);
         }
 
         .stApp .stButton > button[kind="primary"],
         .stApp .stFormSubmitButton > button[kind="primary"] {
-            border-color: rgba(143, 211, 180, 0.58);
-            background: linear-gradient(135deg, rgba(90, 154, 124, 0.42), rgba(24, 54, 43, 0.98));
-            color: #ffffff;
+            border-color: rgba(37, 184, 106, 0.4);
+            background: linear-gradient(180deg, rgba(43, 196, 116, 0.98), rgba(31, 158, 92, 0.98));
+            color: #08100b;
+            box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        .stApp .stButton > button[kind="primary"]:hover,
+        .stApp .stFormSubmitButton > button[kind="primary"]:hover {
+            border-color: rgba(45, 204, 120, 0.48);
+            background: linear-gradient(180deg, rgba(55, 205, 125, 1), rgba(36, 171, 103, 1));
+            color: #051009;
         }
 
         .stApp .stButton > button:disabled,
         .stApp .stFormSubmitButton > button:disabled,
         .stApp .stButton > button[disabled],
         .stApp .stFormSubmitButton > button[disabled] {
-            border-color: rgba(255, 255, 255, 0.09) !important;
-            background: linear-gradient(135deg, rgba(44, 55, 50, 0.9), rgba(25, 31, 28, 0.92)) !important;
-            color: rgba(236, 244, 240, 0.5) !important;
+            border-color: rgba(255, 255, 255, 0.06) !important;
+            background: rgba(27, 31, 38, 0.92) !important;
+            color: rgba(167, 175, 186, 0.45) !important;
             opacity: 1 !important;
             box-shadow: none;
             cursor: not-allowed;
         }
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(10, 20, 17, 0.99), rgba(6, 15, 13, 0.99)) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            min-width: 236px;
+            max-width: 245px;
+            background: linear-gradient(180deg, rgba(13, 15, 20, 0.99), rgba(10, 12, 17, 0.99)) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.07);
         }
 
         [data-testid="stSidebar"] > div:first-child {
             background: transparent !important;
+        }
+
+        [data-testid="stSidebarNav"] {
+            display: none;
         }
 
         [data-testid="stSidebar"] * {
@@ -575,32 +601,88 @@ def load_custom_css():
             color: var(--alab-text-1) !important;
         }
 
+        [data-testid="stSidebar"] .block-container,
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
+            gap: 0.35rem;
+        }
+
         [data-testid="stSidebar"] .stButton > button {
             width: 100%;
-            min-height: 42px;
+            min-height: 36px;
             justify-content: flex-start;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            background: linear-gradient(135deg, rgba(20, 34, 30, 0.96), rgba(8, 18, 15, 0.98));
-            color: var(--alab-text-1);
+            padding: 0.4rem 0.8rem;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--alab-text-2);
             font-family: 'Manrope', sans-serif;
-            font-size: 0.92rem;
-            font-weight: 700;
+            font-size: 0.84rem;
+            font-weight: 600;
             box-shadow: none;
-            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease, color 0.18s ease;
         }
 
         [data-testid="stSidebar"] .stButton > button:hover {
-            border-color: rgba(25, 226, 143, 0.34);
-            background: linear-gradient(135deg, rgba(28, 50, 43, 0.98), rgba(11, 24, 20, 0.99));
-            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--alab-text-1);
+            transform: none;
         }
 
         [data-testid="stSidebar"] .stButton > button[kind="primary"] {
-            border-color: rgba(25, 226, 143, 0.4);
-            background:
-                linear-gradient(135deg, rgba(164, 206, 189, 0.32), rgba(38, 77, 64, 0.98) 24%, rgba(10, 22, 18, 0.99));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--alab-text-1);
+            box-shadow: inset 3px 0 0 var(--alab-brand);
+        }
+
+        [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.075);
+            color: #ffffff;
+        }
+
+        .alab-sidebar-title {
+            margin: 0 0 0.25rem;
+            color: var(--alab-text-3);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .alab-sidebar-user {
+            margin: 0.15rem 0 0.6rem;
+            padding: 0.9rem 0.95rem;
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(15, 18, 24, 0.98));
+        }
+
+        .alab-sidebar-user-label {
+            display: block;
+            color: var(--alab-text-4);
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.22rem;
+        }
+
+        .alab-sidebar-user-value {
+            display: block;
+            color: var(--alab-text-1);
+            font-size: 0.84rem;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .alab-sidebar-user + .stButton > button {
+            margin-top: 0.05rem;
+        }
+
+        .alab-sidebar-nav-spacer {
+            height: 0.3rem;
         }
 
         .alab-section-title,
@@ -608,17 +690,17 @@ def load_custom_css():
             color: var(--alab-brand);
             font-family: 'Sora', sans-serif;
             font-weight: 700;
-            font-size: 0.98rem;
+            font-size: 0.82rem;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin: 0.2rem 0 0.6rem;
-            text-align: center;
+            letter-spacing: 0.1em;
+            margin: 0.15rem 0 0.45rem;
+            text-align: left;
         }
 
         .alab-block-header {
-            margin: 0.25rem 0 1rem;
-            padding: 0.15rem 0 0.6rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            margin: 0.2rem 0 0.9rem;
+            padding: 0.15rem 0 0.55rem;
+            border-bottom: 1px solid var(--alab-border);
         }
 
         .alab-block-header-center {
@@ -627,79 +709,77 @@ def load_custom_css():
 
         .alab-block-eyebrow {
             color: var(--alab-brand);
-            font-size: 0.7rem;
-            font-weight: 800;
+            font-size: 0.68rem;
+            font-weight: 700;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            margin-bottom: 0.32rem;
+            margin-bottom: 0.26rem;
         }
 
         .alab-block-title {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.08rem;
-            font-weight: 800;
-            line-height: 1.15;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.2;
         }
 
         .alab-block-copy {
             max-width: 720px;
-            margin-top: 0.35rem;
+            margin-top: 0.28rem;
             color: var(--alab-text-3);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             line-height: 1.5;
         }
 
         .alab-inline-note {
             margin: 0.15rem 0 0.9rem;
-            padding: 0.72rem 0.85rem;
+            padding: 0.7rem 0.82rem;
             border-radius: var(--alab-radius-sm);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--alab-border);
+            background: rgba(255, 255, 255, 0.02);
             color: var(--alab-text-3);
-            font-size: 0.84rem;
+            font-size: 0.8rem;
             line-height: 1.5;
         }
 
         .alab-mini-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.8rem;
-            margin: 0.25rem 0 1rem;
+            gap: 0.75rem;
+            margin: 0.2rem 0 1rem;
         }
 
         .alab-mini-stat {
-            padding: 0.85rem 0.95rem;
+            padding: 0.95rem 1rem;
             border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(90deg, rgba(25, 226, 143, 0.08), transparent 38%),
-                linear-gradient(145deg, rgba(17, 28, 25, 0.98), rgba(8, 19, 16, 0.98));
-            box-shadow: var(--alab-shadow-sm);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
         }
 
         .alab-mini-label {
             display: block;
             color: var(--alab-text-3);
-            font-size: 0.72rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
         }
 
         .alab-mini-value {
             display: block;
-            margin-top: 0.4rem;
+            margin-top: 0.48rem;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 800;
-            line-height: 1.05;
+            font-size: 1.55rem;
+            font-weight: 700;
+            line-height: 1;
         }
 
         .alab-mini-copy {
             display: block;
-            margin-top: 0.22rem;
+            margin-top: 0.3rem;
             color: var(--alab-text-3);
             font-size: 0.76rem;
             line-height: 1.45;
@@ -709,21 +789,19 @@ def load_custom_css():
         .kpi-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0 1.6rem;
+            gap: 0.85rem;
+            margin: 0.9rem 0 1.3rem;
         }
 
         .alab-kpi,
         .kpi-card {
             position: relative;
             overflow: hidden;
-            padding: 1.1rem 1.15rem 1rem;
-            border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            background:
-                radial-gradient(circle at top right, rgba(25, 226, 143, 0.1), transparent 30%),
-                linear-gradient(145deg, rgba(19, 30, 27, 0.98), rgba(8, 19, 16, 0.98));
-            box-shadow: var(--alab-shadow-md);
+            padding: 1rem 1.05rem 0.95rem;
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
         }
 
         .alab-kpi::before,
@@ -732,30 +810,30 @@ def load_custom_css():
             position: absolute;
             top: 0;
             left: 0;
-            width: 72px;
+            width: 56px;
             height: 2px;
-            background: linear-gradient(90deg, rgba(25, 226, 143, 0.92), rgba(25, 226, 143, 0));
+            background: linear-gradient(90deg, rgba(37, 184, 106, 0.82), rgba(37, 184, 106, 0));
         }
 
         .alab-kpi-label,
         .kpi-title,
         .card-title {
             color: var(--alab-text-3);
-            font-size: 0.76rem;
+            font-size: 0.66rem;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
         }
 
         .alab-kpi-value,
         .kpi-value,
         .card-value {
-            margin-top: 0.5rem;
+            margin-top: 0.52rem;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 2.1rem;
-            font-weight: 800;
-            line-height: 1.05;
+            font-size: clamp(1.8rem, 2vw, 2.15rem);
+            font-weight: 700;
+            line-height: 1.02;
         }
 
         .alab-rank-card,
@@ -766,13 +844,11 @@ def load_custom_css():
             align-items: center;
             gap: 0.8rem;
             margin-bottom: 0.55rem;
-            padding: 0.92rem 1rem;
+            padding: 0.88rem 0.98rem;
             border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(90deg, rgba(25, 226, 143, 0.08), transparent 36%),
-                linear-gradient(140deg, rgba(18, 30, 27, 0.98), rgba(8, 19, 16, 0.96));
-            box-shadow: var(--alab-shadow-sm);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
         }
 
         .alab-rank-left,
@@ -787,7 +863,7 @@ def load_custom_css():
             width: 34px;
             color: var(--alab-warning);
             font-family: 'Sora', sans-serif;
-            font-weight: 800;
+            font-weight: 700;
             text-align: center;
         }
 
@@ -800,24 +876,22 @@ def load_custom_css():
 
         .alab-rank-score,
         .rank-score {
-            color: #9ef0c7;
+            color: #8ce0af;
             font-family: 'Sora', sans-serif;
-            font-weight: 800;
-            font-size: 1.04rem;
+            font-weight: 700;
+            font-size: 0.98rem;
         }
 
         .alab-player-panel {
             padding: 1rem 1rem 0.95rem;
-            border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(180deg, rgba(30, 60, 114, 0.1), transparent 46%),
-                linear-gradient(150deg, rgba(27, 51, 42, 0.92), rgba(10, 26, 20, 0.97));
-            box-shadow: var(--alab-shadow-md);
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
         }
 
         .alab-player-panel-tall {
-            min-height: 222px;
+            min-height: 208px;
         }
 
         .alab-player-media-panel {
@@ -832,11 +906,11 @@ def load_custom_css():
         .alab-player-media-row {
             display: flex;
             align-items: center;
-            gap: 1.35rem;
+            gap: 1.1rem;
             width: fit-content;
             max-width: 100%;
             margin: 0 auto;
-            min-height: 176px;
+            min-height: 162px;
         }
 
         .alab-player-summary {
@@ -846,7 +920,7 @@ def load_custom_css():
             min-height: auto;
             flex-direction: column;
             justify-content: center;
-            gap: 0.65rem;
+            gap: 0.55rem;
         }
 
         .alab-player-summary-focused {
@@ -856,7 +930,7 @@ def load_custom_css():
         .alab-player-identity-block {
             display: flex;
             flex-direction: column;
-            gap: 0.28rem;
+            gap: 0.24rem;
         }
 
         .alab-player-identity-block-compact {
@@ -866,22 +940,22 @@ def load_custom_css():
         .alab-player-name {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.18rem;
+            font-size: 1.22rem;
             font-weight: 700;
-            line-height: 1.1;
+            line-height: 1.08;
         }
 
         .alab-player-subtitle {
             color: var(--alab-text-2);
-            font-size: 1.02rem;
-            font-weight: 700;
-            line-height: 1.28;
+            font-size: 0.98rem;
+            font-weight: 600;
+            line-height: 1.26;
         }
 
         .alab-player-context {
             color: var(--alab-text-3);
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 500;
             line-height: 1.28;
         }
 
@@ -897,11 +971,11 @@ def load_custom_css():
             min-height: 26px;
             padding: 0.24rem 0.58rem;
             border-radius: 999px;
-            background: rgba(158, 240, 199, 0.09);
-            border: 1px solid rgba(158, 240, 199, 0.14);
-            color: #dff8eb;
-            font-size: 0.72rem;
-            font-weight: 700;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--alab-border);
+            color: var(--alab-text-2);
+            font-size: 0.7rem;
+            font-weight: 600;
             letter-spacing: 0.02em;
         }
 
@@ -916,10 +990,10 @@ def load_custom_css():
             width: 168px;
             aspect-ratio: 1 / 1;
             object-fit: cover;
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: var(--alab-shadow-sm);
-            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid var(--alab-border);
+            box-shadow: none;
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .alab-player-photo-placeholder {
@@ -927,9 +1001,9 @@ def load_custom_css():
             place-items: center;
             width: 168px;
             aspect-ratio: 1 / 1;
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid var(--alab-border);
+            background: rgba(255, 255, 255, 0.02);
             color: var(--alab-text-3);
             font-size: 0.84rem;
             font-weight: 700;
@@ -955,13 +1029,13 @@ def load_custom_css():
         .alab-player-link {
             display: inline-flex;
             align-items: center;
-            min-height: 38px;
-            padding: 0.48rem 0.95rem;
+            min-height: 34px;
+            padding: 0.38rem 0.78rem;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04);
-            font-size: 0.84rem;
-            font-weight: 700;
+            border: 1px solid var(--alab-border);
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 0.78rem;
+            font-weight: 600;
         }
 
         .alab-player-link-disabled {
@@ -987,15 +1061,15 @@ def load_custom_css():
             margin: 0 0 0.65rem;
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
-            line-height: 1.15;
+            line-height: 1.18;
         }
 
         .alab-player-panel-copy {
             color: var(--alab-text-2);
-            font-size: 0.9rem;
-            line-height: 1.58;
+            font-size: 0.85rem;
+            line-height: 1.56;
         }
 
         .alab-player-panel-copy strong {
@@ -1014,46 +1088,46 @@ def load_custom_css():
             display: inline-flex;
             align-items: center;
             min-height: 24px;
-            padding: 0.2rem 0.6rem;
+            padding: 0.22rem 0.56rem;
             border-radius: 999px;
-            font-size: 0.68rem;
-            font-weight: 800;
-            letter-spacing: 0.05em;
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--alab-border);
         }
 
         .alab-badge-muted {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.03);
             color: var(--alab-text-2);
         }
 
         .alab-detail-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.7rem;
+            gap: 0.72rem;
         }
 
         .alab-detail-item {
-            padding: 0.72rem 0.78rem;
+            padding: 0.8rem 0.82rem;
             border-radius: var(--alab-radius-sm);
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--alab-border);
         }
 
         .alab-detail-label {
             display: block;
             margin-bottom: 0.22rem;
             color: var(--alab-text-3);
-            font-size: 0.72rem;
+            font-size: 0.66rem;
             font-weight: 700;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
         }
 
         .alab-detail-value {
             color: var(--alab-text-1);
-            font-size: 0.92rem;
+            font-size: 0.88rem;
             font-weight: 600;
             line-height: 1.35;
         }
@@ -1074,8 +1148,8 @@ def load_custom_css():
 
         .alab-compare-kicker {
             color: var(--alab-brand);
-            font-size: 0.72rem;
-            font-weight: 800;
+            font-size: 0.66rem;
+            font-weight: 700;
             letter-spacing: 0.12em;
             text-transform: uppercase;
         }
@@ -1083,7 +1157,7 @@ def load_custom_css():
         .alab-compare-name {
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 1.15rem;
+            font-size: 1.08rem;
             font-weight: 700;
             line-height: 1.18;
             text-align: center;
@@ -1116,10 +1190,10 @@ def load_custom_css():
             margin-top: auto;
             padding: 0.82rem 0.88rem;
             border-radius: var(--alab-radius-sm);
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--alab-border);
             color: var(--alab-text-2);
-            font-size: 0.88rem;
+            font-size: 0.84rem;
             line-height: 1.58;
             text-align: center;
         }
@@ -1127,7 +1201,7 @@ def load_custom_css():
         .alab-compare-empty {
             padding: 1rem 0.95rem;
             border-radius: var(--alab-radius-sm);
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.025);
             border: 1px dashed rgba(255, 255, 255, 0.14);
             color: var(--alab-text-2);
             font-size: 0.9rem;
@@ -1144,18 +1218,18 @@ def load_custom_css():
             margin: 0.35rem auto;
             padding: 0.85rem 0.95rem;
             border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            background: linear-gradient(130deg, rgba(58, 102, 81, 0.88), rgba(10, 26, 20, 0.95));
-            box-shadow: var(--alab-shadow-sm);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
         }
 
         .alab-player-card .alab-player-photo,
         .player-photo {
             width: 56px;
             height: 56px;
-            border-radius: 16px;
+            border-radius: 10px;
             object-fit: cover;
-            border: 1px solid rgba(90, 154, 124, 0.55);
+            border: 1px solid var(--alab-border);
         }
 
         .alab-player-card .alab-player-name,
@@ -1179,7 +1253,7 @@ def load_custom_css():
         .player-link a {
             color: var(--alab-brand);
             font-size: 0.74rem;
-            font-weight: 700;
+            font-weight: 600;
             text-decoration: none;
         }
 
@@ -1188,25 +1262,25 @@ def load_custom_css():
             color: var(--alab-brand);
             font-family: 'Sora', sans-serif;
             font-weight: 700;
-            font-size: 0.94rem;
-            letter-spacing: 0.03em;
+            font-size: 0.86rem;
+            letter-spacing: 0.08em;
             margin: 0.1rem 0 0.6rem;
-            text-align: center;
+            text-align: left;
         }
 
         .alab-panel-title,
         .panel-title {
             margin: 0.2rem 0 0.75rem;
-            padding: 0.75rem 0.85rem;
+            padding: 0.7rem 0.82rem;
             border-radius: var(--alab-radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(145deg, rgba(18, 30, 27, 0.96), rgba(8, 19, 16, 0.98));
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
-            font-size: 0.92rem;
+            font-size: 0.86rem;
             font-weight: 700;
-            text-align: center;
-            box-shadow: var(--alab-shadow-sm);
+            text-align: left;
+            box-shadow: none;
         }
 
         .alab-empty-slot {
@@ -1221,41 +1295,154 @@ def load_custom_css():
             width: 100%;
             min-height: 146px;
             padding: 0.95rem 1rem;
-            border-radius: var(--alab-radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background:
-                linear-gradient(180deg, rgba(30, 60, 114, 0.12), transparent 44%),
-                linear-gradient(140deg, rgba(58, 102, 81, 0.9), rgba(10, 26, 20, 0.96));
-            box-shadow: var(--alab-shadow-md);
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: linear-gradient(180deg, rgba(20, 24, 31, 0.98), rgba(17, 21, 27, 0.98));
+            box-shadow: none;
             color: var(--alab-text-1);
         }
 
         .alab-card h5,
         .card h5 {
-            margin: 0.2rem 0 0.35rem;
+            background: linear-gradient(180deg, rgba(23, 27, 34, 0.98), rgba(19, 23, 29, 0.98));
             color: var(--alab-text-1);
             font-family: 'Sora', sans-serif;
             font-size: 0.94rem;
         }
-
-        .alab-card p,
+            background-color: rgba(239, 98, 98, 0.12);
+            border-color: rgba(239, 98, 98, 0.24);
+            color: #ffd0d0;
         .card p {
             margin: 0.16rem 0;
             color: var(--alab-text-2);
             font-size: 0.81rem;
-            line-height: 1.45;
-        }
+            background-color: rgba(228, 182, 76, 0.12);
+            border-color: rgba(228, 182, 76, 0.22);
+            color: #ffe3a0;
 
         .alab-card-seen,
         .card.visto {
             opacity: 0.84;
-            background: linear-gradient(130deg, rgba(26, 31, 46, 0.92), rgba(42, 58, 90, 0.86));
-        }
+            background-color: rgba(37, 184, 106, 0.12);
+            border-color: rgba(37, 184, 106, 0.22);
+            color: #c8f0d8;
 
         .alab-badge-vencido,
         .vencido {
             background-color: rgba(139, 0, 0, 0.88);
-            color: #ffffff;
+            background-color: rgba(78, 161, 255, 0.12);
+            border-color: rgba(78, 161, 255, 0.22);
+            color: #cfe6ff;
+        }
+
+        .stApp [data-testid="stAlert"] {
+            border-radius: var(--alab-radius-md);
+            border: 1px solid var(--alab-border);
+            background: rgba(18, 22, 29, 0.94);
+        }
+
+        .stApp [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
+            color: var(--alab-text-1) !important;
+        }
+
+        .stApp .stDataFrame,
+        .stApp [data-testid="stTable"] {
+            border: 1px solid var(--alab-border);
+            border-radius: var(--alab-radius-md);
+            overflow: hidden;
+            background: rgba(15, 17, 22, 0.96);
+        }
+
+        .stApp .ag-root-wrapper,
+        .stApp .ag-theme-streamlit,
+        .stApp .ag-theme-alpine,
+        .stApp .ag-theme-balham {
+            border: 1px solid var(--alab-border) !important;
+            border-radius: var(--alab-radius-md) !important;
+            background: rgba(15, 17, 22, 0.96) !important;
+            color: var(--alab-text-1) !important;
+        }
+
+        .stApp .ag-header,
+        .stApp .ag-header-viewport,
+        .stApp .ag-header-container {
+            background: #14171d !important;
+            border-bottom: 1px solid var(--alab-border) !important;
+        }
+
+        .stApp .ag-header-cell,
+        .stApp .ag-header-group-cell {
+            border-right: 0 !important;
+            color: var(--alab-text-3) !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase;
+        }
+
+        .stApp .ag-row {
+            background: rgba(15, 17, 22, 0.98) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: var(--alab-text-1) !important;
+        }
+
+        .stApp .ag-row:hover {
+            background: rgba(255, 255, 255, 0.025) !important;
+        }
+
+        .stApp .ag-row-selected,
+        .stApp .ag-row.ag-row-focus {
+            background: rgba(37, 184, 106, 0.1) !important;
+        }
+
+        .stApp .ag-cell {
+            border-right: 0 !important;
+            display: flex;
+            align-items: center;
+            color: var(--alab-text-2) !important;
+        }
+
+        .stApp .ag-paging-panel,
+        .stApp .ag-status-bar,
+        .stApp .ag-menu,
+        .stApp .ag-popup,
+        .stApp .ag-panel {
+            background: var(--alab-surface-2) !important;
+            color: var(--alab-text-1) !important;
+            border-color: var(--alab-border) !important;
+        }
+
+        .stApp .js-plotly-plot .plotly .modebar {
+            background: rgba(18, 22, 29, 0.84) !important;
+            border: 1px solid var(--alab-border) !important;
+            border-radius: 10px;
+        }
+
+        .alab-footer {
+            margin-top: 1.35rem;
+            padding: 1.1rem 0 0.2rem;
+            border-top: 1px solid var(--alab-border);
+            text-align: center;
+        }
+
+        .alab-footer-title {
+            color: var(--alab-text-1);
+            font-family: 'Sora', sans-serif;
+            font-size: 0.98rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .alab-footer-copy {
+            color: var(--alab-text-2);
+            font-size: 0.82rem;
+            margin: 0.12rem 0;
+        }
+
+        .alab-footer-meta {
+            color: var(--alab-text-4);
+            font-size: 0.74rem;
+            margin-top: 0.35rem;
         }
 
         .alab-badge-hoy,
@@ -1266,13 +1453,47 @@ def load_custom_css():
 
         .alab-badge-proximo,
         .proximo {
-            background-color: rgba(0, 100, 0, 0.9);
-            color: #ffffff;
+                margin-bottom: 0.95rem;
+            }
+
+            [data-testid="stAppViewContainer"] .block-container {
+                padding-right: 1.4rem;
+                padding-left: 1.4rem;
         }
 
         .alab-badge-futuro,
         .futuro {
             background-color: rgba(0, 68, 136, 0.88);
+
+            .alab-player-media-row {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 768px) {
+            [data-testid="stAppViewContainer"] .block-container {
+                padding-top: 1rem;
+                padding-right: 1rem;
+                padding-left: 1rem;
+            }
+
+            .alab-kpi-grid,
+            .kpi-container,
+            .alab-mini-grid,
+            .alab-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .alab-dashboard-chip-row {
+                gap: 0.4rem;
+            }
+
+            .alab-player-photo,
+            .alab-player-photo-placeholder {
+                width: 132px;
+            }
             color: #ffffff;
         }
 

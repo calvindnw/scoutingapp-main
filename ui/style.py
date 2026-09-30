@@ -477,8 +477,28 @@ def load_custom_css():
             color: var(--alab-text-1) !important;
             -webkit-text-fill-color: var(--alab-text-1) !important;
             caret-color: var(--alab-text-1) !important;
-            background: transparent !important;
+            background: var(--alab-surface-2) !important;
+            background-color: var(--alab-surface-2) !important;
             font-size: 0.9rem !important;
+        }
+
+        .stApp input:-webkit-autofill,
+        .stApp input:-webkit-autofill:hover,
+        .stApp input:-webkit-autofill:focus,
+        .stApp textarea:-webkit-autofill,
+        .stApp textarea:-webkit-autofill:hover,
+        .stApp textarea:-webkit-autofill:focus,
+        .stApp [data-baseweb="input"] input:-webkit-autofill,
+        .stApp [data-baseweb="input"] input:-webkit-autofill:hover,
+        .stApp [data-baseweb="input"] input:-webkit-autofill:focus,
+        .stApp [data-baseweb="base-input"] input:-webkit-autofill,
+        .stApp [data-baseweb="base-input"] input:-webkit-autofill:hover,
+        .stApp [data-baseweb="base-input"] input:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--alab-text-1) !important;
+            caret-color: var(--alab-text-1) !important;
+            box-shadow: 0 0 0 1000px var(--alab-surface-2) inset !important;
+            -webkit-box-shadow: 0 0 0 1000px var(--alab-surface-2) inset !important;
+            transition: background-color 9999s ease-out 0s !important;
         }
 
         .stApp [data-baseweb="select"] > div,
@@ -510,6 +530,14 @@ def load_custom_css():
             border-radius: var(--alab-radius-sm);
             border: 1px solid rgba(43, 48, 57, 1) !important;
             box-shadow: none !important;
+        }
+
+        .stApp [data-baseweb="input"] > div,
+        .stApp [data-baseweb="base-input"] > div,
+        .stApp .stDateInput [data-baseweb="input"] > div,
+        .stApp .stNumberInput [data-baseweb="input"] > div {
+            background: var(--alab-surface-2) !important;
+            background-color: var(--alab-surface-2) !important;
         }
 
         .stApp [data-baseweb="select"] * {

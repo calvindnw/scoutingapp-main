@@ -48,6 +48,18 @@ def load_custom_css():
             font-family: 'Manrope', 'Inter', system-ui, sans-serif;
         }
 
+        html,
+        body,
+        .stApp,
+        .stApp [data-baseweb="input"],
+        .stApp [data-baseweb="base-input"],
+        .stApp [data-baseweb="select"] > div,
+        .stApp input,
+        .stApp select,
+        .stApp textarea {
+            color-scheme: dark;
+        }
+
         .stApp {
             position: relative;
             min-height: 100vh;
@@ -465,13 +477,25 @@ def load_custom_css():
             color: var(--alab-text-1) !important;
             -webkit-text-fill-color: var(--alab-text-1) !important;
             caret-color: var(--alab-text-1) !important;
+            background: transparent !important;
             font-size: 0.9rem !important;
+        }
+
+        .stApp [data-baseweb="select"] > div,
+        .stApp [data-baseweb="select"] input,
+        .stApp [data-baseweb="select"] div,
+        .stApp [data-baseweb="select"] span,
+        .stApp .stDateInput [data-baseweb="input"] * ,
+        .stApp .stNumberInput [data-baseweb="input"] * {
+            color: var(--alab-text-1) !important;
+            -webkit-text-fill-color: var(--alab-text-1) !important;
         }
 
         .stApp input::placeholder,
         .stApp textarea::placeholder,
         .stApp [data-baseweb="input"] input::placeholder,
-        .stApp [data-baseweb="base-input"] textarea::placeholder {
+        .stApp [data-baseweb="base-input"] textarea::placeholder,
+        .stApp [data-baseweb="select"] input::placeholder {
             color: rgba(167, 175, 186, 0.68) !important;
             -webkit-text-fill-color: rgba(167, 175, 186, 0.68) !important;
         }
@@ -490,6 +514,26 @@ def load_custom_css():
 
         .stApp [data-baseweb="select"] * {
             color: var(--alab-text-1) !important;
+        }
+
+        .stApp [data-baseweb="popover"],
+        .stApp [role="listbox"],
+        .stApp [role="option"] {
+            color: var(--alab-text-1) !important;
+        }
+
+        .stApp [role="listbox"] {
+            background: var(--alab-surface-2) !important;
+            border: 1px solid rgba(43, 48, 57, 1) !important;
+        }
+
+        .stApp [role="option"] {
+            background: transparent !important;
+        }
+
+        .stApp [role="option"][aria-selected="true"],
+        .stApp [role="option"]:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
         }
 
         .stApp [data-baseweb="select"] svg,

@@ -8879,22 +8879,22 @@ if st.session_state["menu"] == "Lista corta":
         with tarjeta_col:
             render_html_block(
                 f"""
-                <div class="alab-player-panel alab-compare-card" style="margin-bottom:0.9rem;width:100%;">
+                <div class="alab-player-panel alab-compare-card alab-shortlist-card" style="margin-bottom:0.9rem;width:100%;">
                     <div style="display:flex;gap:1.1rem;align-items:flex-start;flex-wrap:nowrap;width:100%;">
                         <div style="flex:0 0 122px;max-width:122px;">
                             <div class="alab-compare-photo-wrap" style="margin:0;justify-content:flex-start;">{foto_html}</div>
                         </div>
-                        <div style="flex:1 1 auto;min-width:0;width:100%;">
+                        <div class="alab-shortlist-body" style="flex:1 1 auto;min-width:0;">
                             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-                                <div>
-                                    <div class="alab-compare-name" style="margin-bottom:0.1rem;text-align:left;">{nombre_card}</div>
-                                    <div class="alab-player-copy" style="margin-bottom:0.25rem;">{posicion_card} · {club_card}</div>
-                                    <div class="alab-player-copy" style="margin-bottom:0.35rem;">{liga_card}</div>
-                                    <div class="alab-player-copy">{edad_card} · {altura_card} · {pie_card}</div>
+                                <div class="alab-shortlist-body">
+                                    <div class="alab-compare-name" style="margin-bottom:0.1rem;">{nombre_card}</div>
+                                    <p class="alab-shortlist-meta" style="margin-bottom:0.25rem;">{posicion_card} · {club_card}</p>
+                                    <p class="alab-shortlist-meta" style="margin-bottom:0.35rem;">{liga_card}</p>
+                                    <p class="alab-shortlist-meta">{edad_card} · {altura_card} · {pie_card}</p>
                                 </div>
                                 <div class="alab-badge-row"><span class='alab-badge alab-badge-muted'>{escape_html(orden_card)}</span></div>
                             </div>
-                            <div class="alab-player-link-row alab-player-link-row-inline" style="margin-top:0.75rem;">{links_html}</div>
+                            <div class="alab-player-link-row alab-player-link-row-inline alab-shortlist-links" style="margin-top:0.75rem;">{links_html}</div>
                         </div>
                     </div>
                 </div>

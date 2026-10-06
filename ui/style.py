@@ -1274,6 +1274,37 @@ def load_custom_css():
             text-align: center;
         }
 
+        .alab-shortlist-card {
+            text-align: left;
+        }
+
+        .alab-shortlist-card .alab-compare-name {
+            text-align: left;
+        }
+
+        .alab-shortlist-body {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            width: 100%;
+        }
+
+        .alab-shortlist-meta {
+            margin: 0;
+            color: var(--alab-text-3);
+            font-size: 0.94rem;
+            line-height: 1.45;
+            text-align: left;
+        }
+
+        .alab-shortlist-links {
+            justify-content: flex-start;
+            align-items: center;
+            text-align: left;
+            width: 100%;
+        }
+
         .alab-compare-photo-wrap {
             display: flex;
             justify-content: center;

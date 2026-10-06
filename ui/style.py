@@ -1305,6 +1305,35 @@ def load_custom_css():
             width: 100%;
         }
 
+        .alab-shortlist-content {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .alab-shortlist-rail {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-start;
+            gap: 0.7rem;
+            min-width: 150px;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .alab-shortlist-rail .alab-player-link-row {
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .alab-shortlist-rail .alab-player-link {
+            justify-content: flex-end;
+        }
+
         .alab-compare-photo-wrap {
             display: flex;
             justify-content: center;

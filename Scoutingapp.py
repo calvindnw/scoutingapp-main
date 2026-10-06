@@ -399,17 +399,14 @@ def leer_shortlist_desde_worksheet(ws) -> pd.DataFrame:
 def cargar_datos_shortlist() -> pd.DataFrame:
     estado = obtener_estado_shortlist()
     if not estado["ok"]:
-        return pd.DataFrame(columns=SHORTLIST_COLUMNS)
+        return pd.DataFrame(columns=SHORTLIST_COLUMNS + ["_sheet_row"])
 
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
-        df = leer_shortlist_desde_worksheet(ws)
-        if "_sheet_row" in df.columns:
-            df = df.drop(columns=["_sheet_row"])
-        return df
+        return leer_shortlist_desde_worksheet(ws)
     except Exception as e:
         st.error(f"⚠️ Error al cargar 'Lista corta': {e}")
-        return pd.DataFrame(columns=SHORTLIST_COLUMNS)
+        return pd.DataFrame(columns=SHORTLIST_COLUMNS + ["_sheet_row"])
 
 
 def valor_shortlist_vacio(valor) -> bool:
@@ -642,7 +639,7 @@ def eliminar_jugador_de_shortlist(scout: str, nombre_lista: str, id_jugador) -> 
         return False, f"No se pudo eliminar el jugador: {exc}"
 
 
-def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden) -> tuple[bool, str]:
+def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden, sheet_row=None) -> tuple[bool, str]:
     nombre_limpio = str(nombre_lista or "").strip()
     id_normalizado = normalizar_id_texto(id_jugador)
     orden_limpio = normalizar_orden_shortlist(orden)
@@ -651,16 +648,24 @@ def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden)
 
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
-        df_shortlist = leer_shortlist_desde_worksheet(ws)
-        coincidencias = df_shortlist[
-            (df_shortlist["Scout"] == scout)
-            & (df_shortlist["Lista"] == nombre_limpio)
-            & (df_shortlist["ID_Jugador"].map(normalizar_id_texto) == id_normalizado)
-        ]
-        if coincidencias.empty:
-            return False, "No se encontró el registro para actualizar el orden."
+        row_number = None
+        if sheet_row is not None and not valor_shortlist_vacio(sheet_row):
+            try:
+                row_number = int(float(sheet_row))
+            except (TypeError, ValueError):
+                row_number = None
 
-        row_number = int(coincidencias.iloc[0]["_sheet_row"])
+        if row_number is None:
+            df_shortlist = leer_shortlist_desde_worksheet(ws)
+            coincidencias = df_shortlist[
+                (df_shortlist["Scout"] == scout)
+                & (df_shortlist["Lista"] == nombre_limpio)
+                & (df_shortlist["ID_Jugador"].map(normalizar_id_texto) == id_normalizado)
+            ]
+            if coincidencias.empty:
+                return False, "No se encontró el registro para actualizar el orden."
+            row_number = int(coincidencias.iloc[0]["_sheet_row"])
+
         ws.update(f"N{row_number}", [[orden_limpio]], value_input_option="USER_ENTERED")
         refrescar_datasets_sesion()
         return True, "Orden actualizado correctamente."
@@ -8915,6 +8920,7 @@ if st.session_state["menu"] == "Lista corta":
                     lista_activa,
                     row["ID_Jugador"],
                     valor_guardar,
+                    row.get("_sheet_row"),
                 )
                 if exito_orden:
                     st.success(mensaje_orden)

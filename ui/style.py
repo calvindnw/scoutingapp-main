@@ -1310,8 +1310,13 @@ def load_custom_css():
             align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             width: 100%;
+        }
+
+        .alab-shortlist-copy {
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .alab-shortlist-rail {
@@ -1319,15 +1324,16 @@ def load_custom_css():
             flex-direction: column;
             align-items: flex-end;
             justify-content: flex-start;
-            gap: 0.7rem;
-            min-width: 150px;
+            gap: 0.5rem;
+            flex: 0 0 auto;
+            min-width: max-content;
             margin-left: auto;
             text-align: right;
         }
 
         .alab-shortlist-rail .alab-player-link-row {
             justify-content: flex-end;
-            width: 100%;
+            width: auto;
         }
 
         .alab-shortlist-rail .alab-player-link {

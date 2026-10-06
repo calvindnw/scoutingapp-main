@@ -8886,7 +8886,7 @@ if st.session_state["menu"] == "Lista corta":
                         </div>
                         <div class="alab-shortlist-body" style="flex:1 1 auto;min-width:0;">
                             <div class="alab-shortlist-content">
-                                <div class="alab-shortlist-body">
+                                <div class="alab-shortlist-copy">
                                     <div class="alab-compare-name" style="margin-bottom:0.1rem;">{nombre_card}</div>
                                     <p class="alab-shortlist-meta" style="margin-bottom:0.25rem;">{posicion_card} · {club_card}</p>
                                     <p class="alab-shortlist-meta" style="margin-bottom:0.35rem;">{liga_card}</p>

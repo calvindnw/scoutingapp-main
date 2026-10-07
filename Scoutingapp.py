@@ -5694,13 +5694,22 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
         .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"] {
             border-color: rgba(37, 184, 106, 0.55) !important;
             background: linear-gradient(180deg, #2bc474, #1f9e5c) !important;
-            color: #08100b !important;
+            color: #000000 !important;
             font-weight: 800 !important;
+        }
+        .stApp div.st-key-shortlist_generar_pdf button[kind="primary"]:not(:disabled) *,
+        .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"] * {
+            color: #000000 !important;
         }
         .stApp div.st-key-shortlist_generar_pdf button[kind="primary"]:not(:disabled):hover,
         .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"]:hover {
             background: linear-gradient(180deg, #37cd7d, #24ab67) !important;
+            color: #000000 !important;
             transform: translateY(-1px);
+        }
+        .stApp div.st-key-shortlist_generar_pdf button[kind="primary"]:not(:disabled):hover *,
+        .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"]:hover * {
+            color: #000000 !important;
         }
         </style>
         """,

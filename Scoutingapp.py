@@ -5587,17 +5587,7 @@ def generar_pdf_lista_corta(df_lista, nombre_lista, scout, criterio_orden):
         pdf.set_font("Arial", "", 9)
         pdf.set_text_color(98, 106, 115)
         pdf.cell(0, 5, "Planificación y seguimiento de jugadores")
-        pdf.set_xy(pdf.l_margin, 34)
-        pdf.set_font("Arial", "", 8)
-        pdf.set_text_color(70, 78, 86)
-        fecha_generacion = datetime.today().strftime("%d/%m/%Y")
-        pdf.cell(
-            0,
-            4,
-            f"Scout: {sanitizar_texto_pdf(str(scout))}   |   {fecha_generacion}   |   "
-            f"{total} jugadores   |   Ordenado por {criterio_orden.lower()}",
-        )
-        pdf.set_y(41)
+        pdf.set_y(34)
 
         etiquetas_metricas = [
             ("TOTAL", total, True),
@@ -5697,10 +5687,30 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
     section_header("Exportación")
     tiene_lista = bool(nombre_lista)
     hay_jugadores = df_lista is not None and not df_lista.empty
+    st.markdown(
+        """
+        <style>
+        .stApp div.st-key-shortlist_generar_pdf button[kind="primary"]:not(:disabled),
+        .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"] {
+            border-color: rgba(37, 184, 106, 0.55) !important;
+            background: linear-gradient(180deg, #2bc474, #1f9e5c) !important;
+            color: #08100b !important;
+            font-weight: 800 !important;
+        }
+        .stApp div.st-key-shortlist_generar_pdf button[kind="primary"]:not(:disabled):hover,
+        .stApp div.st-key-shortlist_descargar_pdf button[kind="primary"]:hover {
+            background: linear-gradient(180deg, #37cd7d, #24ab67) !important;
+            transform: translateY(-1px);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     solicitar_generacion = st.button(
         "Generar informe PDF",
         use_container_width=True,
         disabled=not (tiene_lista and hay_jugadores),
+        type="primary",
         key="shortlist_generar_pdf",
     )
 
@@ -5737,6 +5747,7 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
             file_name=nombre_archivo_pdf_lista_corta(nombre_lista),
             mime="application/pdf",
             use_container_width=True,
+            type="primary",
             key="shortlist_descargar_pdf",
         )
 

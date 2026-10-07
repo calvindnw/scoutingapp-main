@@ -5864,7 +5864,13 @@ def nombre_archivo_pdf_informe_jugador(nombre, fecha=None):
     return f"Informe_Jugador_{nombre_seguro or 'Jugador'}_{fecha_archivo}.pdf"
 
 
-def generar_pdf_informe_jugador(jugador, df_informes_jugador, incluir_informes=False):
+def generar_pdf_informe_jugador(
+    jugador,
+    df_informes_jugador,
+    incluir_informes=False,
+    df_franjas=None,
+    df_data_jugadores=None,
+):
     """Genera el dossier del jugador y, opcionalmente, sus informes visibles."""
     if jugador is None:
         raise ValueError("No se recibió un jugador para generar el informe.")
@@ -5883,6 +5889,56 @@ def generar_pdf_informe_jugador(jugador, df_informes_jugador, incluir_informes=F
         ].copy()
     else:
         informes = pd.DataFrame(columns=informes.columns)
+
+    dataset_scores = None
+    if not informes.empty:
+        informes_score = informes.copy()
+        informes_score["ID_Jugador"] = informes_score["ID_Jugador"].map(normalizar_id_texto)
+        metricas_con_valor = informes_score.apply(
+            lambda fila: any(
+                convertir_valor_numerico(fila.get(metrica)) is not None
+                for metrica in ANALYST_SCORE_METRICS
+            ),
+            axis=1,
+        )
+        informes_score = informes_score.loc[metricas_con_valor]
+        if not informes_score.empty:
+            dataset_scores = construir_dataset_scores_jugador(informes_score, jugador_id)
+
+    resumen_estadistico = {"partidos_jugados": "-", "minutos_jugados": "-"}
+    tabla_estadisticas = None
+    estado_estadisticas = "jugador_sin_estadisticas"
+    if isinstance(df_data_jugadores, pd.DataFrame):
+        resumen_estadistico = obtener_resumen_estadisticas_jugador(
+            jugador,
+            df_data_jugadores,
+        )
+        tabla_estadisticas, estado_estadisticas = construir_tabla_estadisticas(
+            jugador,
+            df_franjas if isinstance(df_franjas, pd.DataFrame) else pd.DataFrame(),
+            df_data_jugadores,
+        )
+
+    resumen_competicion_disponible = any(
+        resumen_estadistico.get(campo, "-") not in {"", "-", None}
+        for campo in ("partidos_jugados", "minutos_jugados")
+    )
+    tabla_jugador_estadisticas = (
+        tabla_estadisticas.iloc[0]
+        if isinstance(tabla_estadisticas, pd.DataFrame) and not tabla_estadisticas.empty
+        else None
+    )
+    metricas_estadisticas_disponibles = bool(
+        tabla_jugador_estadisticas is not None
+        and any(
+            convertir_valor_numerico(valor) is not None
+            for valor in tabla_jugador_estadisticas.iloc[1:]
+        )
+    )
+    hay_estadisticas = (
+        resumen_competicion_disponible or metricas_estadisticas_disponibles
+    )
+    hay_analisis = dataset_scores is not None or hay_estadisticas
 
     columnas_resumen = list(jugador.index) if isinstance(jugador, pd.Series) else list(jugador.keys())
     columna_resumen = columna_resumen_jugador(columnas_resumen)
@@ -6186,6 +6242,311 @@ def generar_pdf_informe_jugador(jugador, df_informes_jugador, incluir_informes=F
         if indice < len(puntos_resumen) - 1:
             pdf.ln(0.4)
     pdf.set_y(pdf.get_y() + 3)
+
+    if hay_analisis:
+        pdf.contexto_pagina = "EVALUACIÓN Y RENDIMIENTO"
+        pdf.add_page()
+        pdf.set_xy(pdf.l_margin, 20)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(37, 184, 106)
+        pdf.cell(ancho, 4, "ANÁLISIS DEL JUGADOR")
+        pdf.ln(6)
+        pdf.set_font("Arial", "B", 18)
+        pdf.set_text_color(17, 19, 24)
+        pdf.cell(ancho, 8, "Evaluación y rendimiento", ln=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(98, 106, 115)
+        pdf.cell(
+            ancho,
+            5,
+            "Lectura integrada de evaluaciones de scouting y rendimiento estadístico.",
+            ln=True,
+        )
+        pdf.ln(4)
+
+        def titulo_analisis(titulo, espacio=18):
+            asegurar_espacio_pdf(pdf, espacio)
+            pdf.ln(2)
+            pdf.set_font("Arial", "B", 9)
+            pdf.set_text_color(23, 124, 73)
+            pdf.cell(ancho, 5, sanitizar_texto_pdf(titulo.upper()), ln=True)
+            pdf.set_draw_color(223, 227, 230)
+            pdf.set_line_width(0.25)
+            pdf.line(pdf.l_margin, pdf.get_y() + 1, pdf.w - pdf.r_margin, pdf.get_y() + 1)
+            pdf.set_y(pdf.get_y() + 4)
+
+        if dataset_scores is not None:
+            titulo_analisis("Evaluación del equipo de analistas", espacio=42)
+            resumen_scores = dataset_scores["resumen"]
+            indicadores = [
+                ("Informes evaluados", str(resumen_scores["informes"])),
+                ("Score promedio", f'{resumen_scores["score_promedio"]:.2f}'),
+                ("Último score", f'{resumen_scores["ultimo_score"]:.2f}'),
+                ("Score máximo", f'{resumen_scores["score_maximo"]:.2f}'),
+            ]
+            separacion_kpi = 2
+            kpi_w = (ancho - separacion_kpi * 3) / 4
+            y_kpi = pdf.get_y()
+            for indice, (etiqueta, contenido) in enumerate(indicadores):
+                x_kpi = pdf.l_margin + indice * (kpi_w + separacion_kpi)
+                pdf.set_fill_color(246, 247, 248)
+                pdf.set_draw_color(223, 227, 230)
+                pdf.rect(x_kpi, y_kpi, kpi_w, 16, "DF")
+                pdf.set_xy(x_kpi + 2.5, y_kpi + 2)
+                pdf.set_font("Arial", "B", 12)
+                pdf.set_text_color(17, 19, 24)
+                pdf.cell(kpi_w - 5, 5, contenido)
+                pdf.set_xy(x_kpi + 2.5, y_kpi + 9)
+                pdf.set_font("Arial", "", 6.5)
+                pdf.set_text_color(98, 106, 115)
+                pdf.multi_cell(kpi_w - 5, 3, etiqueta)
+            pdf.set_y(y_kpi + 19)
+
+            historial_scores = dataset_scores["historial"].copy()
+            if not historial_scores.empty:
+                titulo_analisis("Evolución del score", espacio=60)
+                alto_grafico = 43
+                asegurar_espacio_pdf(pdf, alto_grafico + 3)
+                grafico_x = pdf.l_margin
+                grafico_y = pdf.get_y()
+                grafico_w = ancho
+                pdf.set_fill_color(246, 247, 248)
+                pdf.set_draw_color(223, 227, 230)
+                pdf.rect(grafico_x, grafico_y, grafico_w, alto_grafico, "DF")
+                margen_izq = 12
+                margen_der = 5
+                margen_sup = 5
+                margen_inf = 10
+                plot_x = grafico_x + margen_izq
+                plot_y = grafico_y + margen_sup
+                plot_w = grafico_w - margen_izq - margen_der
+                plot_h = alto_grafico - margen_sup - margen_inf
+                pdf.set_font("Arial", "", 6)
+                for tick in (0, 2, 4, 6, 8, 10):
+                    y_tick = plot_y + plot_h * (1 - tick / 10)
+                    pdf.set_draw_color(223, 227, 230)
+                    pdf.line(plot_x, y_tick, plot_x + plot_w, y_tick)
+                    pdf.set_xy(grafico_x + 1, y_tick - 1.5)
+                    pdf.set_text_color(138, 145, 153)
+                    pdf.cell(8, 3, str(tick), align="R")
+
+                valores_score = [
+                    convertir_valor_numerico(valor)
+                    for valor in historial_scores["Score"].tolist()
+                ]
+                puntos = [
+                    (indice, valor)
+                    for indice, valor in enumerate(valores_score)
+                    if valor is not None
+                ]
+                if puntos:
+                    divisor_x = max(len(valores_score) - 1, 1)
+                    puntos_xy = [
+                        (
+                            plot_x + plot_w * indice / divisor_x,
+                            plot_y + plot_h * (1 - max(0, min(valor, 10)) / 10),
+                        )
+                        for indice, valor in puntos
+                    ]
+                    pdf.set_draw_color(37, 184, 106)
+                    pdf.set_line_width(0.8)
+                    for punto_a, punto_b in zip(puntos_xy, puntos_xy[1:]):
+                        pdf.line(punto_a[0], punto_a[1], punto_b[0], punto_b[1])
+                    for x_punto, y_punto in puntos_xy:
+                        pdf.set_fill_color(37, 184, 106)
+                        pdf.ellipse(x_punto - 1.1, y_punto - 1.1, 2.2, 2.2, "F")
+
+                    fechas_historial = historial_scores["Informe"].astype(str).tolist()
+                    cantidad_etiquetas = min(len(fechas_historial), 6)
+                    indices_etiquetas = sorted(
+                        {
+                            round(
+                                indice * (len(fechas_historial) - 1)
+                                / max(cantidad_etiquetas - 1, 1)
+                            )
+                            for indice in range(cantidad_etiquetas)
+                        }
+                    )
+                    pdf.set_font("Arial", "", 5.8)
+                    pdf.set_text_color(98, 106, 115)
+                    for indice in indices_etiquetas:
+                        x_etiqueta = plot_x + plot_w * indice / divisor_x
+                        texto_fecha = _valor_informe_jugador_pdf(
+                            fechas_historial[indice], ""
+                        )
+                        pdf.set_xy(
+                            max(grafico_x + 1, min(x_etiqueta - 8, grafico_x + grafico_w - 17)),
+                            plot_y + plot_h + 2,
+                        )
+                        pdf.cell(16, 3, texto_fecha, align="C")
+                pdf.set_y(grafico_y + alto_grafico + 3)
+
+        if hay_estadisticas:
+            titulo_analisis("Rendimiento estadístico", espacio=30)
+            tarjetas_rendimiento = [
+                ("Partidos", resumen_estadistico["partidos_jugados"]),
+                ("Minutos", resumen_estadistico["minutos_jugados"]),
+            ]
+            kpi_w = (ancho - 3) / 2
+            y_rendimiento = pdf.get_y()
+            for indice, (etiqueta, contenido) in enumerate(tarjetas_rendimiento):
+                x_kpi = pdf.l_margin + indice * (kpi_w + 3)
+                pdf.set_fill_color(246, 247, 248)
+                pdf.set_draw_color(223, 227, 230)
+                pdf.rect(x_kpi, y_rendimiento, kpi_w, 14, "DF")
+                pdf.set_xy(x_kpi + 3, y_rendimiento + 2)
+                pdf.set_font("Arial", "B", 6.5)
+                pdf.set_text_color(98, 106, 115)
+                pdf.cell(kpi_w - 6, 3, etiqueta.upper())
+                pdf.set_xy(x_kpi + 3, y_rendimiento + 6)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(17, 19, 24)
+                pdf.cell(kpi_w - 6, 5, contenido)
+            pdf.set_y(y_rendimiento + 17)
+
+            filas_comparativa = pd.DataFrame()
+            fila_franja_minima = None
+            fila_franja_maxima = None
+            if isinstance(tabla_estadisticas, pd.DataFrame) and not tabla_estadisticas.empty:
+                _, fila_franja_minima, fila_franja_maxima, _ = (
+                    preparar_datos_graficos_estadisticas(tabla_estadisticas)
+                )
+                filas_comparativa = construir_datos_franja_estadisticas(
+                    tabla_estadisticas,
+                    fila_franja_minima,
+                    fila_franja_maxima,
+                )
+
+            if not filas_comparativa.empty:
+                titulo_analisis("Comparativa con franja de liga", espacio=30)
+                pdf.set_font("Arial", "", 7)
+                pdf.set_text_color(98, 106, 115)
+                pdf.cell(
+                    ancho,
+                    4,
+                    f"Referencia: {valor('Posición')} · {valor('Liga')}",
+                    ln=True,
+                )
+                pdf.ln(1)
+                margen_label = 42
+                margen_valor = 5
+                grafico_w = ancho - margen_label - margen_valor
+                for _, fila in filas_comparativa.iterrows():
+                    asegurar_espacio_pdf(pdf, 9)
+                    y_fila = pdf.get_y()
+                    metrica = _valor_informe_jugador_pdf(fila.get("Métrica"), "Métrica")
+                    pdf.set_font("Arial", "", 6.8)
+                    pdf.set_text_color(17, 19, 24)
+                    pdf.set_xy(pdf.l_margin, y_fila + 1)
+                    pdf.cell(margen_label - 2, 4, metrica)
+
+                    minimo = convertir_valor_numerico(fila.get("Minimo"))
+                    maximo = convertir_valor_numerico(fila.get("Maximo"))
+                    actual = convertir_valor_numerico(fila.get("Jugador"))
+                    x_grafico = pdf.l_margin + margen_label
+                    y_barra = y_fila + 2.5
+                    if minimo is not None and maximo is not None:
+                        amplitud = maximo - minimo
+                        rango = max(abs(amplitud), abs(minimo) * 0.1, 1e-6)
+                        bajo = min(minimo, actual) if actual is not None else minimo
+                        alto = max(maximo, actual) if actual is not None else maximo
+                        padding = max((alto - bajo) * 0.08, rango * 0.08)
+                        dominio_min = bajo - padding
+                        dominio_max = alto + padding
+                        dominio = max(dominio_max - dominio_min, 1e-6)
+                        pos_min = x_grafico + grafico_w * (minimo - dominio_min) / dominio
+                        pos_max = x_grafico + grafico_w * (maximo - dominio_min) / dominio
+                        if pos_max - pos_min < 1:
+                            pos_max = min(x_grafico + grafico_w, pos_min + 1)
+                        pdf.set_fill_color(232, 246, 238)
+                        pdf.set_draw_color(223, 227, 230)
+                        pdf.rect(pos_min, y_barra, pos_max - pos_min, 3, "DF")
+                        if actual is not None:
+                            pos_actual = x_grafico + grafico_w * (actual - dominio_min) / dominio
+                            estado = fila.get("Estado_franja")
+                            color_marcador = (
+                                (206, 79, 79) if estado == "debajo"
+                                else (37, 184, 106) if estado == "encima"
+                                else (23, 124, 73)
+                            )
+                            pdf.set_fill_color(*color_marcador)
+                            pdf.ellipse(pos_actual - 1.2, y_barra + 0.3, 2.4, 2.4, "F")
+                    pdf.set_font("Arial", "B", 6.3)
+                    pdf.set_text_color(98, 106, 115)
+                    pdf.set_xy(pdf.w - pdf.r_margin - margen_valor, y_fila + 1)
+                    pdf.cell(margen_valor, 4, f"{actual:.2f}" if actual is not None else "-", align="R")
+                    pdf.set_y(y_fila + 7)
+
+                pdf.ln(2)
+                titulo_analisis("Jugador / mínimo / máximo / situación", espacio=25)
+                anchos_columnas = [ancho * 0.40, ancho * 0.15, ancho * 0.15, ancho * 0.15, ancho * 0.15]
+                encabezados = ["Métrica", "Jugador", "Mínimo", "Máximo", "Situación"]
+
+                def dibujar_encabezado_tabla():
+                    pdf.set_fill_color(240, 242, 243)
+                    pdf.set_draw_color(223, 227, 230)
+                    pdf.set_font("Arial", "B", 6.5)
+                    pdf.set_text_color(98, 106, 115)
+                    for ancho_columna, encabezado in zip(anchos_columnas, encabezados):
+                        pdf.cell(ancho_columna, 6, encabezado, border=1, fill=True)
+                    pdf.ln()
+
+                dibujar_encabezado_tabla()
+                for _, fila in filas_comparativa.iterrows():
+                    asegurar_espacio_pdf(pdf, 7)
+                    if pdf.get_y() + 7 > pdf.h - pdf.b_margin:
+                        pdf.add_page()
+                        dibujar_encabezado_tabla()
+                    actual = convertir_valor_numerico(fila.get("Jugador"))
+                    minimo = convertir_valor_numerico(fila.get("Minimo"))
+                    maximo = convertir_valor_numerico(fila.get("Maximo"))
+                    estado = {
+                        "debajo": "Debajo",
+                        "dentro": "En franja",
+                        "encima": "Encima",
+                        "sin_dato": "Sin dato",
+                    }.get(fila.get("Estado_franja"), "Sin dato")
+                    valores_fila = [
+                        _valor_informe_jugador_pdf(fila.get("Métrica"), "-"),
+                        f"{actual:.2f}" if actual is not None else "-",
+                        f"{minimo:.2f}" if minimo is not None else "-",
+                        f"{maximo:.2f}" if maximo is not None else "-",
+                        estado,
+                    ]
+                    pdf.set_font("Arial", "", 6.5)
+                    pdf.set_text_color(17, 19, 24)
+                    for indice, (ancho_columna, contenido) in enumerate(
+                        zip(anchos_columnas, valores_fila)
+                    ):
+                        pdf.cell(
+                            ancho_columna,
+                            6,
+                            contenido,
+                            border=1,
+                            align="L" if indice == 0 else "C",
+                        )
+                    pdf.ln()
+            elif metricas_estadisticas_disponibles:
+                titulo_analisis("Métricas disponibles por posición", espacio=22)
+                etiqueta_columna = tabla_estadisticas.columns[0]
+                for _, fila in tabla_estadisticas.iterrows():
+                    for metrica in tabla_estadisticas.columns:
+                        if metrica == etiqueta_columna:
+                            continue
+                        valor_metrica = convertir_valor_numerico(fila.get(metrica))
+                        if valor_metrica is None:
+                            continue
+                        asegurar_espacio_pdf(pdf, 6)
+                        pdf.set_font("Arial", "", 8)
+                        pdf.set_text_color(98, 106, 115)
+                        pdf.cell(ancho * 0.7, 5, sanitizar_texto_pdf(metrica))
+                        pdf.set_font("Arial", "B", 8)
+                        pdf.set_text_color(17, 19, 24)
+                        pdf.cell(ancho * 0.3, 5, f"{valor_metrica:.2f}", ln=True, align="R")
+            elif resumen_competicion_disponible:
+                pdf.set_font("Arial", "", 8)
+                pdf.set_text_color(98, 106, 115)
+                pdf.multi_cell(ancho, 4.5, "No hay métricas configuradas para comparar en esta posición.")
 
     if incluir_informes:
         pdf.contexto_pagina = "INFORMES DE SCOUTING"
@@ -9446,11 +9807,15 @@ if st.session_state["menu"] == "Informes Jugadores":
                     disabled=not jugador_sel_id,
                 ):
                     try:
-                        buffer = generar_pdf_informe_jugador(
-                            j,
-                            df_reports,
-                            incluir_informes=incluir_informes,
-                        )
+                        with st.spinner("Generando informe..."):
+                            df_franjas_pdf, df_data_jugadores_pdf = cargar_datos_estadisticas()
+                            buffer = generar_pdf_informe_jugador(
+                                j,
+                                df_reports,
+                                incluir_informes=incluir_informes,
+                                df_franjas=df_franjas_pdf,
+                                df_data_jugadores=df_data_jugadores_pdf,
+                            )
                     except Exception as exc:
                         st.error(f"No se pudo generar el informe PDF del jugador: {exc}")
                     else:

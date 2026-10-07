@@ -6165,10 +6165,26 @@ def generar_pdf_informe_jugador(jugador, df_informes_jugador, incluir_informes=F
     pdf.set_draw_color(37, 184, 106)
     pdf.set_line_width(1)
     pdf.line(pdf.l_margin + 1, resumen_y, pdf.l_margin + 1, resumen_y + 10)
-    pdf.set_xy(pdf.l_margin + 5, resumen_y)
-    pdf.set_font("Arial", "", 10)
-    pdf.set_text_color(17, 19, 24)
-    pdf.multi_cell(ancho - 7, 5.2, resumen, align="J")
+    puntos_resumen = re.split(
+        r"\s+[-–—]\s+(?=[A-ZÁÉÍÓÚÜÑ])",
+        re.sub(r"^\s*[-–—•]\s*", "", resumen, count=1),
+    )
+    puntos_resumen = [
+        punto.strip()
+        for punto in puntos_resumen
+        if punto and punto.strip()
+    ] or [resumen]
+    for indice, punto in enumerate(puntos_resumen):
+        pdf.set_xy(pdf.l_margin + 5, pdf.get_y())
+        pdf.set_font("Arial", "B", 8.5)
+        pdf.set_text_color(23, 124, 73)
+        pdf.cell(4.5, 4.2, "-")
+        pdf.set_x(pdf.l_margin + 9.5)
+        pdf.set_font("Arial", "", 8.5)
+        pdf.set_text_color(17, 19, 24)
+        pdf.multi_cell(ancho - 11.5, 4.2, punto)
+        if indice < len(puntos_resumen) - 1:
+            pdf.ln(0.4)
     pdf.set_y(pdf.get_y() + 3)
 
     if incluir_informes:

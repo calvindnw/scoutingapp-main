@@ -6116,9 +6116,15 @@ def generar_pdf_informe_jugador(
         pdf.set_xy(texto_x, cursor_y)
         pdf.set_font("Arial", "B", 8)
         pdf.set_text_color(17, 19, 24)
-        pdf.cell(27, 4, "PERFIL")
+        etiqueta_perfil = "Perfil de jugador:"
+        ancho_etiqueta_perfil = pdf.get_string_width(etiqueta_perfil) + 2
+        pdf.cell(ancho_etiqueta_perfil, 4, etiqueta_perfil)
         pdf.set_font("Arial", "", 8)
-        pdf.multi_cell(max(texto_w - 27, 10), 4.2, perfil_hero)
+        pdf.multi_cell(
+            max(texto_w - ancho_etiqueta_perfil, 10),
+            4.2,
+            perfil_hero,
+        )
         cursor_y = max(pdf.get_y(), cursor_y + 4.2) + 0.5
     if links:
         cursor_x = texto_x
@@ -6167,20 +6173,6 @@ def generar_pdf_informe_jugador(
         ("Representante", valor("representante", "Sin información") or "Sin información"),
     ]
     dibujar_tarjetas("Contexto deportivo", contexto)
-
-    if perfil_jugador:
-        seccion("Perfil de jugador", 18)
-        alto_perfil_pdf = max(12, medir_altura_texto_pdf(pdf, perfil_jugador, ancho - 12, 5) + 8)
-        asegurar_espacio_pdf(pdf, alto_perfil_pdf)
-        y = pdf.get_y()
-        pdf.set_fill_color(232, 246, 238)
-        pdf.set_draw_color(223, 227, 230)
-        pdf.rect(pdf.l_margin, y, ancho, alto_perfil_pdf, "DF")
-        pdf.set_xy(pdf.l_margin + 5, y + 4)
-        pdf.set_font("Arial", "B", 10)
-        pdf.set_text_color(23, 124, 73)
-        pdf.multi_cell(ancho - 10, 5, perfil_jugador)
-        pdf.set_y(max(y + alto_perfil_pdf, pdf.get_y()) + 2)
 
     if caracteristicas:
         seccion("Características", 18)

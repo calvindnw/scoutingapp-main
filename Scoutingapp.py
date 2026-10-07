@@ -5761,6 +5761,554 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
         )
 
 
+# ---------------------------------------------------------
+# PDF INDIVIDUAL — PLAYER PROFILE
+# ---------------------------------------------------------
+class FPDF_INFORME_JUGADOR(FPDF_SEGURO):
+    """Documento blanco para el dossier individual de un jugador."""
+
+    def header(self):
+        if self.page_no() <= 1:
+            return
+
+        self.set_xy(self.l_margin, 8)
+        nombre = valor_campo_pdf(getattr(self, "nombre_jugador", "Jugador"))
+        tamano = 8
+        self.set_font("Arial", "B", tamano)
+        while self.get_string_width(nombre) > 68 and tamano > 5:
+            tamano -= 0.5
+            self.set_font("Arial", "B", tamano)
+        self.set_text_color(23, 124, 73)
+        self.cell(70, 5, nombre)
+        self.set_font("Arial", "", 8)
+        self.set_text_color(98, 106, 115)
+        self.cell(
+            0,
+            5,
+            valor_campo_pdf(getattr(self, "contexto_pagina", "PLAYER PROFILE")),
+            align="R",
+        )
+        self.set_draw_color(223, 227, 230)
+        self.set_line_width(0.25)
+        self.line(self.l_margin, 15, self.w - self.r_margin, 15)
+        self.set_y(19)
+
+    def footer(self):
+        y_linea = self.h - 13
+        self.set_draw_color(223, 227, 230)
+        self.set_line_width(0.25)
+        self.line(self.l_margin, y_linea, self.w - self.r_margin, y_linea)
+        self.set_y(self.h - 11)
+        self.set_font("Arial", "", 7)
+        self.set_text_color(138, 145, 153)
+        ancho = (self.w - self.l_margin - self.r_margin) / 2
+        self.cell(ancho, 4, "ScoutingApp Profesional · Informe de jugador")
+        self.cell(ancho, 4, f"Página {self.page_no()} / {{nb}}", align="R")
+
+
+RESUMEN_JUGADOR_ALIASES = [
+    "Resumen",
+    "resumen",
+    "Resumen jugador",
+    "Resumen del jugador",
+    "resumen_jugador",
+]
+
+
+def columna_resumen_jugador(columnas):
+    columnas_por_clave = {
+        normalizar_clave_estadistica(columna): columna for columna in columnas
+    }
+    for alias in RESUMEN_JUGADOR_ALIASES:
+        columna = columnas_por_clave.get(normalizar_clave_estadistica(alias))
+        if columna:
+            return columna
+    return None
+
+
+def _valor_informe_jugador_pdf(valor, fallback=""):
+    if valor is None:
+        return fallback
+    try:
+        if pd.isna(valor):
+            return fallback
+    except (TypeError, ValueError):
+        pass
+    texto = str(valor).strip()
+    if not texto or texto.casefold() in {"nan", "none", "null", "nat", "<na>", "-", "—", "–"}:
+        return fallback
+    return sanitizar_texto_pdf(texto)
+
+
+def _fecha_informe_jugador_pdf(valor):
+    if valor is None:
+        return None
+    try:
+        fecha = pd.to_datetime(valor, errors="coerce", dayfirst=True)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if pd.isna(fecha):
+        return None
+    return fecha.to_pydatetime() if hasattr(fecha, "to_pydatetime") else fecha
+
+
+def nombre_archivo_pdf_informe_jugador(nombre, fecha=None):
+    nombre_seguro = re.sub(
+        r'[\\/:*?"<>|\x00-\x1f]+',
+        "",
+        _valor_informe_jugador_pdf(nombre, ""),
+    )
+    nombre_seguro = re.sub(r"\s+", "_", nombre_seguro)
+    nombre_seguro = re.sub(r"_+", "_", nombre_seguro).strip("._")
+    fecha_archivo = (fecha or datetime.today()).strftime("%Y%m%d")
+    return f"Informe_Jugador_{nombre_seguro or 'Jugador'}_{fecha_archivo}.pdf"
+
+
+def generar_pdf_informe_jugador(jugador, df_informes_jugador, incluir_informes=False):
+    """Genera el dossier del jugador y, opcionalmente, sus informes visibles."""
+    if jugador is None:
+        raise ValueError("No se recibió un jugador para generar el informe.")
+    jugador_id = normalizar_id_texto(jugador.get("ID_Jugador"))
+    if not jugador_id:
+        raise ValueError("El jugador seleccionado no tiene un ID_Jugador válido.")
+
+    informes = (
+        df_informes_jugador.copy()
+        if isinstance(df_informes_jugador, pd.DataFrame)
+        else pd.DataFrame()
+    )
+    if not informes.empty and "ID_Jugador" in informes.columns:
+        informes = informes.loc[
+            informes["ID_Jugador"].map(normalizar_id_texto).eq(jugador_id)
+        ].copy()
+    else:
+        informes = pd.DataFrame(columns=informes.columns)
+
+    columnas_resumen = list(jugador.index) if isinstance(jugador, pd.Series) else list(jugador.keys())
+    columna_resumen = columna_resumen_jugador(columnas_resumen)
+    resumen = (
+        _valor_informe_jugador_pdf(jugador.get(columna_resumen), "Sin resumen cargado")
+        if columna_resumen
+        else "Sin resumen cargado"
+    )
+    nombre = _valor_informe_jugador_pdf(jugador.get("Nombre"), "Jugador")
+
+    pdf = FPDF_INFORME_JUGADOR("P", "mm", "A4")
+    pdf.set_margins(left=12, top=12, right=12)
+    pdf.set_auto_page_break(auto=True, margin=16)
+    pdf.alias_nb_pages()
+    pdf.nombre_jugador = nombre
+    pdf.contexto_pagina = "PLAYER PROFILE"
+    pdf.add_page()
+
+    ancho = pdf.w - pdf.l_margin - pdf.r_margin
+    pdf.set_xy(pdf.l_margin, 12)
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(37, 184, 106)
+    pdf.cell(ancho / 2, 4, "PLAYER PROFILE")
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(138, 145, 153)
+    pdf.cell(ancho / 2, 4, f"Generado: {date.today().strftime('%d/%m/%Y')}", align="R")
+    pdf.ln(7)
+
+    def valor(campo, fallback="-"):
+        return _valor_informe_jugador_pdf(jugador.get(campo), fallback) or fallback
+
+    def seccion(titulo, espacio_minimo=15):
+        asegurar_espacio_pdf(pdf, espacio_minimo)
+        pdf.ln(2)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(23, 124, 73)
+        pdf.cell(ancho, 4, sanitizar_texto_pdf(titulo.upper()), ln=True)
+        pdf.set_draw_color(223, 227, 230)
+        pdf.set_line_width(0.25)
+        pdf.line(pdf.l_margin, pdf.get_y() + 1, pdf.w - pdf.r_margin, pdf.get_y() + 1)
+        pdf.set_y(pdf.get_y() + 4)
+
+    def dibujar_tarjetas(titulo, campos):
+        campos = [(etiqueta, contenido) for etiqueta, contenido in campos if contenido is not None]
+        if not campos:
+            return
+        seccion(titulo, 22)
+        separacion = 3
+        columnas = 2
+        tarjeta_w = (ancho - separacion) / columnas
+        for inicio in range(0, len(campos), columnas):
+            fila = campos[inicio:inicio + columnas]
+            pdf.set_font("Arial", "", 9)
+            alturas = []
+            for _, contenido in fila:
+                alturas.append(
+                    max(14, 7 + medir_altura_texto_pdf(pdf, contenido, tarjeta_w - 8, 4.3))
+                )
+            alto = max(alturas)
+            asegurar_espacio_pdf(pdf, alto + 2)
+            y = pdf.get_y()
+            for indice, (etiqueta, contenido) in enumerate(fila):
+                x = pdf.l_margin + indice * (tarjeta_w + separacion)
+                pdf.set_fill_color(246, 247, 248)
+                pdf.set_draw_color(223, 227, 230)
+                pdf.rect(x, y, tarjeta_w, alto, "DF")
+                pdf.set_xy(x + 4, y + 2)
+                pdf.set_font("Arial", "B", 6.5)
+                pdf.set_text_color(98, 106, 115)
+                pdf.cell(tarjeta_w - 8, 3.5, sanitizar_texto_pdf(etiqueta.upper()))
+                pdf.set_xy(x + 4, y + 6)
+                pdf.set_font("Arial", "", 9)
+                pdf.set_text_color(17, 19, 24)
+                pdf.multi_cell(tarjeta_w - 8, 4.3, contenido)
+            pdf.set_y(y + alto + 2)
+
+    perfil_jugador = limpiar_perfil_jugador_para_ui(
+        obtener_valor_registro_por_aliases(jugador, PLAYER_PROFILE_ALIASES, ""),
+        fallback="",
+    )
+    perfil_jugador = _valor_informe_jugador_pdf(perfil_jugador, "")
+    caracteristicas_raw = valor("Caracteristica", "")
+    caracteristicas = []
+    if caracteristicas_raw:
+        for caracteristica in caracteristicas_raw.split(","):
+            etiqueta = _valor_informe_jugador_pdf(caracteristica, "")
+            if etiqueta and etiqueta not in caracteristicas:
+                caracteristicas.append(etiqueta)
+
+    links = []
+    for etiqueta, campo in (("Perfil externo", "URL_Perfil"), ("Ver video", "video_url")):
+        url = _valor_informe_jugador_pdf(jugador.get(campo), "")
+        if url.lower().startswith(("http://", "https://")):
+            links.append((etiqueta, url))
+
+    # Hero editorial sin forzar los textos largos a una tarjeta rígida.
+    pdf.set_font("Arial", "B", 20)
+    alto_nombre = medir_altura_texto_pdf(pdf, nombre, ancho - 45, 8)
+    club_liga = " · ".join(
+        texto for texto in (valor("Club", ""), valor("Liga", "")) if texto and texto != "-"
+    )
+    perfil_hero = perfil_jugador or ""
+    pdf.set_font("Arial", "", 8.5)
+    alto_club = medir_altura_texto_pdf(pdf, club_liga, ancho - 47, 4.2) if club_liga else 0
+    alto_perfil = medir_altura_texto_pdf(pdf, perfil_hero, ancho - 47, 4.2) if perfil_hero else 0
+    pdf.set_font("Arial", "", 9)
+    posicion_hero = valor("Posición", "")
+    alto_posicion = medir_altura_texto_pdf(pdf, posicion_hero, ancho - 47, 4.5) if posicion_hero and posicion_hero != "-" else 0
+    alto_hero = max(
+        43,
+        8 + alto_nombre + 1 + alto_posicion + alto_club + alto_perfil + (9 if links else 0),
+    )
+    asegurar_espacio_pdf(pdf, alto_hero + 2)
+    hero_y = pdf.get_y()
+    foto_lado = 36
+    foto = descargar_foto_para_pdf(jugador.get("URL_Foto"), max_size=(360, 360), timeout=8)
+    if foto is not None:
+        try:
+            with Image.open(foto) as imagen_origen:
+                imagen = imagen_origen.convert("RGB")
+                lado = min(imagen.size)
+                izquierda = (imagen.width - lado) // 2
+                arriba = (imagen.height - lado) // 2
+                imagen = imagen.crop((izquierda, arriba, izquierda + lado, arriba + lado))
+                imagen.thumbnail((360, 360))
+                foto_cuadrada = BytesIO()
+                imagen.save(foto_cuadrada, format="PNG", optimize=True)
+                foto_cuadrada.seek(0)
+            foto = foto_cuadrada
+        except (OSError, ValueError):
+            foto = None
+
+    pdf.set_fill_color(246, 247, 248)
+    pdf.set_draw_color(223, 227, 230)
+    pdf.rect(pdf.l_margin, hero_y, ancho, alto_hero, "DF")
+    foto_x = pdf.l_margin + 3
+    foto_y = hero_y + 3
+    pdf.set_fill_color(240, 242, 243)
+    pdf.rect(foto_x, foto_y, foto_lado, foto_lado, "F")
+    if foto is not None:
+        pdf.image(foto, x=foto_x, y=foto_y, w=foto_lado, h=foto_lado)
+    else:
+        iniciales = "".join(parte[0] for parte in nombre.split()[:2] if parte).upper() or "?"
+        pdf.set_xy(foto_x, foto_y + 14)
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(138, 145, 153)
+        pdf.cell(foto_lado, 5, iniciales, align="C")
+        pdf.set_xy(foto_x, foto_y + 23)
+        pdf.set_font("Arial", "", 7)
+        pdf.cell(foto_lado, 4, "Sin foto", align="C")
+
+    texto_x = foto_x + foto_lado + 5
+    texto_w = pdf.w - pdf.r_margin - texto_x - 3
+    cursor_y = hero_y + 4
+    pdf.set_xy(texto_x, cursor_y)
+    pdf.set_font("Arial", "B", 20)
+    pdf.set_text_color(17, 19, 24)
+    pdf.multi_cell(texto_w, 8, nombre)
+    cursor_y = pdf.get_y() + 0.5
+
+    posicion = posicion_hero
+    if posicion and posicion != "-":
+        pdf.set_xy(texto_x, cursor_y)
+        pdf.set_font("Arial", "B", 9)
+        pdf.set_text_color(23, 124, 73)
+        pdf.multi_cell(texto_w, 4.5, posicion)
+        cursor_y = pdf.get_y() + 0.5
+    if club_liga:
+        pdf.set_xy(texto_x, cursor_y)
+        pdf.set_font("Arial", "", 8.5)
+        pdf.set_text_color(98, 106, 115)
+        pdf.multi_cell(texto_w, 4.2, club_liga)
+        cursor_y = pdf.get_y() + 0.5
+    if perfil_hero:
+        pdf.set_xy(texto_x, cursor_y)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(17, 19, 24)
+        pdf.cell(27, 4, "PERFIL")
+        pdf.set_font("Arial", "", 8)
+        pdf.multi_cell(max(texto_w - 27, 10), 4.2, perfil_hero)
+        cursor_y = max(pdf.get_y(), cursor_y + 4.2) + 0.5
+    if links:
+        cursor_x = texto_x
+        for etiqueta, url in links:
+            link_w = pdf.get_string_width(etiqueta) + 8
+            pdf.set_fill_color(232, 246, 238)
+            pdf.set_draw_color(223, 227, 230)
+            pdf.rect(cursor_x, cursor_y, link_w, 7, "DF")
+            pdf.set_xy(cursor_x, cursor_y + 1.7)
+            pdf.set_font("Arial", "B", 7.5)
+            pdf.set_text_color(23, 124, 73)
+            pdf.cell(link_w, 3.5, etiqueta, align="C", link=url)
+            cursor_x += link_w + 2
+    pdf.set_y(hero_y + alto_hero + 2)
+
+    fecha_nac_dt = _fecha_informe_jugador_pdf(jugador.get("Fecha_Nac"))
+    fecha_nac = fecha_nac_dt.strftime("%d/%m/%Y") if fecha_nac_dt else None
+    edad = (
+        calcular_edad(fecha_nac)
+        if fecha_nac
+        else "?"
+    )
+    altura_raw = _valor_informe_jugador_pdf(jugador.get("Altura"), "")
+    if altura_raw:
+        try:
+            altura_numero = float(altura_raw.replace(",", "."))
+            altura_raw = str(int(altura_numero)) if altura_numero.is_integer() else str(altura_numero).rstrip("0").rstrip(".")
+        except ValueError:
+            if altura_raw.lower().endswith(" cm"):
+                altura_raw = altura_raw[:-3].strip()
+
+    personales = [
+        ("Nacimiento", fecha_nac),
+        ("Edad", f"{edad} años" if str(edad) != "?" else None),
+        ("Nacionalidad", valor("Nacionalidad", "") or None),
+        ("Segunda nacionalidad", valor("Segunda_Nacionalidad", "") or None),
+        ("Altura", f"{altura_raw} cm" if altura_raw else None),
+        ("Pie hábil", valor("Pie_Hábil", "") or None),
+    ]
+    dibujar_tarjetas("Información personal", personales)
+
+    contexto = [
+        ("Posición", valor("Posición", "") or None),
+        ("Club", valor("Club", "") or None),
+        ("Liga", valor("Liga", "") or None),
+        ("Representante", valor("representante", "Sin información") or "Sin información"),
+    ]
+    dibujar_tarjetas("Contexto deportivo", contexto)
+
+    if perfil_jugador:
+        seccion("Perfil de jugador", 18)
+        alto_perfil_pdf = max(12, medir_altura_texto_pdf(pdf, perfil_jugador, ancho - 12, 5) + 8)
+        asegurar_espacio_pdf(pdf, alto_perfil_pdf)
+        y = pdf.get_y()
+        pdf.set_fill_color(232, 246, 238)
+        pdf.set_draw_color(223, 227, 230)
+        pdf.rect(pdf.l_margin, y, ancho, alto_perfil_pdf, "DF")
+        pdf.set_xy(pdf.l_margin + 5, y + 4)
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_text_color(23, 124, 73)
+        pdf.multi_cell(ancho - 10, 5, perfil_jugador)
+        pdf.set_y(max(y + alto_perfil_pdf, pdf.get_y()) + 2)
+
+    if caracteristicas:
+        seccion("Características", 18)
+        pdf.set_font("Arial", "", 8)
+        cursor_x = pdf.l_margin
+        cursor_y = pdf.get_y()
+        pill_h = 7
+        for caracteristica in caracteristicas:
+            pill_w = pdf.get_string_width(caracteristica) + 8
+            if pill_w > ancho:
+                asegurar_espacio_pdf(pdf, 10)
+                pdf.set_x(pdf.l_margin)
+                pdf.set_font("Arial", "", 8)
+                pdf.set_text_color(17, 19, 24)
+                pdf.multi_cell(ancho, 4.2, caracteristica)
+                cursor_y = pdf.get_y() + 1
+                cursor_x = pdf.l_margin
+                continue
+            if cursor_x + pill_w > pdf.w - pdf.r_margin:
+                cursor_x = pdf.l_margin
+                cursor_y += pill_h + 2
+            if cursor_y + pill_h + 2 > pdf.h - pdf.b_margin - 8:
+                pdf.add_page()
+                cursor_y = pdf.get_y()
+                cursor_x = pdf.l_margin
+            pdf.set_fill_color(246, 247, 248)
+            pdf.set_draw_color(223, 227, 230)
+            pdf.rect(cursor_x, cursor_y, pill_w, pill_h, "DF")
+            pdf.set_xy(cursor_x, cursor_y + 1.8)
+            pdf.set_font("Arial", "", 8)
+            pdf.set_text_color(17, 19, 24)
+            pdf.cell(pill_w, 3.5, caracteristica, align="C")
+            cursor_x += pill_w + 2
+        pdf.set_y(max(cursor_y + pill_h + 2, pdf.get_y()))
+
+    seccion("Resumen", 22)
+    resumen_y = pdf.get_y()
+    pdf.set_draw_color(37, 184, 106)
+    pdf.set_line_width(1)
+    pdf.line(pdf.l_margin + 1, resumen_y, pdf.l_margin + 1, resumen_y + 10)
+    pdf.set_xy(pdf.l_margin + 5, resumen_y)
+    pdf.set_font("Arial", "", 10)
+    pdf.set_text_color(17, 19, 24)
+    pdf.multi_cell(ancho - 7, 5.2, resumen, align="J")
+    pdf.set_y(pdf.get_y() + 3)
+
+    if incluir_informes:
+        pdf.contexto_pagina = "INFORMES DE SCOUTING"
+        pdf.add_page()
+        pdf.set_xy(pdf.l_margin, 20)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(37, 184, 106)
+        pdf.cell(ancho, 4, "HISTORIAL DE SEGUIMIENTO")
+        pdf.ln(6)
+        pdf.set_font("Arial", "B", 18)
+        pdf.set_text_color(17, 19, 24)
+        pdf.cell(ancho, 8, "Informes de scouting", ln=True)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(98, 106, 115)
+        pdf.cell(ancho, 5, f"Jugador: {nombre}  ·  Informes incluidos: {len(informes)}", ln=True)
+        pdf.ln(5)
+
+        metricas_por_grupo = [
+            ("TÉCNICO", [("Controles", "Controles"), ("Perfiles", "Perfiles"), ("Pase corto", "Pase_corto"), ("Pase largo", "Pase_largo"), ("Pase filtrado", "Pase_filtrado")]),
+            ("DEFENSIVO", [("1v1 defensivo", "1v1_defensivo"), ("Recuperación", "Recuperacion"), ("Intercepciones", "Intercepciones"), ("Duelos aéreos", "Duelos_aereos")]),
+            ("OFENSIVO", [("Regate", "Regate"), ("Velocidad", "Velocidad"), ("Duelos ofensivos", "Duelos_ofensivos")]),
+            ("MENTAL", [("Resiliencia", "Resiliencia"), ("Liderazgo", "Liderazgo"), ("Inteligencia emocional", "Inteligencia_emocional")]),
+            ("TÁCTICO", [("Inteligencia táctica", "Inteligencia_tactica"), ("Posicionamiento", "Posicionamiento"), ("Visión de juego", "Vision_de_juego"), ("Movimientos sin pelota", "Movimientos_sin_pelota")]),
+        ]
+
+        def fecha_visible(valor_fecha):
+            fecha = _fecha_informe_jugador_pdf(valor_fecha)
+            return fecha.strftime("%d/%m/%Y") if fecha else "-"
+
+        if not informes.empty:
+            informes["__orden_pdf"] = informes.apply(
+                lambda fila: (
+                    _fecha_informe_jugador_pdf(fila.get("Fecha_Informe"))
+                    or _fecha_informe_jugador_pdf(fila.get("Fecha_Partido"))
+                ),
+                axis=1,
+            )
+            informes = informes.sort_values(
+                "__orden_pdf", ascending=False, na_position="last", kind="stable"
+            ).drop(columns=["__orden_pdf"])
+
+        if informes.empty:
+            pdf.set_font("Arial", "", 9.5)
+            pdf.set_text_color(98, 106, 115)
+            pdf.multi_cell(ancho, 5, "No hay informes vinculados disponibles para incluir.")
+        else:
+            for indice, (_, informe) in enumerate(informes.iterrows(), start=1):
+                asegurar_espacio_pdf(pdf, 31)
+                pdf.ln(2)
+                pdf.set_font("Arial", "B", 10)
+                pdf.set_text_color(17, 19, 24)
+                pdf.cell(30, 5, f"INFORME {indice:02d}")
+                linea = _valor_informe_jugador_pdf(informe.get("Línea"), "")
+                if linea:
+                    ancho_linea = min(pdf.get_string_width(linea) + 8, ancho - 35)
+                    pdf.set_fill_color(232, 246, 238)
+                    pdf.set_draw_color(223, 227, 230)
+                    pdf.rect(pdf.l_margin + 31, pdf.get_y() - 0.5, ancho_linea, 6, "DF")
+                    pdf.set_xy(pdf.l_margin + 31, pdf.get_y() + 0.5)
+                    pdf.set_font("Arial", "B", 7)
+                    pdf.set_text_color(23, 124, 73)
+                    pdf.cell(ancho_linea, 4, linea, align="C")
+                pdf.set_xy(pdf.w - pdf.r_margin - 38, pdf.get_y())
+                pdf.set_font("Arial", "", 8)
+                pdf.set_text_color(98, 106, 115)
+                fecha_informe = _fecha_informe_jugador_pdf(informe.get("Fecha_Informe"))
+                pdf.cell(
+                    38,
+                    5,
+                    fecha_informe.strftime("%d/%m/%Y") if fecha_informe else "",
+                    align="R",
+                )
+                pdf.ln(6)
+
+                metadatos = [
+                    ("Partido", _valor_informe_jugador_pdf(informe.get("Equipos_Resultados"), "")),
+                    (
+                        "Fecha partido",
+                        fecha_visible(informe.get("Fecha_Partido"))
+                        if _fecha_informe_jugador_pdf(informe.get("Fecha_Partido"))
+                        else "",
+                    ),
+                    ("Scout", _valor_informe_jugador_pdf(informe.get("Scout"), "")),
+                    ("Formación", _valor_informe_jugador_pdf(informe.get("Formación"), "")),
+                ]
+                for etiqueta, contenido in metadatos:
+                    if contenido:
+                        pdf.set_font("Arial", "B", 7.5)
+                        pdf.set_text_color(98, 106, 115)
+                        pdf.write(4.5, sanitizar_texto_pdf(f"{etiqueta}: "))
+                        pdf.set_font("Arial", "", 8.5)
+                        pdf.set_text_color(17, 19, 24)
+                        pdf.write(4.5, contenido)
+                        pdf.write(4.5, "    ")
+                pdf.ln(5)
+
+                observaciones = _valor_informe_jugador_pdf(
+                    informe.get("Observaciones"), "Sin observaciones cargadas."
+                )
+                asegurar_espacio_pdf(pdf, 14)
+                pdf.set_font("Arial", "B", 8)
+                pdf.set_text_color(23, 124, 73)
+                pdf.cell(ancho, 4, "OBSERVACIONES", ln=True)
+                pdf.set_font("Arial", "", 9.5)
+                pdf.set_text_color(17, 19, 24)
+                pdf.multi_cell(ancho, 4.8, observaciones, align="J")
+                pdf.ln(2)
+
+                for titulo_grupo, metricas in metricas_por_grupo:
+                    valores_grupo = [
+                        (etiqueta, _valor_informe_jugador_pdf(informe.get(columna), ""))
+                        for etiqueta, columna in metricas
+                    ]
+                    valores_grupo = [(etiqueta, texto) for etiqueta, texto in valores_grupo if texto]
+                    if not valores_grupo:
+                        continue
+                    asegurar_espacio_pdf(pdf, 10)
+                    pdf.set_font("Arial", "B", 7.5)
+                    pdf.set_text_color(98, 106, 115)
+                    pdf.cell(ancho, 4, titulo_grupo, ln=True)
+                    for etiqueta, texto in valores_grupo:
+                        asegurar_espacio_pdf(pdf, 5)
+                        pdf.set_font("Arial", "", 8.5)
+                        pdf.set_text_color(17, 19, 24)
+                        pdf.cell(ancho * 0.72, 4.5, etiqueta)
+                        pdf.set_font("Arial", "B", 8.5)
+                        pdf.cell(ancho * 0.28, 4.5, texto, ln=True, align="R")
+                    pdf.ln(1.5)
+                pdf.set_draw_color(223, 227, 230)
+                pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+
+    contenido_pdf = pdf.output(dest="S")
+    if isinstance(contenido_pdf, str):
+        contenido_pdf = contenido_pdf.encode("latin-1")
+    buffer = BytesIO(contenido_pdf)
+    buffer.seek(0)
+    return buffer
+
+
 # FUNCION: GENERAR PDF REPORTE COMPLETO (OPTIMIZADO)
 # ---------------------------------------------------------
 def generar_pdf_reporte_completo(jugador, df_reports):
@@ -8729,7 +9277,10 @@ if st.session_state["menu"] == "Informes Jugadores":
 
             jugador_sel = selected_data[0]
             nombre_jug = jugador_sel.get("Nombre", "")
-            jugador_data = df_players[df_players["Nombre"] == nombre_jug]
+            jugador_sel_id = normalizar_id_texto(jugador_sel.get("ID_Jugador"))
+            jugador_data = df_players[
+                df_players["ID_Jugador"].map(normalizar_id_texto).eq(jugador_sel_id)
+            ] if jugador_sel_id and "ID_Jugador" in df_players.columns else df_players.iloc[0:0]
 
             if not jugador_data.empty:
                 j = jugador_data.iloc[0]
@@ -8851,23 +9402,54 @@ if st.session_state["menu"] == "Informes Jugadores":
                     else:
                         st.info("Este jugador no tiene descripción cargada todavía.")
 
-                # =========================================================
-                # EXPORTAR PDF SIMPLE
-                # =========================================================
-                # EXPORTAR PDF COMPLETO (CON FOTO E INFORMACIÓN COMPLETA)
-                # =========================================================
-                jugador_pdf_id = j["ID_Jugador"]
-                if st.button("📝 Generar informe", key=f"pdf_{jugador_pdf_id}"):
-                    buffer = generar_pdf_reporte_completo(j, df_reports)
-                    if buffer:
-                        pdf_file_name = f"Reporte_Scouting_{str(j.get('Nombre', 'Jugador')).replace(' ', '_')}.pdf"
-                        st.download_button(
-                            "⬇️ Descargar PDF",
-                            buffer,
-                            file_name=pdf_file_name,
-                            mime="application/pdf",
-                            key=f"descarga_{jugador_pdf_id}"
+                st.markdown("---")
+                section_header("Informe PDF")
+                informes_visibles_jugador = df_reports[
+                    df_reports["ID_Jugador"].map(normalizar_id_texto).eq(jugador_sel_id)
+                ].copy() if jugador_sel_id and "ID_Jugador" in df_reports.columns else pd.DataFrame()
+                incluir_informes = st.toggle(
+                    "Incluir informes vinculados",
+                    value=False,
+                    key=f"incluir_informes_pdf_{jugador_sel_id}",
+                )
+                st.caption(
+                    "Agrega al final del PDF los informes de scouting disponibles para este jugador."
+                )
+                if incluir_informes and not informes_visibles_jugador.empty:
+                    st.caption(
+                        f"Se incluirán {len(informes_visibles_jugador)} informes vinculados."
+                    )
+                elif incluir_informes:
+                    st.caption("No hay informes vinculados disponibles para incluir.")
+
+                opcion_pdf = "con_informes" if incluir_informes else "solo_perfil"
+                if st.button(
+                    "Generar informe PDF",
+                    key=f"generar_informe_pdf_{jugador_sel_id}",
+                    type="primary",
+                    disabled=not jugador_sel_id,
+                ):
+                    try:
+                        buffer = generar_pdf_informe_jugador(
+                            j,
+                            df_reports,
+                            incluir_informes=incluir_informes,
                         )
+                    except Exception as exc:
+                        st.error(f"No se pudo generar el informe PDF del jugador: {exc}")
+                    else:
+                        if buffer:
+                            pdf_file_name = nombre_archivo_pdf_informe_jugador(j.get("Nombre"))
+                            st.download_button(
+                                "Descargar PDF",
+                                buffer,
+                                file_name=pdf_file_name,
+                                mime="application/pdf",
+                                key=f"descargar_informe_pdf_{jugador_sel_id}_{opcion_pdf}",
+                                on_click="ignore",
+                            )
+                if not jugador_sel_id:
+                    st.error("El informe seleccionado no contiene un ID_Jugador válido.")
 
                 # =========================================================
                 # EXPANDER — EDITAR / ELIMINAR INFORMES

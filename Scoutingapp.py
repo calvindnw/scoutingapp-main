@@ -3562,13 +3562,13 @@ def crear_radar_comparativa(dataset_comparativa):
     return fig
 
 
-def descargar_foto_para_pdf(url_foto, max_size=(360, 360)):
+def descargar_foto_para_pdf(url_foto, max_size=(360, 360), timeout=10):
     url_foto = normalizar_url_foto(url_foto)
     if not url_foto:
         return None
 
     try:
-        respuesta = requests.get(url_foto, timeout=10)
+        respuesta = requests.get(url_foto, timeout=timeout)
         respuesta.raise_for_status()
         with Image.open(BytesIO(respuesta.content)) as imagen_origen:
             imagen = imagen_origen.convert("RGB")
@@ -5285,6 +5285,461 @@ class FPDF_SEGURO(FPDF):
         w = self._normalizar_ancho_texto(w)
         text = sanitizar_texto_pdf(str(text)) if text else ""
         return super().multi_cell(w, h, text, border, align, fill)
+
+
+class FPDF_LISTA_CORTA(FPDF_SEGURO):
+    """PDF editorial de lista corta con páginas blancas y footer discreto."""
+
+    def header(self):
+        self.set_fill_color(255, 255, 255)
+        if self.page_no() > 1:
+            self.set_xy(self.l_margin, 8)
+            self.set_font("Arial", "B", 8)
+            self.set_text_color(23, 124, 73)
+            self.cell(34, 5, "SHORTLIST")
+            self.set_font("Arial", "", 8)
+            self.set_text_color(98, 106, 115)
+            nombre_lista = valor_shortlist_visual(getattr(self, "nombre_lista", ""), fallback="-")
+            self.cell(
+                0,
+                5,
+                _ajustar_texto_pdf_lista_corta(
+                    self,
+                    nombre_lista,
+                    self.w - self.r_margin - self.get_x(),
+                ),
+                align="R",
+            )
+            self.set_draw_color(223, 227, 230)
+            self.set_line_width(0.25)
+            self.line(self.l_margin, 15, self.w - self.r_margin, 15)
+            self.set_y(19)
+
+    def footer(self):
+        y_linea = self.h - 13
+        self.set_draw_color(223, 227, 230)
+        self.set_line_width(0.25)
+        self.line(self.l_margin, y_linea, self.w - self.r_margin, y_linea)
+        self.set_y(self.h - 11)
+        self.set_font("Arial", "", 7)
+        self.set_text_color(138, 145, 153)
+        self.cell(
+            (self.w - self.l_margin - self.r_margin) / 2,
+            4,
+            "ScoutingApp Profesional · Lista corta",
+        )
+        self.cell(
+            (self.w - self.l_margin - self.r_margin) / 2,
+            4,
+            f"Página {self.page_no()} / {{nb}}",
+            align="R",
+        )
+
+
+def _valor_pdf_lista_corta(valor, sufijo="", fallback="-"):
+    texto = valor_shortlist_visual(valor, fallback=fallback)
+    return texto if texto == "-" or not sufijo else f"{texto} {sufijo}"
+
+
+def _ajustar_texto_pdf_lista_corta(pdf, texto, ancho):
+    texto = sanitizar_texto_pdf(str(texto or ""))
+    if ancho <= 0 or pdf.get_string_width(texto) <= ancho:
+        return texto
+    sufijo = "..."
+    while texto and pdf.get_string_width(texto + sufijo) > ancho:
+        texto = texto[:-1]
+    return texto + sufijo if texto else sufijo
+
+
+def _preparar_foto_lista_corta(buffer_foto):
+    if buffer_foto is None:
+        return None
+    try:
+        with Image.open(buffer_foto) as imagen_origen:
+            imagen = imagen_origen.convert("RGB")
+            lado = min(imagen.size)
+            izquierda = (imagen.width - lado) // 2
+            arriba = (imagen.height - lado) // 2
+            imagen = imagen.crop((izquierda, arriba, izquierda + lado, arriba + lado))
+            imagen.thumbnail((360, 360))
+            buffer_cuadrado = BytesIO()
+            imagen.save(buffer_cuadrado, format="PNG", optimize=True)
+            buffer_cuadrado.seek(0)
+            return buffer_cuadrado
+    except Exception:
+        return None
+
+
+def _insertar_foto_lista_corta(pdf, foto, x, y, lado):
+    if foto is None:
+        return False
+    try:
+        pdf.image(foto, x=x, y=y, w=lado, h=lado)
+        return True
+    except (AttributeError, TypeError):
+        ruta_temporal = None
+        try:
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as archivo:
+                archivo.write(foto.getvalue())
+                ruta_temporal = archivo.name
+            pdf.image(ruta_temporal, x=x, y=y, w=lado, h=lado)
+            return True
+        except Exception:
+            return False
+        finally:
+            if ruta_temporal and os.path.exists(ruta_temporal):
+                try:
+                    os.unlink(ruta_temporal)
+                except OSError:
+                    pass
+    except Exception:
+        return False
+
+
+def _dibujar_seccion_lista_corta(pdf, titulo, cantidad):
+    y = pdf.get_y()
+    pdf.set_fill_color(37, 184, 106)
+    pdf.rect(pdf.l_margin, y + 1.1, 1.1, 4.2, "F")
+    pdf.set_xy(pdf.l_margin + 3, y)
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(17, 19, 24)
+    pdf.cell(120, 6, sanitizar_texto_pdf(titulo.upper()))
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(98, 106, 115)
+    pdf.cell(0, 6, f"{cantidad} jugador(es)", align="R")
+    pdf.set_draw_color(223, 227, 230)
+    pdf.set_line_width(0.25)
+    pdf.line(pdf.l_margin, y + 7, pdf.w - pdf.r_margin, y + 7)
+    pdf.set_y(y + 9)
+
+
+def _dibujar_tarjeta_lista_corta(pdf, jugador):
+    alto = 36
+    x = pdf.l_margin
+    y = pdf.get_y()
+    ancho = pdf.w - pdf.l_margin - pdf.r_margin
+    foto_x, foto_y, foto_lado = x + 3, y + 5, 26
+    datos_x = x + 33
+    badge_w = 30
+    datos_w = ancho - (datos_x - x) - 4
+    ancho_nombre = datos_w - badge_w - 3
+
+    colores_badge = {
+        "Titular": ((23, 124, 73), (255, 255, 255)),
+        "Suplente": ((232, 246, 238), (23, 124, 73)),
+        "Apuesta": ((249, 243, 225), (126, 91, 27)),
+        "Futuro": ((235, 240, 246), (57, 78, 103)),
+        "Sin asignar": ((240, 242, 243), (98, 106, 115)),
+    }
+    orden = normalizar_orden_shortlist(jugador.get("Orden")) or "Sin asignar"
+    fondo_badge, texto_badge = colores_badge[orden]
+
+    pdf.set_fill_color(246, 247, 248)
+    pdf.set_draw_color(223, 227, 230)
+    pdf.rect(x, y, ancho, alto, "DF")
+    pdf.set_fill_color(240, 242, 243)
+    pdf.rect(foto_x, foto_y, foto_lado, foto_lado, "F")
+    foto = _preparar_foto_lista_corta(
+        descargar_foto_para_pdf(
+            jugador.get("URL_Foto", ""),
+            max_size=(360, 360),
+            timeout=2,
+        )
+    )
+    foto_insertada = _insertar_foto_lista_corta(
+        pdf,
+        foto,
+        foto_x,
+        foto_y,
+        foto_lado,
+    )
+    if not foto_insertada:
+        pdf.set_xy(foto_x, foto_y + 10)
+        pdf.set_font("Arial", "", 6.5)
+        pdf.set_text_color(138, 145, 153)
+        pdf.cell(foto_lado, 4, "Sin foto", align="C")
+
+    nombre = _valor_pdf_lista_corta(jugador.get("Nombre"), fallback="-")
+    posicion = _valor_pdf_lista_corta(jugador.get("Posición"), fallback="-")
+    club = valor_shortlist_visual(jugador.get("Club"), fallback="")
+    liga = valor_shortlist_visual(jugador.get("Liga"), fallback="")
+    club_liga = " · ".join(valor for valor in (club, liga) if valor)
+    if not club_liga:
+        club_liga = "-"
+    meta = " | ".join(
+        (
+            _valor_pdf_lista_corta(jugador.get("Edad"), "años"),
+            _valor_pdf_lista_corta(jugador.get("Altura"), "cm"),
+            valor_shortlist_visual(jugador.get("Pie_Hábil"), fallback="-"),
+        )
+    )
+
+    pdf.set_xy(datos_x, y + 3.4)
+    pdf.set_font("Arial", "B", 15)
+    pdf.set_text_color(17, 19, 24)
+    pdf.cell(ancho_nombre, 6, _ajustar_texto_pdf_lista_corta(pdf, nombre, ancho_nombre))
+
+    pdf.set_fill_color(*fondo_badge)
+    pdf.set_xy(x + ancho - badge_w - 3, y + 3.2)
+    pdf.rect(pdf.get_x(), pdf.get_y(), badge_w, 5.3, "F")
+    pdf.set_xy(x + ancho - badge_w - 3, y + 3.4)
+    pdf.set_font("Arial", "B", 6.8)
+    pdf.set_text_color(*texto_badge)
+    pdf.cell(badge_w, 4.8, sanitizar_texto_pdf(orden.upper()), align="C")
+
+    pdf.set_xy(datos_x, y + 11)
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(23, 124, 73)
+    pdf.cell(datos_w, 4, _ajustar_texto_pdf_lista_corta(pdf, posicion, datos_w))
+
+    pdf.set_xy(datos_x, y + 16)
+    pdf.set_font("Arial", "", 8.5)
+    pdf.set_text_color(70, 78, 86)
+    pdf.cell(datos_w, 4, _ajustar_texto_pdf_lista_corta(pdf, club_liga, datos_w))
+
+    pdf.set_xy(datos_x, y + 21)
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(98, 106, 115)
+    pdf.cell(datos_w, 4, _ajustar_texto_pdf_lista_corta(pdf, meta, datos_w))
+
+    enlaces = []
+    for columna, etiqueta in (("URL_Perfil", "Perfil externo"), ("video_url", "Ver video")):
+        url = valor_shortlist_visual(jugador.get(columna), fallback="")
+        if url.startswith(("http://", "https://")):
+            enlaces.append((etiqueta, url))
+    if enlaces:
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.set_text_color(23, 124, 73)
+        pdf.set_xy(datos_x, y + 28)
+        for etiqueta, url in enlaces:
+            pdf.cell(29 if etiqueta == "Perfil externo" else 22, 4, etiqueta, link=url)
+    pdf.set_y(y + alto + 3)
+
+
+def generar_pdf_lista_corta(df_lista, nombre_lista, scout, criterio_orden):
+    """Genera, sin acceder a Sheets, un informe PDF solo con filas de la lista del scout."""
+    try:
+        if df_lista is None or df_lista.empty:
+            st.error("La lista seleccionada no contiene jugadores para exportar.")
+            return None
+        if not nombre_lista or not scout:
+            st.error("Falta la lista o el scout responsable para generar el informe.")
+            return None
+        if str(scout) != str(CURRENT_USER):
+            st.error("Solo se pueden generar informes de las listas del usuario actual.")
+            return None
+        if criterio_orden not in ("Posición", "Prioridad"):
+            st.error("El criterio de orden debe ser Posición o Prioridad.")
+            return None
+
+        columnas_requeridas = set(SHORTLIST_COLUMNS)
+        if not columnas_requeridas.issubset(df_lista.columns):
+            st.error("Los datos de la lista corta no tienen todas las columnas requeridas.")
+            return None
+
+        filas_propias = df_lista[
+            (df_lista["Scout"].astype(str) == str(scout))
+            & (df_lista["Lista"].astype(str) == str(nombre_lista))
+        ].copy()
+        filas_reales = filas_propias[
+            filas_propias["ID_Jugador"].map(lambda valor: not valor_shortlist_vacio(valor))
+        ].copy()
+        if filas_reales.empty:
+            st.error("No hay jugadores reales pertenecientes a esta lista y scout.")
+            return None
+
+        jugadores = ordenar_shortlist_visual(filas_reales, criterio_orden)
+        total = len(jugadores)
+        conteos = {
+            orden: int(jugadores["Orden"].map(normalizar_orden_shortlist).eq(orden).sum())
+            for orden in SHORTLIST_ALLOWED_ORDERS
+        }
+        conteos["Sin asignar"] = int(
+            jugadores["Orden"].map(normalizar_orden_shortlist).eq("").sum()
+        )
+
+        pdf = FPDF_LISTA_CORTA("P", "mm", "A4")
+        pdf.nombre_lista = str(nombre_lista)
+        pdf.set_margins(left=12, top=12, right=12)
+        pdf.set_auto_page_break(auto=True, margin=14)
+        pdf.alias_nb_pages()
+        pdf.add_page()
+
+        pdf.set_xy(pdf.l_margin, 12)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_text_color(37, 184, 106)
+        pdf.cell(0, 4, "S H O R T L I S T")
+        pdf.set_xy(pdf.l_margin, 17)
+        pdf.set_font("Arial", "B", 22)
+        pdf.set_text_color(17, 19, 24)
+        pdf.cell(
+            0,
+            9,
+            _ajustar_texto_pdf_lista_corta(
+                pdf,
+                str(nombre_lista),
+                pdf.w - pdf.l_margin - pdf.r_margin,
+            ),
+        )
+        pdf.set_xy(pdf.l_margin, 27)
+        pdf.set_font("Arial", "", 9)
+        pdf.set_text_color(98, 106, 115)
+        pdf.cell(0, 5, "Planificación y seguimiento de jugadores")
+        pdf.set_xy(pdf.l_margin, 34)
+        pdf.set_font("Arial", "", 8)
+        pdf.set_text_color(70, 78, 86)
+        fecha_generacion = datetime.today().strftime("%d/%m/%Y")
+        pdf.cell(
+            0,
+            4,
+            f"Scout: {sanitizar_texto_pdf(str(scout))}   |   {fecha_generacion}   |   "
+            f"{total} jugadores   |   Ordenado por {criterio_orden.lower()}",
+        )
+        pdf.set_y(41)
+
+        etiquetas_metricas = [
+            ("TOTAL", total, True),
+            ("TITULARES", conteos["Titular"], False),
+            ("SUPLENTES", conteos["Suplente"], False),
+            ("APUESTAS", conteos["Apuesta"], False),
+            ("FUTURO", conteos["Futuro"], False),
+        ]
+        if conteos["Sin asignar"]:
+            etiquetas_metricas.append(("SIN ASIGNAR", conteos["Sin asignar"], False))
+        ancho_total = pdf.w - pdf.l_margin - pdf.r_margin
+        separacion = 2
+        metric_w = (ancho_total - separacion * (len(etiquetas_metricas) - 1)) / len(etiquetas_metricas)
+        y_metricas = pdf.get_y()
+        for indice, (etiqueta, valor, destacada) in enumerate(etiquetas_metricas):
+            x_metric = pdf.l_margin + indice * (metric_w + separacion)
+            pdf.set_fill_color(*(232, 246, 238) if destacada else (246, 247, 248))
+            pdf.set_draw_color(223, 227, 230)
+            pdf.rect(x_metric, y_metricas, metric_w, 14, "DF")
+            pdf.set_xy(x_metric + 2, y_metricas + 1.1)
+            pdf.set_font("Arial", "B", 10)
+            pdf.set_text_color(*(23, 124, 73) if destacada else (17, 19, 24))
+            pdf.cell(metric_w - 4, 5, str(valor))
+            pdf.set_xy(x_metric + 2, y_metricas + 7)
+            pdf.set_font("Arial", "", 5.8)
+            pdf.set_text_color(98, 106, 115)
+            pdf.cell(metric_w - 4, 4, etiqueta)
+        pdf.set_y(y_metricas + 18)
+
+        if criterio_orden == "Posición":
+            grupos = []
+            for posicion in POSITION_ORDER:
+                grupo = jugadores[jugadores["Posición"].astype(str).str.strip() == posicion]
+                if not grupo.empty:
+                    grupos.append((posicion, grupo))
+            posiciones_conocidas = set(POSITION_ORDER)
+            otros = jugadores[~jugadores["Posición"].astype(str).str.strip().isin(posiciones_conocidas)]
+            if not otros.empty:
+                for posicion, grupo in otros.groupby("Posición", sort=True, dropna=False):
+                    titulo = valor_shortlist_visual(posicion, fallback="Sin posición")
+                    grupos.append((titulo, grupo))
+        else:
+            grupos = []
+            etiquetas_orden = [
+                ("Titular", "TITULARES"),
+                ("Suplente", "SUPLENTES"),
+                ("Apuesta", "APUESTAS"),
+                ("Futuro", "FUTURO"),
+                ("", "SIN ASIGNAR"),
+            ]
+            orden_normalizado = jugadores["Orden"].map(normalizar_orden_shortlist)
+            for clave, titulo in etiquetas_orden:
+                grupo = jugadores[orden_normalizado == clave]
+                if not grupo.empty:
+                    grupos.append((titulo, grupo))
+
+        y_limite = pdf.h - 16
+        for titulo, grupo in grupos:
+            if pdf.get_y() + 9 + 39 > y_limite:
+                pdf.add_page()
+            _dibujar_seccion_lista_corta(pdf, titulo, len(grupo))
+            for _, jugador in grupo.iterrows():
+                if pdf.get_y() + 39 > y_limite:
+                    pdf.add_page()
+                    _dibujar_seccion_lista_corta(pdf, titulo, len(grupo))
+                _dibujar_tarjeta_lista_corta(pdf, jugador)
+
+        buffer_pdf = BytesIO()
+        contenido_pdf = pdf.output(dest="S")
+        if isinstance(contenido_pdf, str):
+            contenido_pdf = contenido_pdf.encode("latin-1")
+        buffer_pdf.write(contenido_pdf)
+        buffer_pdf.seek(0)
+        return buffer_pdf
+    except Exception as exc:
+        st.error(f"No se pudo generar el informe PDF de la lista corta: {exc}")
+        return None
+
+
+def nombre_archivo_pdf_lista_corta(nombre_lista, fecha=None):
+    nombre = str(nombre_lista or "").strip().replace(" ", "_")
+    nombre = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', "", nombre)
+    nombre = re.sub(r"_+", "_", nombre).strip("._")
+    fecha_archivo = (fecha or datetime.today()).strftime("%Y%m%d")
+    return f"Lista_Corta_{nombre or 'Lista'}_{fecha_archivo}.pdf"
+
+
+def _firma_datos_lista_corta(df_lista):
+    columnas = [columna for columna in SHORTLIST_COLUMNS if columna in df_lista.columns]
+    return tuple(
+        tuple("" if valor_shortlist_vacio(valor) else str(valor) for valor in fila)
+        for fila in df_lista[columnas].itertuples(index=False, name=None)
+    )
+
+
+def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
+    section_header("Exportación")
+    tiene_lista = bool(nombre_lista)
+    hay_jugadores = df_lista is not None and not df_lista.empty
+    solicitar_generacion = st.button(
+        "Generar informe PDF",
+        use_container_width=True,
+        disabled=not (tiene_lista and hay_jugadores),
+        key="shortlist_generar_pdf",
+    )
+
+    if tiene_lista and hay_jugadores and solicitar_generacion:
+        with st.spinner("Generando informe..."):
+            pdf_generado = generar_pdf_lista_corta(
+                df_lista,
+                nombre_lista,
+                CURRENT_USER,
+                criterio_orden,
+            )
+        if pdf_generado is not None:
+            st.session_state["shortlist_pdf_generado"] = {
+                "scout": CURRENT_USER,
+                "lista": nombre_lista,
+                "criterio": criterio_orden,
+                "firma": _firma_datos_lista_corta(df_lista),
+                "contenido": pdf_generado.getvalue(),
+            }
+
+    generado = st.session_state.get("shortlist_pdf_generado")
+    if (
+        tiene_lista
+        and hay_jugadores
+        and generado
+        and generado.get("scout") == CURRENT_USER
+        and generado.get("lista") == nombre_lista
+        and generado.get("criterio") == criterio_orden
+        and generado.get("firma") == _firma_datos_lista_corta(df_lista)
+    ):
+        st.download_button(
+            "Descargar PDF",
+            data=generado["contenido"],
+            file_name=nombre_archivo_pdf_lista_corta(nombre_lista),
+            mime="application/pdf",
+            use_container_width=True,
+            key="shortlist_descargar_pdf",
+        )
+
 
 # FUNCION: GENERAR PDF REPORTE COMPLETO (OPTIMIZADO)
 # ---------------------------------------------------------
@@ -8768,10 +9223,17 @@ if st.session_state["menu"] == "Lista corta":
             st.info("Todavía no tenés listas. Creá una lista vacía para empezar.")
 
     if not lista_activa:
+        render_exportacion_pdf_lista_corta(
+            pd.DataFrame(columns=SHORTLIST_COLUMNS),
+            "",
+            st.session_state.get("shortlist_criterio_orden", "Posición"),
+        )
         st.stop()
 
     df_lista_activa = df_short[df_short["Lista"] == lista_activa].copy()
-    df_lista_real = df_lista_activa[df_lista_activa["ID_Jugador"].astype(str).str.strip() != ""].copy()
+    df_lista_real = df_lista_activa[
+        df_lista_activa.apply(es_registro_real_shortlist, axis=1)
+    ].copy()
 
     render_html_block(
         f"""
@@ -8828,10 +9290,6 @@ if st.session_state["menu"] == "Lista corta":
             else:
                 st.info(mensaje_add)
 
-    if df_lista_real.empty:
-        st.info("La lista está vacía. El registro marcador se conserva en Google Sheets, pero no se muestra como jugador.")
-        st.stop()
-
     filtros_col1, filtros_col2 = st.columns([1.3, 4.7])
     with filtros_col1:
         criterio_orden = st.selectbox("Ordenar por", ["Posición", "Prioridad"], key="shortlist_criterio_orden")
@@ -8846,6 +9304,12 @@ if st.session_state["menu"] == "Lista corta":
             | df_lista_ordenada["Club"].astype(str).str.contains(patron, case=False, na=False)
             | df_lista_ordenada["Posición"].astype(str).str.contains(patron, case=False, na=False)
         ].copy()
+
+    render_exportacion_pdf_lista_corta(df_lista_real, lista_activa, criterio_orden)
+
+    if df_lista_real.empty:
+        st.info("La lista está vacía. El registro marcador se conserva en Google Sheets, pero no se muestra como jugador.")
+        st.stop()
 
     section_header("Jugadores de la lista")
     for _, row in df_lista_ordenada.iterrows():
@@ -9859,4 +10323,3 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-

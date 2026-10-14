@@ -272,6 +272,42 @@ SHORTLIST_COLUMNS = [
     "Orden",
     "compartido_con",
 ]
+
+
+def clave_encabezado_shortlist(valor) -> str:
+    return str(valor or "").strip().casefold()
+
+
+SHORTLIST_COLUMN_KEYS = {
+    clave_encabezado_shortlist(columna): columna
+    for columna in SHORTLIST_COLUMNS
+}
+
+
+def validar_encabezados_shortlist(encabezados: list[str]) -> list[str]:
+    cantidades = {}
+    for encabezado in encabezados:
+        clave = clave_encabezado_shortlist(encabezado)
+        cantidades[clave] = cantidades.get(clave, 0) + 1
+    return [
+        columna
+        for columna in SHORTLIST_COLUMNS
+        if cantidades.get(clave_encabezado_shortlist(columna), 0) != 1
+    ]
+
+
+def encabezado_real_shortlist(encabezados: list[str], columna: str) -> str | None:
+    clave_buscada = clave_encabezado_shortlist(columna)
+    return next(
+        (
+            encabezado
+            for encabezado in encabezados
+            if clave_encabezado_shortlist(encabezado) == clave_buscada
+        ),
+        None,
+    )
+
+
 SHORTLIST_ALLOWED_ORDERS = ["Titular", "Suplente", "Apuesta", "Futuro"]
 POSITION_ORDER = {
     "Arquero": 1,
@@ -364,7 +400,7 @@ def obtener_estado_shortlist() -> dict:
             "actual": [],
         }
 
-    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados_actuales.count(columna) != 1]
+    faltantes = validar_encabezados_shortlist(encabezados_actuales)
     if faltantes:
         return {
             "ok": False,
@@ -381,8 +417,24 @@ def obtener_estado_shortlist() -> dict:
 
 def normalizar_filas_hoja(valores: list[list[str]], columnas: list[str]) -> pd.DataFrame:
     encabezados = valores[0]
-    columnas_datos = list(dict.fromkeys(columnas + [columna for columna in encabezados if columna not in columnas]))
-    indices = {columna: encabezados.index(columna) for columna in columnas_datos}
+    columnas_requeridas = [
+        SHORTLIST_COLUMN_KEYS.get(clave_encabezado_shortlist(columna), columna)
+        for columna in columnas
+    ]
+    columnas_extra = [
+        columna
+        for columna in encabezados
+        if clave_encabezado_shortlist(columna) not in SHORTLIST_COLUMN_KEYS
+    ]
+    columnas_datos = list(dict.fromkeys(columnas_requeridas + columnas_extra))
+    indices = {}
+    for encabezado in encabezados:
+        canonica = SHORTLIST_COLUMN_KEYS.get(
+            clave_encabezado_shortlist(encabezado),
+            encabezado,
+        )
+        if canonica not in indices:
+            indices[canonica] = encabezados.index(encabezado)
     filas_normalizadas = []
     for indice, fila in enumerate(valores[1:], start=2):
         fila_ajustada = [
@@ -395,7 +447,7 @@ def normalizar_filas_hoja(valores: list[list[str]], columnas: list[str]) -> pd.D
 
 def leer_shortlist_desde_worksheet(ws) -> pd.DataFrame:
     encabezados_actuales = ws.row_values(1)
-    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados_actuales.count(columna) != 1]
+    faltantes = validar_encabezados_shortlist(encabezados_actuales)
     if faltantes:
         raise ValueError(
             "La hoja 'Lista corta' no coincide con la estructura requerida. "
@@ -1080,17 +1132,24 @@ def guardar_shortlist_completa(
     df_actual = leer_shortlist_desde_worksheet(ws)
     mascara_lista = (df_actual["Scout"] == scout) & (df_actual["Lista"] == nombre_lista)
     encabezados = ws.row_values(1)
-    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados.count(columna) != 1]
+    faltantes = validar_encabezados_shortlist(encabezados)
     if faltantes:
         raise ValueError(f"No se puede guardar la lista corta; encabezados ausentes o duplicados: {faltantes}.")
+    columnas_para_guardar = []
+    for encabezado in encabezados:
+        columna_canonica = SHORTLIST_COLUMN_KEYS.get(
+            clave_encabezado_shortlist(encabezado),
+            encabezado,
+        )
+        columnas_para_guardar.append(columna_canonica)
     df_actualizado = pd.concat(
         [
-            df_actual.loc[~mascara_lista, encabezados],
-            filas_lista.reindex(columns=encabezados, fill_value=""),
+            df_actual.loc[~mascara_lista, columnas_para_guardar],
+            filas_lista.reindex(columns=columnas_para_guardar, fill_value=""),
         ],
         ignore_index=True,
     )
-    df_guardar = df_actualizado.reindex(columns=encabezados, fill_value="").fillna("")
+    df_guardar = df_actualizado.reindex(columns=columnas_para_guardar, fill_value="").fillna("")
     ws.update(
         [encabezados] + df_guardar.values.tolist(),
         value_input_option="USER_ENTERED",
@@ -1239,9 +1298,10 @@ def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden)
         if coincidencias.empty:
             return False, "No se encontró el registro para actualizar el orden."
         encabezados = ws.row_values(1)
-        if "Orden" not in encabezados:
+        encabezado_orden = encabezado_real_shortlist(encabezados, "Orden")
+        if encabezado_orden is None:
             return False, "No se encontró la columna 'Orden' en la hoja 'Lista corta'."
-        columna_orden = col_letter(encabezados.index("Orden") + 1)
+        columna_orden = col_letter(encabezados.index(encabezado_orden) + 1)
         row_number = int(coincidencias.iloc[0]["_sheet_row"])
         ws.update(f"{columna_orden}{row_number}", [[orden_limpio]], value_input_option="USER_ENTERED")
         refrescar_datasets_sesion()
@@ -1264,12 +1324,8 @@ def actualizar_compartido_con_lista(
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
         encabezados = ws.row_values(1)
-        faltantes = [
-            columna
-            for columna in SHORTLIST_COLUMNS
-            if encabezados.count(columna) != 1
-        ]
-        if faltantes or "compartido_con" not in encabezados:
+        faltantes = validar_encabezados_shortlist(encabezados)
+        if faltantes or encabezado_real_shortlist(encabezados, "compartido_con") is None:
             return False, "No se encontró la columna 'compartido_con' en la hoja 'Lista corta'."
 
         df_shortlist = leer_shortlist_desde_worksheet(ws)
@@ -1293,7 +1349,8 @@ def actualizar_compartido_con_lista(
             return False, "Uno o más destinatarios no existen en la fuente de usuarios."
         usuarios_validos = [opciones_por_clave[usuario.casefold()] for usuario in usuarios_solicitados]
         compartido_con = serializar_usuarios_compartidos(usuarios_validos, scout)
-        columna_compartida = col_letter(encabezados.index("compartido_con") + 1)
+        encabezado_compartido = encabezado_real_shortlist(encabezados, "compartido_con")
+        columna_compartida = col_letter(encabezados.index(encabezado_compartido) + 1)
         actualizaciones = [
             {
                 "range": f"{columna_compartida}{int(fila['_sheet_row'])}",

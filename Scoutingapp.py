@@ -270,8 +270,8 @@ SHORTLIST_COLUMNS = [
     "URL_Perfil",
     "video_url",
     "Orden",
+    "compartido_con",
 ]
-
 SHORTLIST_ALLOWED_ORDERS = ["Titular", "Suplente", "Apuesta", "Futuro"]
 POSITION_ORDER = {
     "Arquero": 1,
@@ -285,6 +285,12 @@ POSITION_ORDER = {
     "Extremo derecho": 9,
     "Extremo izquierdo": 10,
     "Delantero": 11,
+}
+LINE_ORDER = {
+    "Arquero": 1,
+    "Defensa": 2,
+    "Mediocampo": 3,
+    "Ataque": 4,
 }
 ORDER_PRIORITY = {
     "Titular": 1,
@@ -358,12 +364,14 @@ def obtener_estado_shortlist() -> dict:
             "actual": [],
         }
 
-    if encabezados_actuales != SHORTLIST_COLUMNS:
+    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados_actuales.count(columna) != 1]
+    if faltantes:
         return {
             "ok": False,
             "message": (
                 "⚠️ La hoja 'Lista corta' no coincide con la estructura requerida. "
-                f"Encabezados esperados: {SHORTLIST_COLUMNS}. Encabezados actuales: {encabezados_actuales or '[]'}."
+                f"Faltan encabezados requeridos o están duplicados: {faltantes}. "
+                f"Encabezados actuales: {encabezados_actuales or '[]'}."
             ),
             "actual": encabezados_actuales,
         }
@@ -372,22 +380,27 @@ def obtener_estado_shortlist() -> dict:
 
 
 def normalizar_filas_hoja(valores: list[list[str]], columnas: list[str]) -> pd.DataFrame:
-    ancho_objetivo = len(columnas)
+    encabezados = valores[0]
+    columnas_datos = list(dict.fromkeys(columnas + [columna for columna in encabezados if columna not in columnas]))
+    indices = {columna: encabezados.index(columna) for columna in columnas_datos}
     filas_normalizadas = []
     for indice, fila in enumerate(valores[1:], start=2):
-        fila_ajustada = list(fila[:ancho_objetivo])
-        if len(fila_ajustada) < ancho_objetivo:
-            fila_ajustada.extend([""] * (ancho_objetivo - len(fila_ajustada)))
+        fila_ajustada = [
+            fila[indices[columna]] if indices[columna] < len(fila) else ""
+            for columna in columnas_datos
+        ]
         filas_normalizadas.append(fila_ajustada + [indice])
-    return pd.DataFrame(filas_normalizadas, columns=columnas + ["_sheet_row"])
+    return pd.DataFrame(filas_normalizadas, columns=columnas_datos + ["_sheet_row"])
 
 
 def leer_shortlist_desde_worksheet(ws) -> pd.DataFrame:
     encabezados_actuales = ws.row_values(1)
-    if encabezados_actuales != SHORTLIST_COLUMNS:
+    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados_actuales.count(columna) != 1]
+    if faltantes:
         raise ValueError(
             "La hoja 'Lista corta' no coincide con la estructura requerida. "
-            f"Esperado: {SHORTLIST_COLUMNS}. Actual: {encabezados_actuales or '[]'}."
+            f"Faltan encabezados requeridos o están duplicados: {faltantes}. "
+            f"Actual: {encabezados_actuales or '[]'}."
         )
     valores = ws.get_all_values()
     if not valores:
@@ -425,6 +438,529 @@ def valor_shortlist_visual(valor, fallback="-") -> str:
     return fallback if valor_shortlist_vacio(valor) else str(valor).strip()
 
 
+def parsear_usuarios_compartidos(valor, usuario_actual=None) -> list[str]:
+    if isinstance(valor, str):
+        if valor_shortlist_vacio(valor):
+            return []
+        entradas = valor.split(";")
+    elif isinstance(valor, set):
+        entradas = sorted(valor, key=lambda entrada: str(entrada).casefold())
+    elif isinstance(valor, (list, tuple, pd.Series)):
+        entradas = valor
+    else:
+        if valor_shortlist_vacio(valor):
+            return []
+        entradas = [valor]
+
+    usuario_actual = str(usuario_actual or "").strip().casefold()
+    usuarios = []
+    vistos = set()
+    for entrada in entradas:
+        if valor_shortlist_vacio(entrada):
+            continue
+        usuario = str(entrada).strip()
+        clave = usuario.casefold()
+        if clave in {"nan", "none", "<na>", "null"} or clave == usuario_actual or clave in vistos:
+            continue
+        vistos.add(clave)
+        usuarios.append(usuario)
+    return usuarios
+
+
+def serializar_usuarios_compartidos(usuarios, usuario_actual=None) -> str:
+    usuarios_parseados = parsear_usuarios_compartidos(usuarios, usuario_actual)
+    nombres_reales = {}
+    if "df_users" in globals() and "Usuario" in df_users.columns:
+        for nombre in df_users["Usuario"].tolist():
+            if valor_shortlist_vacio(nombre):
+                continue
+            nombre_real = str(nombre).strip()
+            nombres_reales.setdefault(nombre_real.casefold(), nombre_real)
+
+    usuario_actual = str(usuario_actual or "").strip().casefold()
+    destinatarios = []
+    vistos = set()
+    for usuario in usuarios_parseados:
+        clave = usuario.casefold()
+        nombre_real = nombres_reales.get(clave)
+        if not nombre_real or clave == usuario_actual or clave in vistos:
+            continue
+        vistos.add(clave)
+        destinatarios.append(nombre_real)
+    return ";".join(destinatarios)
+
+
+def obtener_opciones_usuarios_compartir(usuario_actual) -> list[str]:
+    if "Usuario" not in df_users.columns:
+        return []
+    opciones = []
+    vistos = set()
+    for valor in df_users["Usuario"].tolist():
+        if valor_shortlist_vacio(valor):
+            continue
+        usuario = str(valor).strip()
+        clave = usuario.casefold()
+        if clave != str(usuario_actual).strip().casefold() and clave not in vistos:
+            vistos.add(clave)
+            opciones.append(usuario)
+    return opciones
+
+
+def usuario_es_admin(usuario_actual) -> bool:
+    if not {"Usuario", "Rol"}.issubset(df_users.columns):
+        return False
+    coincidencias = df_users[
+        df_users["Usuario"].astype(str).str.strip().str.casefold()
+        == str(usuario_actual).strip().casefold()
+    ]
+    return (
+        not coincidencias.empty
+        and str(coincidencias.iloc[0]["Rol"]).strip().casefold() == "admin"
+    )
+
+
+def usuario_puede_editar_lista(scout, usuario_actual=None) -> bool:
+    usuario_actual = CURRENT_USER if usuario_actual is None else usuario_actual
+    return not valor_shortlist_vacio(scout) and str(scout).strip() == str(usuario_actual).strip()
+
+
+def usuario_puede_ver_lista(scout, compartido_con, usuario_actual=None) -> bool:
+    usuario_actual = CURRENT_USER if usuario_actual is None else usuario_actual
+    if usuario_puede_editar_lista(scout, usuario_actual):
+        return True
+    usuario_actual_normalizado = str(usuario_actual or "").strip().casefold()
+    return bool(usuario_actual_normalizado) and usuario_actual_normalizado in {
+        usuario.casefold()
+        for usuario in parsear_usuarios_compartidos(compartido_con, usuario_actual=None)
+    }
+
+
+def obtener_listas_propias(df_shortlist: pd.DataFrame, usuario_actual) -> list[tuple[str, str]]:
+    if df_shortlist is None or df_shortlist.empty:
+        return []
+    propias = df_shortlist[df_shortlist["Scout"].astype(str).str.strip() == str(usuario_actual).strip()]
+    return sorted(
+        {
+            (str(fila["Scout"]).strip(), str(fila["Lista"]).strip())
+            for _, fila in propias.iterrows()
+            if not valor_shortlist_vacio(fila.get("Lista"))
+        },
+        key=lambda lista: (lista[1].casefold(), lista[0].casefold()),
+    )
+
+
+def obtener_listas_compartidas_con_usuario(
+    df_shortlist: pd.DataFrame,
+    usuario_actual,
+) -> list[tuple[str, str]]:
+    if df_shortlist is None or df_shortlist.empty:
+        return []
+    compartidas = set()
+    for (scout, nombre), filas in df_shortlist.groupby(["Scout", "Lista"], dropna=False, sort=False):
+        scout = str(scout).strip()
+        nombre = str(nombre).strip()
+        if (
+            not valor_shortlist_vacio(nombre)
+            and scout != str(usuario_actual).strip()
+            and filas["compartido_con"].map(
+                lambda valor: usuario_puede_ver_lista(scout, valor, usuario_actual)
+            ).all()
+        ):
+            compartidas.add((scout, nombre))
+    return sorted(compartidas, key=lambda lista: (lista[1].casefold(), lista[0].casefold()))
+
+
+def obtener_listas_disponibles_consenso_admin(
+    df_shortlist: pd.DataFrame,
+    usuario_actual,
+    rol_actual,
+) -> list[tuple[str, str]]:
+    if str(rol_actual).casefold() != "admin" or not usuario_es_admin(usuario_actual):
+        return []
+    return obtener_listas_compartidas_con_usuario(df_shortlist, usuario_actual)
+
+
+def obtener_linea_desde_posicion(posicion) -> str:
+    posicion = "" if valor_shortlist_vacio(posicion) else str(posicion).strip()
+    if posicion == "Arquero":
+        return "Arquero"
+    if posicion in {
+        "Defensa central derecho",
+        "Defensa central izquierdo",
+        "Lateral derecho",
+        "Lateral izquierdo",
+    }:
+        return "Defensa"
+    if posicion in {
+        "Mediocampista defensivo",
+        "Mediocampista mixto",
+        "Mediocampista ofensivo",
+    }:
+        return "Mediocampo"
+    if posicion in {"Extremo derecho", "Extremo izquierdo", "Delantero"}:
+        return "Ataque"
+    return "Otros"
+
+
+def ordenar_consenso(jugadores: list[dict]) -> list[dict]:
+    return sorted(
+        jugadores,
+        key=lambda jugador: (
+            LINE_ORDER.get(jugador["Línea"], len(LINE_ORDER) + 1),
+            POSITION_ORDER.get(jugador["Posición"], len(POSITION_ORDER) + 1),
+            -jugador["Repeticiones"],
+            jugador["Nombre"].casefold(),
+        ),
+    )
+
+
+def construir_consenso_listas(
+    df_shortlist: pd.DataFrame,
+    listas_seleccionadas,
+    df_players_base: pd.DataFrame,
+    usuario_actual,
+    rol_actual,
+) -> dict:
+    if str(rol_actual).casefold() != "admin" or not usuario_es_admin(usuario_actual):
+        raise PermissionError("Solo un administrador puede generar consensos.")
+
+    seleccionadas = sorted(
+        {
+            (str(scout).strip(), str(nombre).strip())
+            for scout, nombre in (listas_seleccionadas or [])
+            if not valor_shortlist_vacio(scout) and not valor_shortlist_vacio(nombre)
+        },
+        key=lambda lista: (lista[0].casefold(), lista[1].casefold()),
+    )
+    disponibles = set(
+        obtener_listas_disponibles_consenso_admin(df_shortlist, usuario_actual, rol_actual)
+    )
+    if len(seleccionadas) < 2:
+        raise ValueError("Seleccioná al menos dos listas.")
+    if not set(seleccionadas).issubset(disponibles):
+        raise PermissionError("El consenso solo admite listas compartidas explícitamente con este administrador.")
+
+    claves = set(seleccionadas)
+    filas = df_shortlist[
+        df_shortlist.apply(
+            lambda fila: (str(fila["Scout"]).strip(), str(fila["Lista"]).strip()) in claves
+            and es_registro_real_shortlist(fila),
+            axis=1,
+        )
+    ].copy()
+    filas["_id_consenso"] = filas["ID_Jugador"].map(normalizar_id_texto)
+    filas = filas[filas["_id_consenso"] != ""].sort_values(
+        ["Scout", "Lista"],
+        key=lambda columna: columna.astype(str).str.casefold(),
+        kind="stable",
+    )
+    filas = filas.drop_duplicates(subset=["Scout", "Lista", "_id_consenso"], keep="first")
+
+    filas_por_id = {
+        jugador_id: grupo
+        for jugador_id, grupo in filas.groupby("_id_consenso", sort=True)
+    }
+    jugadores_actuales = {}
+    if (
+        df_players_base is not None
+        and not df_players_base.empty
+        and "ID_Jugador" in df_players_base.columns
+    ):
+        base_actual = df_players_base.copy()
+        base_actual["_id_consenso"] = base_actual["ID_Jugador"].map(normalizar_id_texto)
+        for _, jugador_actual in base_actual[base_actual["_id_consenso"] != ""].iterrows():
+            jugadores_actuales.setdefault(jugador_actual["_id_consenso"], jugador_actual)
+
+    consenso = []
+    for jugador_id, grupo in filas_por_id.items():
+        apariciones = grupo[["Scout", "Lista"]].drop_duplicates()
+        repeticiones = len(apariciones)
+        if repeticiones < 2:
+            continue
+
+        actual = jugadores_actuales.get(jugador_id)
+        if actual is not None:
+            datos = {
+                "Nombre": valor_shortlist_visual(actual.get("Nombre"), fallback=""),
+                "Posición": valor_shortlist_visual(actual.get("Posición"), fallback=""),
+                "Club": valor_shortlist_visual(actual.get("Club"), fallback=""),
+                "Liga": valor_shortlist_visual(actual.get("Liga"), fallback=""),
+                "Edad": valor_shortlist_visual(
+                    actual.get("Edad", calcular_edad(actual.get("Fecha_Nac"))),
+                    fallback="",
+                ),
+                "Altura": valor_shortlist_visual(actual.get("Altura"), fallback=""),
+                "Pie_Hábil": valor_shortlist_visual(actual.get("Pie_Hábil"), fallback=""),
+                "URL_Foto": valor_shortlist_visual(actual.get("URL_Foto"), fallback=""),
+            }
+        else:
+            snapshot = grupo.iloc[0]
+            datos = {
+                campo: valor_shortlist_visual(snapshot.get(campo), fallback="")
+                for campo in (
+                    "Nombre",
+                    "Posición",
+                    "Club",
+                    "Liga",
+                    "Edad",
+                    "Altura",
+                    "Pie_Hábil",
+                    "URL_Foto",
+                )
+            }
+
+        listas = sorted(
+            {
+                f"{str(fila['Lista']).strip()} · {str(fila['Scout']).strip()}"
+                for _, fila in apariciones.iterrows()
+            },
+            key=str.casefold,
+        )
+        consenso.append(
+            {
+                "ID_Jugador": jugador_id,
+                **datos,
+                "Línea": obtener_linea_desde_posicion(datos["Posición"]),
+                "Repeticiones": repeticiones,
+                "Listas": listas,
+            }
+        )
+
+    jugadores_unicos = len(filas_por_id)
+    jugadores_ordenados = ordenar_consenso(consenso)
+    return {
+        "listas_analizadas": len(seleccionadas),
+        "listas": [f"{nombre} · {scout}" for scout, nombre in seleccionadas],
+        "jugadores_unicos": jugadores_unicos,
+        "jugadores_repetidos": len(jugadores_ordenados),
+        "jugadores": jugadores_ordenados,
+    }
+
+
+def generar_pdf_consenso_lista_corta(
+    df_shortlist: pd.DataFrame,
+    listas_seleccionadas,
+    df_players_base: pd.DataFrame,
+    usuario_actual,
+    rol_actual,
+):
+    if str(rol_actual).casefold() != "admin" or not usuario_es_admin(usuario_actual):
+        raise PermissionError("Solo un administrador puede generar el PDF de consenso.")
+
+    consenso = construir_consenso_listas(
+        df_shortlist,
+        listas_seleccionadas,
+        df_players_base,
+        usuario_actual,
+        rol_actual,
+    )
+    pdf = FPDF_LISTA_CORTA("P", "mm", "A4")
+    pdf.nombre_lista = "Consenso de listas cortas"
+    pdf.set_margins(left=12, top=12, right=12)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.alias_nb_pages()
+    pdf.add_page()
+
+    ancho = pdf.w - pdf.l_margin - pdf.r_margin
+    pdf.set_font("Arial", "B", 8)
+    pdf.set_text_color(37, 184, 106)
+    pdf.cell(0, 5, "SCOUTING · ANÁLISIS CRUZADO")
+    pdf.ln(8)
+    pdf.set_font("Arial", "B", 19)
+    pdf.set_text_color(17, 19, 24)
+    pdf.multi_cell(ancho, 8, "CONSENSO DE LISTA CORTA")
+    pdf.set_font("Arial", "", 9)
+    pdf.set_text_color(98, 106, 115)
+    pdf.cell(0, 5, "Análisis cruzado de listas compartidas")
+    pdf.ln(9)
+    pdf.set_draw_color(223, 227, 230)
+    pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+    pdf.ln(4)
+    pdf.set_font("Arial", "", 8.5)
+    pdf.set_text_color(70, 78, 86)
+    pdf.cell(0, 5, f"Fecha: {date.today().strftime('%d/%m/%Y')}")
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(17, 19, 24)
+    pdf.cell(0, 6, "RESUMEN")
+    pdf.ln(6)
+
+    metricas = [
+        ("LISTAS ANALIZADAS", consenso["listas_analizadas"]),
+        ("JUGADORES ÚNICOS", consenso["jugadores_unicos"]),
+        ("JUGADORES CON CONSENSO", consenso["jugadores_repetidos"]),
+    ]
+    separacion = 2
+    metric_w = (ancho - separacion * (len(metricas) - 1)) / len(metricas)
+    y_metricas = pdf.get_y() + 1
+    for indice, (etiqueta, valor) in enumerate(metricas):
+        x = pdf.l_margin + indice * (metric_w + separacion)
+        pdf.set_fill_color(*(232, 246, 238) if indice == 2 else (246, 247, 248))
+        pdf.set_draw_color(223, 227, 230)
+        pdf.rect(x, y_metricas, metric_w, 15, "DF")
+        pdf.set_xy(x + 2, y_metricas + 1)
+        pdf.set_font("Arial", "B", 11)
+        pdf.set_text_color(23, 124, 73) if indice == 2 else pdf.set_text_color(17, 19, 24)
+        pdf.cell(metric_w - 4, 5, str(valor))
+        pdf.set_xy(x + 2, y_metricas + 8)
+        pdf.set_font("Arial", "", 5.8)
+        pdf.set_text_color(98, 106, 115)
+        pdf.cell(metric_w - 4, 4, etiqueta)
+    pdf.set_y(y_metricas + 19)
+
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(17, 19, 24)
+    pdf.cell(0, 6, "LISTAS ANALIZADAS")
+    pdf.ln(6)
+    pdf.set_font("Arial", "", 8)
+    pdf.set_text_color(70, 78, 86)
+    for etiqueta in consenso["listas"]:
+        pdf.multi_cell(ancho, 4, f"· {etiqueta}")
+    pdf.ln(3)
+
+    posiciones_por_linea = {
+        "Arquero": ["Arquero"],
+        "Defensa": [
+            "Defensa central derecho",
+            "Defensa central izquierdo",
+            "Lateral derecho",
+            "Lateral izquierdo",
+        ],
+        "Mediocampo": [
+            "Mediocampista defensivo",
+            "Mediocampista mixto",
+            "Mediocampista ofensivo",
+        ],
+        "Ataque": ["Extremo derecho", "Extremo izquierdo", "Delantero"],
+    }
+
+    def envolver(texto, ancho_texto):
+        palabras = sanitizar_texto_pdf(str(texto or "")).split()
+        lineas = []
+        linea = ""
+        for palabra in palabras:
+            candidata = f"{linea} {palabra}".strip()
+            if linea and pdf.get_string_width(candidata) > ancho_texto:
+                lineas.append(linea)
+                linea = palabra
+            else:
+                linea = candidata
+        if linea:
+            lineas.append(linea)
+        return lineas or ["-"]
+
+    def dibujar_jugador(jugador):
+        x = pdf.l_margin
+        y = pdf.get_y()
+        ancho_tarjeta = ancho
+        ancho_badge = 33
+        x_datos = x + 4
+        ancho_datos = ancho_tarjeta - ancho_badge - 11
+        lineas_listas = []
+        for etiqueta in jugador["Listas"]:
+            lineas_listas.extend(envolver(etiqueta, ancho_datos))
+        alto = max(28, 24 + len(lineas_listas) * 3.7)
+        if pdf.get_y() + alto + 2 > pdf.h - pdf.b_margin:
+            pdf.add_page()
+            y = pdf.get_y()
+
+        pdf.set_fill_color(250, 251, 251)
+        pdf.set_draw_color(223, 227, 230)
+        pdf.rect(x, y, ancho_tarjeta, alto, "DF")
+        pdf.set_xy(x_datos, y + 2.5)
+        pdf.set_font("Arial", "B", 11)
+        pdf.set_text_color(17, 19, 24)
+        pdf.cell(
+            ancho_datos,
+            5,
+            _ajustar_texto_pdf_lista_corta(pdf, jugador["Nombre"] or "-", ancho_datos),
+        )
+        pdf.set_fill_color(232, 246, 238)
+        pdf.rect(x + ancho_tarjeta - ancho_badge - 3, y + 2.5, ancho_badge, 6, "F")
+        pdf.set_xy(x + ancho_tarjeta - ancho_badge - 3, y + 3)
+        pdf.set_font("Arial", "B", 7)
+        pdf.set_text_color(23, 124, 73)
+        pdf.cell(ancho_badge, 4, f"{jugador['Repeticiones']} REPETICIONES", align="C")
+
+        pdf.set_xy(x_datos, y + 8.5)
+        pdf.set_font("Arial", "B", 7.5)
+        pdf.set_text_color(23, 124, 73)
+        pdf.cell(ancho_datos, 4, _ajustar_texto_pdf_lista_corta(pdf, jugador["Posición"] or "-", ancho_datos))
+        pdf.set_xy(x_datos, y + 12.5)
+        pdf.set_font("Arial", "", 7.2)
+        pdf.set_text_color(70, 78, 86)
+        club_liga = " · ".join(valor for valor in (jugador["Club"], jugador["Liga"]) if valor) or "-"
+        pdf.cell(ancho_datos, 4, _ajustar_texto_pdf_lista_corta(pdf, club_liga, ancho_datos))
+
+        meta = " · ".join(
+            valor
+            for valor in (
+                formatear_shortlist_unidad(jugador["Edad"], "años") if jugador["Edad"] else "",
+                formatear_shortlist_unidad(jugador["Altura"], "cm") if jugador["Altura"] else "",
+                jugador["Pie_Hábil"],
+            )
+            if valor
+        )
+        pdf.set_xy(x_datos, y + 16.5)
+        pdf.set_font("Arial", "", 7)
+        pdf.set_text_color(98, 106, 115)
+        pdf.cell(ancho_datos, 3.8, _ajustar_texto_pdf_lista_corta(pdf, meta or "-", ancho_datos))
+        pdf.set_xy(x_datos, y + 20.5)
+        pdf.set_font("Arial", "B", 6.8)
+        pdf.set_text_color(70, 78, 86)
+        pdf.cell(ancho_datos, 3.5, "APARECE EN:")
+        pdf.set_font("Arial", "", 6.8)
+        for indice, linea_lista in enumerate(lineas_listas):
+            pdf.set_xy(x_datos, y + 24 + indice * 3.7)
+            pdf.cell(ancho_datos, 3.5, linea_lista)
+        pdf.set_y(y + alto + 2)
+
+    jugadores = consenso["jugadores"]
+    for linea in (*LINE_ORDER.keys(), "Otros"):
+        jugadores_linea = [jugador for jugador in jugadores if jugador["Línea"] == linea]
+        if not jugadores_linea:
+            continue
+        if pdf.get_y() + 12 > pdf.h - pdf.b_margin:
+            pdf.add_page()
+        pdf.ln(2)
+        _dibujar_seccion_lista_corta(pdf, linea, len(jugadores_linea))
+        puestos = posiciones_por_linea.get(linea, [])
+        posiciones_presentes = list(puestos)
+        posiciones_presentes.extend(
+            sorted(
+                {
+                    jugador["Posición"]
+                    for jugador in jugadores_linea
+                    if jugador["Posición"] not in puestos
+                },
+                key=str.casefold,
+            )
+        )
+        for posicion in posiciones_presentes:
+            grupo = [
+                jugador for jugador in jugadores_linea if jugador["Posición"] == posicion
+            ]
+            if not grupo:
+                continue
+            if pdf.get_y() + 10 > pdf.h - pdf.b_margin:
+                pdf.add_page()
+            pdf.set_font("Arial", "B", 8)
+            pdf.set_text_color(17, 19, 24)
+            pdf.cell(0, 5, sanitizar_texto_pdf(posicion or "Sin posición"))
+            pdf.ln(5)
+            for jugador in grupo:
+                dibujar_jugador(jugador)
+
+    buffer_pdf = BytesIO()
+    contenido_pdf = pdf.output(dest="S")
+    if isinstance(contenido_pdf, str):
+        contenido_pdf = contenido_pdf.encode("latin-1")
+    buffer_pdf.write(contenido_pdf)
+    buffer_pdf.seek(0)
+    return buffer_pdf
+
+
 def formatear_shortlist_unidad(valor, sufijo: str) -> str:
     texto = valor_shortlist_visual(valor, fallback="-")
     return texto if texto == "-" else f"{texto} {sufijo}"
@@ -443,14 +979,20 @@ def normalizar_orden_shortlist(valor) -> str:
     return texto if texto in SHORTLIST_ALLOWED_ORDERS else ""
 
 
-def construir_fila_marcador_shortlist(scout: str, nombre_lista: str) -> dict:
+def construir_fila_marcador_shortlist(scout: str, nombre_lista: str, compartido_con="") -> dict:
     fila = {columna: "" for columna in SHORTLIST_COLUMNS}
     fila["Scout"] = scout
     fila["Lista"] = nombre_lista
+    fila["compartido_con"] = serializar_usuarios_compartidos(compartido_con, scout)
     return fila
 
 
-def construir_fila_shortlist_desde_jugador(jugador, scout: str, nombre_lista: str) -> dict:
+def construir_fila_shortlist_desde_jugador(
+    jugador,
+    scout: str,
+    nombre_lista: str,
+    compartido_con="",
+) -> dict:
     edad = calcular_edad(jugador.get("Fecha_Nac"))
     return {
         "Scout": scout,
@@ -467,6 +1009,7 @@ def construir_fila_shortlist_desde_jugador(jugador, scout: str, nombre_lista: st
         "URL_Perfil": valor_shortlist_visual(jugador.get("URL_Perfil", ""), fallback=""),
         "video_url": valor_shortlist_visual(jugador.get("video_url", ""), fallback=""),
         "Orden": "",
+        "compartido_con": serializar_usuarios_compartidos(compartido_con, scout),
     }
 
 
@@ -518,12 +1061,40 @@ def construir_texto_whatsapp_shortlist(df: pd.DataFrame) -> str:
     return "\n\n".join(bloques).strip()
 
 
-def guardar_shortlist_completa(ws, df_shortlist: pd.DataFrame):
-    df_guardar = df_shortlist.copy()
-    if "_sheet_row" in df_guardar.columns:
-        df_guardar = df_guardar.drop(columns=["_sheet_row"])
-    df_guardar = df_guardar.reindex(columns=SHORTLIST_COLUMNS, fill_value="").fillna("")
-    ws.update([SHORTLIST_COLUMNS] + df_guardar.values.tolist(), value_input_option="USER_ENTERED")
+def guardar_shortlist_completa(
+    ws,
+    filas_lista: pd.DataFrame,
+    scout: str,
+    nombre_lista: str,
+):
+    if not usuario_puede_editar_lista(scout):
+        raise PermissionError("Solo el propietario puede modificar esta lista.")
+
+    filas_lista = filas_lista.copy()
+    if not filas_lista.empty and (
+        not filas_lista["Scout"].astype(str).eq(str(scout)).all()
+        or not filas_lista["Lista"].astype(str).eq(str(nombre_lista)).all()
+    ):
+        raise PermissionError("La operación contiene filas fuera de la lista autorizada.")
+
+    df_actual = leer_shortlist_desde_worksheet(ws)
+    mascara_lista = (df_actual["Scout"] == scout) & (df_actual["Lista"] == nombre_lista)
+    encabezados = ws.row_values(1)
+    faltantes = [columna for columna in SHORTLIST_COLUMNS if encabezados.count(columna) != 1]
+    if faltantes:
+        raise ValueError(f"No se puede guardar la lista corta; encabezados ausentes o duplicados: {faltantes}.")
+    df_actualizado = pd.concat(
+        [
+            df_actual.loc[~mascara_lista, encabezados],
+            filas_lista.reindex(columns=encabezados, fill_value=""),
+        ],
+        ignore_index=True,
+    )
+    df_guardar = df_actualizado.reindex(columns=encabezados, fill_value="").fillna("")
+    ws.update(
+        [encabezados] + df_guardar.values.tolist(),
+        value_input_option="USER_ENTERED",
+    )
     refrescar_datasets_sesion()
 
 
@@ -531,6 +1102,8 @@ def crear_lista_shortlist_vacia(nombre_lista: str, scout: str) -> tuple[bool, st
     nombre_limpio = str(nombre_lista or "").strip()
     if not nombre_limpio:
         return False, "Indicá un nombre de lista válido."
+    if not usuario_puede_editar_lista(scout):
+        return False, "Solo podés crear y modificar listas propias."
 
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
@@ -542,11 +1115,8 @@ def crear_lista_shortlist_vacia(nombre_lista: str, scout: str) -> tuple[bool, st
         if not existe.empty:
             return False, "Ya existe una lista con ese nombre para el usuario actual."
 
-        nuevo_df = pd.concat(
-            [df_shortlist[SHORTLIST_COLUMNS], pd.DataFrame([construir_fila_marcador_shortlist(scout, nombre_limpio)])],
-            ignore_index=True,
-        )
-        guardar_shortlist_completa(ws, nuevo_df)
+        marcador = pd.DataFrame([construir_fila_marcador_shortlist(scout, nombre_limpio)])
+        guardar_shortlist_completa(ws, marcador, scout, nombre_limpio)
         return True, f"Lista '{nombre_limpio}' creada correctamente."
     except Exception as exc:
         return False, f"No se pudo crear la lista: {exc}"
@@ -559,6 +1129,8 @@ def agregar_jugador_a_shortlist(id_jugador, nombre_lista: str, scout: str, df_pl
         return False, "Seleccioná una lista antes de agregar el jugador."
     if not id_normalizado:
         return False, "No se pudo identificar el jugador seleccionado."
+    if not usuario_puede_editar_lista(scout):
+        return False, "Solo el propietario puede agregar jugadores a esta lista."
 
     coincidencias = df_players_base[df_players_base["ID_Jugador"].map(normalizar_id_texto) == id_normalizado]
     if coincidencias.empty:
@@ -576,17 +1148,26 @@ def agregar_jugador_a_shortlist(id_jugador, nombre_lista: str, scout: str, df_pl
         if not duplicado.empty:
             return False, "Ese jugador ya está cargado en la lista seleccionada."
 
-        jugador = coincidencias.iloc[0]
-        nueva_fila = pd.DataFrame([construir_fila_shortlist_desde_jugador(jugador, scout, nombre_limpio)])
-        sin_marcador = df_shortlist[
-            ~(
-                (df_shortlist["Scout"] == scout)
-                & (df_shortlist["Lista"] == nombre_limpio)
-                & (df_shortlist["ID_Jugador"].astype(str).str.strip() == "")
-            )
+        filas_lista = df_shortlist[
+            (df_shortlist["Scout"] == scout) & (df_shortlist["Lista"] == nombre_limpio)
         ].copy()
-        nuevo_df = pd.concat([sin_marcador[SHORTLIST_COLUMNS], nueva_fila], ignore_index=True)
-        guardar_shortlist_completa(ws, nuevo_df)
+        destinatarios = []
+        for valor in filas_lista["compartido_con"].tolist():
+            destinatarios.extend(parsear_usuarios_compartidos(valor, scout))
+        compartido_con = serializar_usuarios_compartidos(destinatarios, scout)
+        jugador = coincidencias.iloc[0]
+        nueva_fila = construir_fila_shortlist_desde_jugador(
+            jugador,
+            scout,
+            nombre_limpio,
+            compartido_con,
+        )
+        filas_lista = filas_lista[
+            filas_lista["ID_Jugador"].map(lambda valor: not valor_shortlist_vacio(valor))
+        ].copy()
+        filas_lista["compartido_con"] = compartido_con
+        filas_lista = pd.concat([filas_lista, pd.DataFrame([nueva_fila])], ignore_index=True)
+        guardar_shortlist_completa(ws, filas_lista, scout, nombre_limpio)
         return True, f"{jugador.get('Nombre', 'Jugador')} agregado a '{nombre_limpio}'."
     except Exception as exc:
         return False, f"No se pudo agregar el jugador: {exc}"
@@ -597,6 +1178,8 @@ def eliminar_jugador_de_shortlist(scout: str, nombre_lista: str, id_jugador) -> 
     id_normalizado = normalizar_id_texto(id_jugador)
     if not nombre_limpio or not id_normalizado:
         return False, "Faltan datos para eliminar el jugador de la lista."
+    if not usuario_puede_editar_lista(scout):
+        return False, "Solo el propietario puede quitar jugadores de esta lista."
 
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
@@ -613,75 +1196,134 @@ def eliminar_jugador_de_shortlist(scout: str, nombre_lista: str, id_jugador) -> 
             df_shortlist.loc[mascara_objetivo, "Nombre"].iloc[0],
             fallback="Jugador",
         )
-        nuevo_df = df_shortlist.loc[~mascara_objetivo, SHORTLIST_COLUMNS].copy()
-
-        quedan_reales = nuevo_df[
-            (nuevo_df["Scout"] == scout)
-            & (nuevo_df["Lista"] == nombre_limpio)
-            & (nuevo_df["ID_Jugador"].astype(str).str.strip() != "")
-        ]
-        if quedan_reales.empty:
-            nuevo_df = nuevo_df[
-                ~(
-                    (nuevo_df["Scout"] == scout)
-                    & (nuevo_df["Lista"] == nombre_limpio)
-                    & (nuevo_df["ID_Jugador"].astype(str).str.strip() == "")
-                )
-            ].copy()
-            nuevo_df = pd.concat(
-                [nuevo_df, pd.DataFrame([construir_fila_marcador_shortlist(scout, nombre_limpio)])],
-                ignore_index=True,
+        filas_lista = df_shortlist[
+            (df_shortlist["Scout"] == scout) & (df_shortlist["Lista"] == nombre_limpio)
+        ].copy()
+        destinatarios = []
+        for valor in filas_lista["compartido_con"].tolist():
+            destinatarios.extend(parsear_usuarios_compartidos(valor, scout))
+        compartido_con = serializar_usuarios_compartidos(destinatarios, scout)
+        filas_lista = filas_lista.loc[~mascara_objetivo.loc[filas_lista.index]].copy()
+        filas_lista = filas_lista[
+            filas_lista["ID_Jugador"].map(lambda valor: not valor_shortlist_vacio(valor))
+        ].copy()
+        filas_lista["compartido_con"] = compartido_con
+        if filas_lista.empty:
+            filas_lista = pd.DataFrame(
+                [construir_fila_marcador_shortlist(scout, nombre_limpio, compartido_con)]
             )
 
-        guardar_shortlist_completa(ws, nuevo_df)
+        guardar_shortlist_completa(ws, filas_lista, scout, nombre_limpio)
         return True, f"{nombre_jugador} eliminado de '{nombre_limpio}'."
     except Exception as exc:
         return False, f"No se pudo eliminar el jugador: {exc}"
 
 
-def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden, sheet_row=None) -> tuple[bool, str]:
+def actualizar_orden_shortlist(scout: str, nombre_lista: str, id_jugador, orden) -> tuple[bool, str]:
     nombre_limpio = str(nombre_lista or "").strip()
     id_normalizado = normalizar_id_texto(id_jugador)
     orden_limpio = normalizar_orden_shortlist(orden)
     if not nombre_limpio or not id_normalizado:
         return False, "Faltan datos para actualizar el orden."
+    if not usuario_puede_editar_lista(scout):
+        return False, "Solo el propietario puede cambiar el orden de esta lista."
 
     try:
         ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
-        row_number = None
-        if sheet_row is not None and not valor_shortlist_vacio(sheet_row):
-            try:
-                row_number = int(float(sheet_row))
-            except (TypeError, ValueError):
-                row_number = None
-
-        if row_number is None:
-            df_shortlist = leer_shortlist_desde_worksheet(ws)
-            coincidencias = df_shortlist[
-                (df_shortlist["Scout"] == scout)
-                & (df_shortlist["Lista"] == nombre_limpio)
-                & (df_shortlist["ID_Jugador"].map(normalizar_id_texto) == id_normalizado)
-            ]
-            if coincidencias.empty:
-                return False, "No se encontró el registro para actualizar el orden."
-            row_number = int(coincidencias.iloc[0]["_sheet_row"])
-
-        ws.update(f"N{row_number}", [[orden_limpio]], value_input_option="USER_ENTERED")
+        df_shortlist = leer_shortlist_desde_worksheet(ws)
+        coincidencias = df_shortlist[
+            (df_shortlist["Scout"] == scout)
+            & (df_shortlist["Lista"] == nombre_limpio)
+            & (df_shortlist["ID_Jugador"].map(normalizar_id_texto) == id_normalizado)
+        ]
+        if coincidencias.empty:
+            return False, "No se encontró el registro para actualizar el orden."
+        encabezados = ws.row_values(1)
+        if "Orden" not in encabezados:
+            return False, "No se encontró la columna 'Orden' en la hoja 'Lista corta'."
+        columna_orden = col_letter(encabezados.index("Orden") + 1)
+        row_number = int(coincidencias.iloc[0]["_sheet_row"])
+        ws.update(f"{columna_orden}{row_number}", [[orden_limpio]], value_input_option="USER_ENTERED")
         refrescar_datasets_sesion()
         return True, "Orden actualizado correctamente."
     except Exception as exc:
         return False, f"No se pudo actualizar el orden: {exc}"
 
 
+def actualizar_compartido_con_lista(
+    scout: str,
+    nombre_lista: str,
+    usuarios,
+) -> tuple[bool, str]:
+    nombre_limpio = str(nombre_lista or "").strip()
+    if not nombre_limpio:
+        return False, "Seleccioná una lista válida."
+    if not usuario_puede_editar_lista(scout):
+        return False, "Solo el propietario puede compartir esta lista."
+
+    try:
+        ws = obtener_hoja("Lista corta", SHORTLIST_COLUMNS)
+        encabezados = ws.row_values(1)
+        faltantes = [
+            columna
+            for columna in SHORTLIST_COLUMNS
+            if encabezados.count(columna) != 1
+        ]
+        if faltantes or "compartido_con" not in encabezados:
+            return False, "No se encontró la columna 'compartido_con' en la hoja 'Lista corta'."
+
+        df_shortlist = leer_shortlist_desde_worksheet(ws)
+        filas_lista = df_shortlist[
+            (df_shortlist["Scout"] == scout) & (df_shortlist["Lista"] == nombre_limpio)
+        ]
+        if filas_lista.empty:
+            return False, "No se encontró la lista seleccionada."
+
+        opciones_por_clave = {
+            usuario.casefold(): usuario
+            for usuario in obtener_opciones_usuarios_compartir(scout)
+        }
+        usuarios_solicitados = parsear_usuarios_compartidos(usuarios, usuario_actual=scout)
+        usuarios_invalidos = [
+            usuario
+            for usuario in usuarios_solicitados
+            if usuario.casefold() not in opciones_por_clave
+        ]
+        if usuarios_invalidos:
+            return False, "Uno o más destinatarios no existen en la fuente de usuarios."
+        usuarios_validos = [opciones_por_clave[usuario.casefold()] for usuario in usuarios_solicitados]
+        compartido_con = serializar_usuarios_compartidos(usuarios_validos, scout)
+        columna_compartida = col_letter(encabezados.index("compartido_con") + 1)
+        actualizaciones = [
+            {
+                "range": f"{columna_compartida}{int(fila['_sheet_row'])}",
+                "values": [[compartido_con]],
+            }
+            for _, fila in filas_lista.iterrows()
+        ]
+        ws.batch_update(actualizaciones, value_input_option="RAW")
+        refrescar_datasets_sesion()
+        return True, "Acceso actualizado correctamente."
+    except Exception as exc:
+        return False, f"No se pudo actualizar el acceso: {exc}"
+
+
 # =========================================================
 # ACTUALIZAR HOJA (BLINDADA - SIN BORRAR)
 # =========================================================
+def es_hoja_lista_corta(nombre_hoja: str) -> bool:
+    return normalizar_nombre_hoja(nombre_hoja) == normalizar_nombre_hoja("Lista corta")
+
+
 def actualizar_hoja(nombre_hoja: str, df: pd.DataFrame):
     """
     Actualiza sin borrar datos previos.
     Si existe el ID, actualiza esa fila. Si no, la agrega.
     Nunca borra toda la hoja.
     """
+    if es_hoja_lista_corta(nombre_hoja):
+        st.error("Usá las operaciones de Lista corta con validación de propietario.")
+        return
     try:
         ws = obtener_hoja(nombre_hoja, list(df.columns))
         data_actual = ws.get_all_records()
@@ -727,6 +1369,9 @@ def eliminar_por_id(nombre_hoja: str, id_col: str, id_valor):
     """
     Elimina una fila específica por ID, sin tocar el resto.
     """
+    if es_hoja_lista_corta(nombre_hoja):
+        st.error("Usá las operaciones de Lista corta con validación de propietario.")
+        return
     try:
         ws = obtener_hoja(nombre_hoja)
         data_actual = ws.get_all_records()
@@ -747,6 +1392,9 @@ def eliminar_por_id(nombre_hoja: str, id_col: str, id_valor):
 # =========================================================
 def agregar_fila(nombre_hoja: str, fila: list):
     """Agrega una nueva fila sin tocar el resto."""
+    if es_hoja_lista_corta(nombre_hoja):
+        st.error("Usá las operaciones de Lista corta con validación de propietario.")
+        return
     try:
         ws = obtener_hoja(nombre_hoja)
         # Convertir todos los valores numpy.int64 a int antes de agregar
@@ -760,6 +1408,9 @@ def agregar_fila(nombre_hoja: str, fila: list):
 
 def actualizar_fila_en_hoja(nombre_hoja: str, id_columna: str, id_valor, fila: list, columnas_base: list = None):
     """Actualiza una fila puntual detectandola por un ID estable."""
+    if es_hoja_lista_corta(nombre_hoja):
+        st.error("Usá las operaciones de Lista corta con validación de propietario.")
+        return False
     try:
         ws = obtener_hoja(nombre_hoja, columnas_base)
         valores = ws.get_all_values()
@@ -951,6 +1602,9 @@ if st.sidebar.button("Cerrar sesión"):
     st.session_state["role"] = None
     for clave in ["df_players", "df_reports", "df_short", "df_dt", "df_dt_periods", "df_tag", "df_player_profile"]:
         st.session_state.pop(clave, None)
+    for clave in list(st.session_state.keys()):
+        if str(clave).startswith(("shortlist_", "lista_corta_")):
+            st.session_state.pop(clave, None)
     st.rerun()
 
 
@@ -5527,9 +6181,6 @@ def generar_pdf_lista_corta(df_lista, nombre_lista, scout, criterio_orden):
         if not nombre_lista or not scout:
             st.error("Falta la lista o el scout responsable para generar el informe.")
             return None
-        if str(scout) != str(CURRENT_USER):
-            st.error("Solo se pueden generar informes de las listas del usuario actual.")
-            return None
         if criterio_orden not in ("Posición", "Prioridad"):
             st.error("El criterio de orden debe ser Posición o Prioridad.")
             return None
@@ -5543,6 +6194,13 @@ def generar_pdf_lista_corta(df_lista, nombre_lista, scout, criterio_orden):
             (df_lista["Scout"].astype(str) == str(scout))
             & (df_lista["Lista"].astype(str) == str(nombre_lista))
         ].copy()
+        if filas_propias.empty or not usuario_puede_ver_lista(
+            scout,
+            filas_propias.iloc[0].get("compartido_con", ""),
+            CURRENT_USER,
+        ):
+            st.error("No tenés acceso a esta lista para generar el informe.")
+            return None
         filas_reales = filas_propias[
             filas_propias["ID_Jugador"].map(lambda valor: not valor_shortlist_vacio(valor))
         ].copy()
@@ -5683,8 +6341,14 @@ def _firma_datos_lista_corta(df_lista):
     )
 
 
-def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
+def render_exportacion_pdf_lista_corta(
+    df_lista,
+    nombre_lista,
+    criterio_orden,
+    scout=None,
+):
     section_header("Exportación")
+    scout = str(scout or CURRENT_USER)
     tiene_lista = bool(nombre_lista)
     hay_jugadores = df_lista is not None and not df_lista.empty
     st.markdown(
@@ -5728,12 +6392,13 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
             pdf_generado = generar_pdf_lista_corta(
                 df_lista,
                 nombre_lista,
-                CURRENT_USER,
+                scout,
                 criterio_orden,
             )
         if pdf_generado is not None:
             st.session_state["shortlist_pdf_generado"] = {
-                "scout": CURRENT_USER,
+                "solicitante": CURRENT_USER,
+                "scout": scout,
                 "lista": nombre_lista,
                 "criterio": criterio_orden,
                 "firma": _firma_datos_lista_corta(df_lista),
@@ -5745,7 +6410,8 @@ def render_exportacion_pdf_lista_corta(df_lista, nombre_lista, criterio_orden):
         tiene_lista
         and hay_jugadores
         and generado
-        and generado.get("scout") == CURRENT_USER
+        and generado.get("solicitante") == CURRENT_USER
+        and generado.get("scout") == scout
         and generado.get("lista") == nombre_lista
         and generado.get("criterio") == criterio_orden
         and generado.get("firma") == _firma_datos_lista_corta(df_lista)
@@ -9946,11 +10612,24 @@ if st.session_state["menu"] == "Lista corta":
         st.stop()
 
     df_short = cargar_datos_shortlist().copy()
-    df_short = df_short[df_short["Scout"] == CURRENT_USER].copy()
-    listas_usuario = sorted(
-        df_short["Lista"].dropna().astype(str).str.strip().replace("", np.nan).dropna().unique().tolist()
-    )
-    registros_reales_usuario = df_short[df_short["ID_Jugador"].astype(str).str.strip() != ""].copy()
+    df_short = df_short[
+        df_short.apply(
+            lambda fila: usuario_puede_ver_lista(
+                fila.get("Scout"),
+                fila.get("compartido_con", ""),
+                CURRENT_USER,
+            ),
+            axis=1,
+        )
+    ].copy()
+    listas_propias = obtener_listas_propias(df_short, CURRENT_USER)
+    listas_compartidas = obtener_listas_compartidas_con_usuario(df_short, CURRENT_USER)
+    listas_usuario = listas_propias + listas_compartidas
+    registros_reales_usuario = df_short[
+        df_short["ID_Jugador"].map(lambda valor: not valor_shortlist_vacio(valor))
+    ].copy()
+    usuario_key = str(CURRENT_USER)
+    subvista_key = f"lista_corta_subvista_{usuario_key}"
 
     render_html_block(
         f"""
@@ -9958,7 +10637,7 @@ if st.session_state["menu"] == "Lista corta":
             <div class="alab-dashboard-hero-kicker">Shortlist</div>
             <h1 class="alab-dashboard-hero-title">Lista corta</h1>
             <div class="alab-dashboard-chip-row">
-                <span class="alab-dashboard-chip"><strong>Alcance</strong> Privado por scout</span>
+                <span class="alab-dashboard-chip"><strong>Alcance</strong> Propias y compartidas explícitamente</span>
                 <span class="alab-dashboard-chip"><strong>Listas</strong> {len(listas_usuario)}</span>
                 <span class="alab-dashboard-chip"><strong>Jugadores</strong> {len(registros_reales_usuario)}</span>
             </div>
@@ -9966,36 +10645,172 @@ if st.session_state["menu"] == "Lista corta":
         """
     )
 
-    if "lista_corta_subvista" not in st.session_state:
-        st.session_state["lista_corta_subvista"] = "Lista corta táctica"
+    if subvista_key not in st.session_state:
+        st.session_state[subvista_key] = "Lista corta táctica"
 
     st.markdown("#### Modo de trabajo")
-    modo_col_1, modo_col_2, modo_col_3 = st.columns([1.35, 1.35, 4.3])
+    modo_col_1, modo_col_2, modo_col_consenso, modo_col_3 = st.columns([1.25, 1.25, 1.55, 3.1])
     with modo_col_1:
         if st.button(
             "Lista corta táctica",
             use_container_width=True,
-            type="primary" if st.session_state["lista_corta_subvista"] == "Lista corta táctica" else "secondary",
-            key="lista_corta_modo_tactica",
-        ) and st.session_state["lista_corta_subvista"] != "Lista corta táctica":
-            st.session_state["lista_corta_subvista"] = "Lista corta táctica"
+            type="primary" if st.session_state[subvista_key] == "Lista corta táctica" else "secondary",
+            key=f"lista_corta_modo_tactica_{usuario_key}",
+        ) and st.session_state[subvista_key] != "Lista corta táctica":
+            st.session_state[subvista_key] = "Lista corta táctica"
             st.rerun()
     with modo_col_2:
         if st.button(
             "Lista corta express",
             use_container_width=True,
-            type="primary" if st.session_state["lista_corta_subvista"] == "Lista corta express" else "secondary",
-            key="lista_corta_modo_express",
-        ) and st.session_state["lista_corta_subvista"] != "Lista corta express":
-            st.session_state["lista_corta_subvista"] = "Lista corta express"
+            type="primary" if st.session_state[subvista_key] == "Lista corta express" else "secondary",
+            key=f"lista_corta_modo_express_{usuario_key}",
+        ) and st.session_state[subvista_key] != "Lista corta express":
+            st.session_state[subvista_key] = "Lista corta express"
+            st.rerun()
+    with modo_col_consenso:
+        if CURRENT_ROLE == "admin" and usuario_es_admin(CURRENT_USER) and st.button(
+            "Consenso de listas",
+            use_container_width=True,
+            type="primary" if st.session_state[subvista_key] == "Consenso de listas" else "secondary",
+            key=f"lista_corta_modo_consenso_{usuario_key}",
+        ) and st.session_state[subvista_key] != "Consenso de listas":
+            st.session_state[subvista_key] = "Consenso de listas"
             st.rerun()
     with modo_col_3:
         section_note("Elegí entre la vista táctica tradicional o la generación express para armar informes rápidos en el momento.")
 
-    vista_lista_corta = st.session_state["lista_corta_subvista"]
+    vista_lista_corta = st.session_state[subvista_key]
+
+    if vista_lista_corta == "Consenso de listas" and CURRENT_ROLE == "admin" and usuario_es_admin(CURRENT_USER):
+        st.markdown("---")
+        section_header("CONSENSO DE LISTAS CORTAS")
+        df_short_consenso = cargar_datos_shortlist().copy()
+        opciones_consenso = obtener_listas_disponibles_consenso_admin(
+            df_short_consenso,
+            CURRENT_USER,
+            CURRENT_ROLE,
+        )
+        if not opciones_consenso:
+            st.info("No tenés listas compartidas disponibles para consensuar.")
+            st.stop()
+
+        etiquetas_consenso = {
+            clave: f"{clave[1]} · {clave[0]}"
+            for clave in opciones_consenso
+        }
+        listas_consenso_seleccionadas = st.multiselect(
+            "Listas a consensuar",
+            opciones_consenso,
+            format_func=lambda clave: etiquetas_consenso.get(clave, f"{clave[1]} · {clave[0]}"),
+            key=f"lista_corta_consenso_seleccionadas_{usuario_key}",
+        )
+        seleccion_consenso_key = tuple(
+            sorted(listas_consenso_seleccionadas, key=lambda clave: (clave[0].casefold(), clave[1].casefold()))
+        )
+        if len(seleccion_consenso_key) < 2:
+            st.info("Seleccioná al menos dos listas.")
+
+        if st.button(
+            "Generar consenso",
+            disabled=len(seleccion_consenso_key) < 2,
+            type="primary",
+            key=f"lista_corta_consenso_generar_{usuario_key}",
+        ):
+            try:
+                consenso_generado = construir_consenso_listas(
+                    df_short_consenso,
+                    seleccion_consenso_key,
+                    df_players_all,
+                    CURRENT_USER,
+                    CURRENT_ROLE,
+                )
+                st.session_state[f"lista_corta_consenso_resultado_{usuario_key}"] = {
+                    "seleccion": seleccion_consenso_key,
+                    "resultado": consenso_generado,
+                }
+            except (PermissionError, ValueError) as exc:
+                st.error(str(exc))
+
+        resultado_guardado = st.session_state.get(
+            f"lista_corta_consenso_resultado_{usuario_key}",
+            {},
+        )
+        if resultado_guardado.get("seleccion") == seleccion_consenso_key and len(seleccion_consenso_key) >= 2:
+            resultado_consenso = resultado_guardado["resultado"]
+            st.markdown(
+                f"""
+                <div class="alab-mini-grid">
+                    <div class="alab-mini-stat"><span class="alab-mini-label">Listas analizadas</span><span class="alab-mini-value">{resultado_consenso['listas_analizadas']}</span></div>
+                    <div class="alab-mini-stat"><span class="alab-mini-label">Jugadores únicos</span><span class="alab-mini-value">{resultado_consenso['jugadores_unicos']}</span></div>
+                    <div class="alab-mini-stat"><span class="alab-mini-label">Jugadores repetidos</span><span class="alab-mini-value">{resultado_consenso['jugadores_repetidos']}</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if resultado_consenso["jugadores"]:
+                df_resultado_consenso = pd.DataFrame(resultado_consenso["jugadores"])
+                df_resultado_consenso["Listas"] = df_resultado_consenso["Listas"].map(
+                    lambda etiquetas: " · ".join(etiquetas)
+                )
+                st.dataframe(
+                    df_resultado_consenso[
+                        [
+                            "Línea",
+                            "Nombre",
+                            "Posición",
+                            "Club",
+                            "Liga",
+                            "Edad",
+                            "Altura",
+                            "Pie_Hábil",
+                            "Repeticiones",
+                            "Listas",
+                        ]
+                    ],
+                    hide_index=True,
+                    use_container_width=True,
+                )
+            else:
+                st.info("No hay jugadores presentes en dos o más de las listas seleccionadas.")
+
+            pdf_consenso_key = f"lista_corta_consenso_pdf_{usuario_key}"
+            if st.button(
+                "Generar informe de consenso PDF",
+                type="primary",
+                key=f"lista_corta_consenso_pdf_generar_{usuario_key}",
+            ):
+                try:
+                    pdf_consenso = generar_pdf_consenso_lista_corta(
+                        cargar_datos_shortlist().copy(),
+                        seleccion_consenso_key,
+                        df_players_all,
+                        CURRENT_USER,
+                        CURRENT_ROLE,
+                    )
+                    st.session_state[pdf_consenso_key] = {
+                        "seleccion": seleccion_consenso_key,
+                        "contenido": pdf_consenso.getvalue(),
+                    }
+                except (PermissionError, ValueError) as exc:
+                    st.error(str(exc))
+                except Exception as exc:
+                    st.error(f"No se pudo generar el PDF de consenso: {exc}")
+
+            pdf_guardado = st.session_state.get(pdf_consenso_key, {})
+            if pdf_guardado.get("seleccion") == seleccion_consenso_key:
+                st.download_button(
+                    "Descargar PDF",
+                    data=pdf_guardado["contenido"],
+                    file_name=f"Consenso_Lista_Corta_{date.today().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"lista_corta_consenso_pdf_descargar_{usuario_key}",
+                )
+        st.stop()
 
     if vista_lista_corta == "Lista corta express":
-        st.session_state["lista_corta_subvista"] = "Lista corta express"
+        st.session_state[subvista_key] = "Lista corta express"
         df_players_express = df_players_all.copy()
         df_players_express["ID_Jugador"] = df_players_express["ID_Jugador"].astype(str)
 
@@ -10050,7 +10865,7 @@ if st.session_state["menu"] == "Lista corta":
                 key="lista_corta_express_agregar",
             ):
                 if jugador_express_id and jugador_express_id not in st.session_state["lista_corta_express_ids"]:
-                    st.session_state["lista_corta_subvista"] = "Lista corta express"
+                    st.session_state[subvista_key] = "Lista corta express"
                     st.session_state["lista_corta_express_ids"].append(jugador_express_id)
                     st.rerun()
 
@@ -10058,7 +10873,7 @@ if st.session_state["menu"] == "Lista corta":
             acciones_express_col1, acciones_express_col2 = st.columns([1.3, 4.7])
             with acciones_express_col1:
                 if st.button("Limpiar selección", use_container_width=True, key="lista_corta_express_limpiar"):
-                    st.session_state["lista_corta_subvista"] = "Lista corta express"
+                    st.session_state[subvista_key] = "Lista corta express"
                     st.session_state["lista_corta_express_ids"] = []
                     st.rerun()
             with acciones_express_col2:
@@ -10146,7 +10961,7 @@ if st.session_state["menu"] == "Lista corta":
                         key=f"lista_corta_express_quitar_{jugador['id']}",
                         use_container_width=True,
                     ):
-                        st.session_state["lista_corta_subvista"] = "Lista corta express"
+                        st.session_state[subvista_key] = "Lista corta express"
                         st.session_state["lista_corta_express_ids"] = [
                             jugador_id for jugador_id in st.session_state["lista_corta_express_ids"] if str(jugador_id) != str(jugador["id"])
                         ]
@@ -10174,8 +10989,15 @@ if st.session_state["menu"] == "Lista corta":
 
     crear_col, selector_col = st.columns([1.5, 2.5])
     with crear_col:
-        nombre_nueva_lista = st.text_input("Nueva lista", key="shortlist_nueva_lista")
-        if st.button("Crear lista vacía", use_container_width=True, key="shortlist_crear_lista"):
+        nombre_nueva_lista = st.text_input(
+            "Nueva lista",
+            key=f"shortlist_nueva_lista_{usuario_key}",
+        )
+        if st.button(
+            "Crear lista vacía",
+            use_container_width=True,
+            key=f"shortlist_crear_lista_{usuario_key}",
+        ):
             creada, mensaje_lista = crear_lista_shortlist_vacia(nombre_nueva_lista, CURRENT_USER)
             if creada:
                 st.success(mensaje_lista)
@@ -10183,32 +11005,96 @@ if st.session_state["menu"] == "Lista corta":
             else:
                 st.info(mensaje_lista)
 
-    if listas_usuario and st.session_state.get("shortlist_lista_activa") not in listas_usuario:
-        st.session_state["shortlist_lista_activa"] = listas_usuario[0]
-
     with selector_col:
-        if listas_usuario:
-            lista_activa = st.selectbox(
+        categoria_lista = st.radio(
+            "Elegir lista",
+            ["Mis listas", "Compartidas conmigo"],
+            horizontal=True,
+            key=f"shortlist_categoria_lista_{usuario_key}",
+        )
+        if categoria_lista == "Mis listas":
+            opciones_listas = listas_propias
+            etiqueta_lista = lambda clave: clave[1]
+            clave_selector = f"shortlist_lista_propia_{usuario_key}"
+        else:
+            opciones_listas = listas_compartidas
+            etiqueta_lista = lambda clave: f"{clave[1]} · {clave[0]}"
+            clave_selector = f"shortlist_lista_compartida_{usuario_key}"
+
+        if opciones_listas:
+            seleccion_lista = st.selectbox(
                 "Lista seleccionada",
-                listas_usuario,
-                key="shortlist_lista_activa",
+                opciones_listas,
+                format_func=etiqueta_lista,
+                key=clave_selector,
             )
         else:
-            lista_activa = ""
-            st.info("Todavía no tenés listas. Creá una lista vacía para empezar.")
+            seleccion_lista = None
 
-    if not lista_activa:
-        render_exportacion_pdf_lista_corta(
-            pd.DataFrame(columns=SHORTLIST_COLUMNS),
-            "",
-            st.session_state.get("shortlist_criterio_orden", "Posición"),
-        )
+    if seleccion_lista is None:
+        if categoria_lista == "Mis listas":
+            st.info("Todavía no tenés listas propias. Creá una lista vacía para empezar.")
+        else:
+            st.info("No tenés listas compartidas con vos.")
         st.stop()
 
-    df_lista_activa = df_short[df_short["Lista"] == lista_activa].copy()
+    lista_owner, lista_activa = seleccion_lista
+    st.session_state[f"lista_corta_lista_seleccionada_tipo_{usuario_key}"] = categoria_lista
+    st.session_state[f"lista_corta_lista_seleccionada_owner_{usuario_key}"] = lista_owner
+    st.session_state[f"lista_corta_lista_seleccionada_nombre_{usuario_key}"] = lista_activa
+    es_propietario = usuario_puede_editar_lista(lista_owner, CURRENT_USER)
+    df_lista_activa = df_short[
+        (df_short["Scout"].astype(str).str.strip() == lista_owner)
+        & (df_short["Lista"].astype(str).str.strip() == lista_activa)
+    ].copy()
+    if df_lista_activa.empty or not df_lista_activa["compartido_con"].map(
+        lambda compartidos: usuario_puede_ver_lista(lista_owner, compartidos, CURRENT_USER)
+    ).all():
+        st.error("No tenés acceso a esta lista.")
+        st.stop()
+
     df_lista_real = df_lista_activa[
         df_lista_activa.apply(es_registro_real_shortlist, axis=1)
     ].copy()
+
+    if not es_propietario:
+        st.info(f"Compartida por {lista_owner} · SOLO LECTURA")
+    else:
+        section_header("Compartir lista")
+        st.caption("Permití que otros usuarios puedan consultar esta lista sin modificarla.")
+        st.markdown("**Compartida con**")
+        opciones_usuarios = obtener_opciones_usuarios_compartir(CURRENT_USER)
+        destinatarios_actuales = {
+            usuario.casefold()
+            for fila in df_lista_activa["compartido_con"].tolist()
+            for usuario in parsear_usuarios_compartidos(fila, CURRENT_USER)
+        }
+        destinatarios_default = [
+            usuario
+            for usuario in opciones_usuarios
+            if usuario.casefold() in destinatarios_actuales
+        ]
+        destinatarios = st.multiselect(
+            "Usuarios con acceso de lectura",
+            opciones_usuarios,
+            default=destinatarios_default,
+            key=f"shortlist_compartir_{usuario_key}_{lista_owner}_{lista_activa}",
+        )
+        if st.button(
+            "Guardar acceso",
+            use_container_width=True,
+            key=f"shortlist_guardar_acceso_{usuario_key}_{lista_owner}_{lista_activa}",
+        ):
+            actualizado, mensaje_acceso = actualizar_compartido_con_lista(
+                lista_owner,
+                lista_activa,
+                destinatarios,
+            )
+            if actualizado:
+                st.toast("Acceso actualizado correctamente.")
+                st.rerun()
+            else:
+                st.error(mensaje_acceso)
 
     render_html_block(
         f"""
@@ -10216,7 +11102,7 @@ if st.session_state["menu"] == "Lista corta":
             <div class="alab-mini-stat">
                 <span class="alab-mini-label">Lista activa</span>
                 <span class="alab-mini-value">{escape_html(lista_activa)}</span>
-                <span class="alab-mini-copy">Toda la lectura y edición se resuelve sobre esta lista.</span>
+                <span class="alab-mini-copy">{'Propietario: ' + escape_html(lista_owner) if not es_propietario else 'Toda la lectura y edición se resuelve sobre esta lista.'}</span>
             </div>
             <div class="alab-mini-stat">
                 <span class="alab-mini-label">Jugadores reales</span>
@@ -10232,44 +11118,52 @@ if st.session_state["menu"] == "Lista corta":
         """
     )
 
-    section_header("Agregar jugador")
-    opciones_busqueda_short = {
-        f"{row['Nombre']} - {row['Club']} - {row['Posición']}": row["ID_Jugador"]
-        for _, row in df_players.sort_values(["Nombre", "Club"], na_position="last").iterrows()
-    }
-    add_col, add_btn_col = st.columns([5, 1.2])
-    with add_col:
-        jugador_a_agregar = st.selectbox(
-            "Buscar jugador en la base",
-            [""] + list(opciones_busqueda_short.keys()),
-            key="shortlist_buscar_jugador",
-        )
-    with add_btn_col:
-        st.write("")
-        st.write("")
-        if st.button(
-            "Agregar",
-            use_container_width=True,
-            disabled=not jugador_a_agregar,
-            key="shortlist_agregar_jugador",
-        ):
-            exito_add, mensaje_add = agregar_jugador_a_shortlist(
-                opciones_busqueda_short.get(jugador_a_agregar, ""),
-                lista_activa,
-                CURRENT_USER,
-                df_players,
+    if es_propietario:
+        section_header("Agregar jugador")
+        opciones_busqueda_short = {
+            f"{row['Nombre']} - {row['Club']} - {row['Posición']}": row["ID_Jugador"]
+            for _, row in df_players.sort_values(["Nombre", "Club"], na_position="last").iterrows()
+        }
+        add_col, add_btn_col = st.columns([5, 1.2])
+        with add_col:
+            jugador_a_agregar = st.selectbox(
+                "Buscar jugador en la base",
+                [""] + list(opciones_busqueda_short.keys()),
+                key=f"shortlist_buscar_jugador_{usuario_key}_{lista_activa}",
             )
-            if exito_add:
-                st.success(mensaje_add)
-                st.rerun()
-            else:
-                st.info(mensaje_add)
+        with add_btn_col:
+            st.write("")
+            st.write("")
+            if st.button(
+                "Agregar",
+                use_container_width=True,
+                disabled=not jugador_a_agregar,
+                key=f"shortlist_agregar_jugador_{usuario_key}_{lista_activa}",
+            ):
+                exito_add, mensaje_add = agregar_jugador_a_shortlist(
+                    opciones_busqueda_short.get(jugador_a_agregar, ""),
+                    lista_activa,
+                    lista_owner,
+                    df_players,
+                )
+                if exito_add:
+                    st.success(mensaje_add)
+                    st.rerun()
+                else:
+                    st.info(mensaje_add)
 
     filtros_col1, filtros_col2 = st.columns([1.3, 4.7])
     with filtros_col1:
-        criterio_orden = st.selectbox("Ordenar por", ["Posición", "Prioridad"], key="shortlist_criterio_orden")
+        criterio_orden = st.selectbox(
+            "Ordenar por",
+            ["Posición", "Prioridad"],
+            key=f"shortlist_criterio_orden_{usuario_key}_{lista_owner}_{lista_activa}",
+        )
     with filtros_col2:
-        busqueda_lista = st.text_input("Buscar dentro de la lista", key="shortlist_busqueda_lista")
+        busqueda_lista = st.text_input(
+            "Buscar dentro de la lista",
+            key=f"shortlist_busqueda_lista_{usuario_key}_{lista_owner}_{lista_activa}",
+        )
 
     df_lista_ordenada = ordenar_shortlist_visual(df_lista_real, criterio_orden)
     if busqueda_lista:
@@ -10280,7 +11174,12 @@ if st.session_state["menu"] == "Lista corta":
             | df_lista_ordenada["Posición"].astype(str).str.contains(patron, case=False, na=False)
         ].copy()
 
-    render_exportacion_pdf_lista_corta(df_lista_real, lista_activa, criterio_orden)
+    render_exportacion_pdf_lista_corta(
+        df_lista_real,
+        lista_activa,
+        criterio_orden,
+        scout=lista_owner,
+    )
 
     if df_lista_real.empty:
         st.info("La lista está vacía. El registro marcador se conserva en Google Sheets, pero no se muestra como jugador.")
@@ -10343,47 +11242,49 @@ if st.session_state["menu"] == "Lista corta":
             )
 
         with accion_col:
-            opcion_actual_orden = orden_card if orden_card in SHORTLIST_ALLOWED_ORDERS else "Sin asignar"
-            nueva_prioridad = st.selectbox(
-                "Orden",
-                ["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS,
-                index=(["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS).index(opcion_actual_orden),
-                key=f"shortlist_orden_{lista_activa}_{row['ID_Jugador']}",
-            )
-            if st.button(
-                "Guardar",
-                use_container_width=True,
-                key=f"shortlist_guardar_orden_{lista_activa}_{row['ID_Jugador']}",
-            ):
-                valor_guardar = "" if nueva_prioridad == "Sin asignar" else nueva_prioridad
-                exito_orden, mensaje_orden = actualizar_orden_shortlist(
-                    CURRENT_USER,
-                    lista_activa,
-                    row["ID_Jugador"],
-                    valor_guardar,
-                    row.get("_sheet_row"),
+            if es_propietario:
+                opcion_actual_orden = orden_card if orden_card in SHORTLIST_ALLOWED_ORDERS else "Sin asignar"
+                nueva_prioridad = st.selectbox(
+                    "Orden",
+                    ["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS,
+                    index=(["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS).index(opcion_actual_orden),
+                    key=f"shortlist_orden_{usuario_key}_{lista_owner}_{lista_activa}_{row['ID_Jugador']}",
                 )
-                if exito_orden:
-                    st.success(mensaje_orden)
-                    st.rerun()
-                else:
-                    st.error(mensaje_orden)
+                if st.button(
+                    "Guardar",
+                    use_container_width=True,
+                    key=f"shortlist_guardar_orden_{usuario_key}_{lista_owner}_{lista_activa}_{row['ID_Jugador']}",
+                ):
+                    valor_guardar = "" if nueva_prioridad == "Sin asignar" else nueva_prioridad
+                    exito_orden, mensaje_orden = actualizar_orden_shortlist(
+                        lista_owner,
+                        lista_activa,
+                        row["ID_Jugador"],
+                        valor_guardar,
+                    )
+                    if exito_orden:
+                        st.success(mensaje_orden)
+                        st.rerun()
+                    else:
+                        st.error(mensaje_orden)
 
-            if st.button(
-                "Quitar",
-                use_container_width=True,
-                key=f"shortlist_quitar_{lista_activa}_{row['ID_Jugador']}",
-            ):
-                exito_del, mensaje_del = eliminar_jugador_de_shortlist(
-                    CURRENT_USER,
-                    lista_activa,
-                    row["ID_Jugador"],
-                )
-                if exito_del:
-                    st.success(mensaje_del)
-                    st.rerun()
-                else:
-                    st.error(mensaje_del)
+                if st.button(
+                    "Quitar",
+                    use_container_width=True,
+                    key=f"shortlist_quitar_{usuario_key}_{lista_owner}_{lista_activa}_{row['ID_Jugador']}",
+                ):
+                    exito_del, mensaje_del = eliminar_jugador_de_shortlist(
+                        lista_owner,
+                        lista_activa,
+                        row["ID_Jugador"],
+                    )
+                    if exito_del:
+                        st.success(mensaje_del)
+                        st.rerun()
+                    else:
+                        st.error(mensaje_del)
+            else:
+                st.caption("SOLO LECTURA")
 
     st.markdown("---")
     section_header("Texto para WhatsApp")
@@ -10392,7 +11293,8 @@ if st.session_state["menu"] == "Lista corta":
         "Mensaje generado",
         value=texto_whatsapp,
         height=260,
-        key=f"shortlist_whatsapp_{lista_activa}_{criterio_orden}",
+        disabled=not es_propietario,
+        key=f"shortlist_whatsapp_{usuario_key}_{lista_owner}_{lista_activa}_{criterio_orden}",
     )
 
 

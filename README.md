@@ -96,3 +96,9 @@ Volve a iniciar la app con este comando:
 ```
 
 Si alguna vez `8502` esta ocupado, cerrá la otra app que lo esté usando o cambiá el puerto en `.streamlit/config.toml`.
+
+## Lista corta compartida y consenso
+
+La hoja `Lista corta` debe incluir el encabezado `compartido_con`. Sus valores se guardan en una sola celda, separados por punto y coma, y se aplican a todas las filas de la misma combinación `Scout` + `Lista`. Compartir una lista da acceso de solo lectura y no transfiere su propiedad.
+
+La pantalla distingue las listas propias de las compartidas explícitamente con el usuario. Los administradores no reciben acceso global a listas cortas: el consenso solo permite seleccionar listas que les hayan compartido y cuenta cada `ID_Jugador` una sola vez por lista. La generación y descarga del PDF de consenso no modifica Google Sheets.

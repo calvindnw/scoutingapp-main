@@ -629,7 +629,14 @@ def obtener_listas_disponibles_consenso_admin(
 ) -> list[tuple[str, str]]:
     if str(rol_actual).casefold() != "admin" or not usuario_es_admin(usuario_actual):
         return []
-    return obtener_listas_compartidas_con_usuario(df_shortlist, usuario_actual)
+    listas_autorizadas = set(obtener_listas_propias(df_shortlist, usuario_actual))
+    listas_autorizadas.update(
+        obtener_listas_compartidas_con_usuario(df_shortlist, usuario_actual)
+    )
+    return sorted(
+        listas_autorizadas,
+        key=lambda lista: (lista[1].casefold(), lista[0].casefold()),
+    )
 
 
 def obtener_linea_desde_posicion(posicion) -> str:
@@ -690,7 +697,9 @@ def construir_consenso_listas(
     if len(seleccionadas) < 2:
         raise ValueError("Seleccioná al menos dos listas.")
     if not set(seleccionadas).issubset(disponibles):
-        raise PermissionError("El consenso solo admite listas compartidas explícitamente con este administrador.")
+        raise PermissionError(
+            "El consenso solo admite listas propias o compartidas explícitamente con este administrador."
+        )
 
     claves = set(seleccionadas)
     filas = df_shortlist[
@@ -10749,7 +10758,7 @@ if st.session_state["menu"] == "Lista corta":
             CURRENT_ROLE,
         )
         if not opciones_consenso:
-            st.info("No tenés listas compartidas disponibles para consensuar.")
+            st.info("No tenés listas propias ni listas compartidas disponibles para consensuar.")
             st.stop()
 
         etiquetas_consenso = {

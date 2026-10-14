@@ -10715,7 +10715,7 @@ if st.session_state["menu"] == "Lista corta":
         st.session_state[subvista_key] = "Lista corta táctica"
 
     st.markdown("#### Modo de trabajo")
-    modo_col_1, modo_col_2, modo_col_consenso, modo_col_3 = st.columns([1.25, 1.25, 1.55, 3.1])
+    modo_col_1, modo_col_consenso, modo_col_3 = st.columns([1.25, 1.55, 4.35])
     with modo_col_1:
         if st.button(
             "Lista corta táctica",
@@ -10724,15 +10724,6 @@ if st.session_state["menu"] == "Lista corta":
             key=f"lista_corta_modo_tactica_{usuario_key}",
         ) and st.session_state[subvista_key] != "Lista corta táctica":
             st.session_state[subvista_key] = "Lista corta táctica"
-            st.rerun()
-    with modo_col_2:
-        if st.button(
-            "Lista corta express",
-            use_container_width=True,
-            type="primary" if st.session_state[subvista_key] == "Lista corta express" else "secondary",
-            key=f"lista_corta_modo_express_{usuario_key}",
-        ) and st.session_state[subvista_key] != "Lista corta express":
-            st.session_state[subvista_key] = "Lista corta express"
             st.rerun()
     with modo_col_consenso:
         if CURRENT_ROLE == "admin" and usuario_es_admin(CURRENT_USER) and st.button(
@@ -10744,9 +10735,12 @@ if st.session_state["menu"] == "Lista corta":
             st.session_state[subvista_key] = "Consenso de listas"
             st.rerun()
     with modo_col_3:
-        section_note("Elegí entre la vista táctica tradicional o la generación express para armar informes rápidos en el momento.")
+        section_note("Gestioná tus listas propias y consultá las listas compartidas explícitamente.")
 
     vista_lista_corta = st.session_state[subvista_key]
+    if vista_lista_corta not in {"Lista corta táctica", "Consenso de listas"}:
+        st.session_state[subvista_key] = "Lista corta táctica"
+        vista_lista_corta = "Lista corta táctica"
 
     if vista_lista_corta == "Consenso de listas" and CURRENT_ROLE == "admin" and usuario_es_admin(CURRENT_USER):
         st.markdown("---")

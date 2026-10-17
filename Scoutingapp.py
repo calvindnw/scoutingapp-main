@@ -1046,11 +1046,6 @@ def normalizar_orden_shortlist(valor) -> str:
     return texto if texto in SHORTLIST_ALLOWED_ORDERS else ""
 
 
-def descripcion_linea_shortlist(valor) -> str:
-    linea = normalizar_orden_shortlist(valor)
-    return SHORTLIST_LINE_DESCRIPTIONS.get(linea, "")
-
-
 def construir_fila_marcador_shortlist(scout: str, nombre_lista: str, compartido_con="") -> dict:
     fila = {columna: "" for columna in SHORTLIST_COLUMNS}
     fila["Scout"] = scout
@@ -11226,12 +11221,8 @@ if st.session_state["menu"] == "Lista corta":
     section_header("Líneas de seguimiento")
     st.caption("Asigná a cada jugador la línea que representa su proyección dentro de la plantilla.")
     lineas_html = "".join(
-        f"""
-        <div class="alab-mini-stat">
-            <span class="alab-mini-label">{escape_html(linea)}</span>
-            <span class="alab-mini-copy">{escape_html(descripcion)}</span>
-        </div>
-        """
+        f'<div class="alab-mini-stat"><span class="alab-mini-label">{escape_html(linea)}</span>'
+        f'<span class="alab-mini-copy">{escape_html(descripcion)}</span></div>'
         for linea, descripcion in SHORTLIST_LINE_DESCRIPTIONS.items()
     )
     render_html_block(f'<div class="alab-mini-grid">{lineas_html}</div>')
@@ -11279,7 +11270,6 @@ if st.session_state["menu"] == "Lista corta":
         altura_card = escape_html(formatear_shortlist_unidad(row.get("Altura"), "cm"))
         pie_card = escape_html(valor_shortlist_visual(row.get("Pie_Hábil"), fallback="-"))
         orden_card = normalizar_orden_shortlist(row.get("Orden")) or "Sin asignar"
-        descripcion_orden_card = escape_html(descripcion_linea_shortlist(row.get("Orden")))
         foto_url = normalizar_url_foto(row.get("URL_Foto", ""))
         perfil_url = str(row.get("URL_Perfil", "") or "").strip()
         video_url = str(row.get("video_url", "") or "").strip()
@@ -11317,7 +11307,6 @@ if st.session_state["menu"] == "Lista corta":
                                 </div>
                                 <div class="alab-shortlist-rail">
                                     <div class="alab-badge-row"><span class='alab-badge alab-badge-muted'>{escape_html(orden_card)}</span></div>
-                                    {f'<div class="alab-shortlist-meta" style="margin-top:0.35rem;">{descripcion_orden_card}</div>' if descripcion_orden_card else ''}
                                     <div class="alab-player-link-row alab-player-link-row-inline alab-shortlist-links">{links_html}</div>
                                 </div>
                             </div>

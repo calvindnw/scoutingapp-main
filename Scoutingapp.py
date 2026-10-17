@@ -1080,6 +1080,54 @@ def construir_fila_shortlist_desde_jugador(
     }
 
 
+def sincronizar_shortlist_con_jugadores(
+    df_shortlist: pd.DataFrame,
+    df_players_base: pd.DataFrame,
+) -> pd.DataFrame:
+    """Actualiza la ficha visible con Jugadores y conserva el snapshot como respaldo."""
+    if (
+        df_shortlist is None
+        or df_shortlist.empty
+        or df_players_base is None
+        or df_players_base.empty
+        or "ID_Jugador" not in df_shortlist.columns
+        or "ID_Jugador" not in df_players_base.columns
+    ):
+        return df_shortlist.copy() if df_shortlist is not None else pd.DataFrame()
+
+    sincronizada = df_shortlist.copy()
+    columnas_sincronizadas = [
+        "Nombre",
+        "Altura",
+        "Pie_Hábil",
+        "Club",
+        "Liga",
+        "Posición",
+        "URL_Foto",
+        "URL_Perfil",
+        "video_url",
+    ]
+    jugadores_por_id = {}
+    for _, jugador in df_players_base.iterrows():
+        jugador_id = normalizar_id_texto(jugador.get("ID_Jugador", ""))
+        if jugador_id and jugador_id not in jugadores_por_id:
+            jugadores_por_id[jugador_id] = jugador
+
+    for indice, fila in sincronizada.iterrows():
+        jugador = jugadores_por_id.get(normalizar_id_texto(fila.get("ID_Jugador", "")))
+        if jugador is None:
+            continue
+        for columna in columnas_sincronizadas:
+            if columna in sincronizada.columns and columna in jugador.index:
+                sincronizada.at[indice, columna] = jugador.get(columna, "")
+        if "Edad" in sincronizada.columns and "Fecha_Nac" in jugador.index:
+            edad_actual = calcular_edad(jugador.get("Fecha_Nac"))
+            if str(edad_actual) != "?":
+                sincronizada.at[indice, "Edad"] = str(edad_actual)
+
+    return sincronizada
+
+
 def ordenar_shortlist_visual(df: pd.DataFrame, criterio: str) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame(columns=df.columns if df is not None else SHORTLIST_COLUMNS)
@@ -11122,6 +11170,10 @@ if st.session_state["menu"] == "Lista corta":
     df_lista_real = df_lista_activa[
         df_lista_activa.apply(es_registro_real_shortlist, axis=1)
     ].copy()
+    df_lista_real = sincronizar_shortlist_con_jugadores(
+        df_lista_real,
+        df_players_all,
+    )
 
     if not es_propietario:
         st.info(f"Compartida por {lista_owner} · SOLO LECTURA")

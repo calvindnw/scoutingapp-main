@@ -101,4 +101,11 @@ Si alguna vez `8502` esta ocupado, cerrá la otra app que lo esté usando o camb
 
 La hoja `Lista corta` debe incluir el encabezado `compartido_con`. Sus valores se guardan en una sola celda, separados por punto y coma, y se aplican a todas las filas de la misma combinación `Scout` + `Lista`. Compartir una lista da acceso de solo lectura y no transfiere su propiedad.
 
+Las listas cortas utilizan la columna `Orden` como línea de seguimiento:
+
+- **Titular:** jugador visualizado para competir por un lugar en el 11 principal.
+- **Suplente:** jugador que disputará sus minutos a fuerza de rendimiento y es proyectable al 11 titular.
+- **Apuesta:** jugador por debajo de la línea de suplentes, con menor caudal de minutos, pero proyectable a suplente si alcanza el crecimiento y rendimiento esperado.
+- **Futuro:** jugador que todavía no llega como apuesta, pero es proyectable a esa línea y puede ser titular en una plantilla de reserva.
+
 La pantalla distingue las listas propias de las compartidas explícitamente con el usuario. Los administradores no reciben acceso global a listas cortas: el consenso solo permite seleccionar listas que les hayan compartido y cuenta cada `ID_Jugador` una sola vez por lista. La generación y descarga del PDF de consenso no modifica Google Sheets.

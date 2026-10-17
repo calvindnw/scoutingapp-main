@@ -309,6 +309,12 @@ def encabezado_real_shortlist(encabezados: list[str], columna: str) -> str | Non
 
 
 SHORTLIST_ALLOWED_ORDERS = ["Titular", "Suplente", "Apuesta", "Futuro"]
+SHORTLIST_LINE_DESCRIPTIONS = {
+    "Titular": "Jugador visualizado para competir por un lugar en el 11 principal.",
+    "Suplente": "Jugador que disputará sus minutos a fuerza de rendimiento y es proyectable al 11 titular.",
+    "Apuesta": "Jugador por debajo de la línea de suplentes, con menor caudal de minutos, pero proyectable a suplente si alcanza el crecimiento y rendimiento esperado.",
+    "Futuro": "Jugador que todavía no llega como apuesta, pero es proyectable a esa línea y puede ser titular en una plantilla de reserva.",
+}
 POSITION_ORDER = {
     "Arquero": 1,
     "Defensa central derecho": 2,
@@ -1038,6 +1044,11 @@ def es_registro_real_shortlist(registro) -> bool:
 def normalizar_orden_shortlist(valor) -> str:
     texto = "" if valor_shortlist_vacio(valor) else str(valor).strip()
     return texto if texto in SHORTLIST_ALLOWED_ORDERS else ""
+
+
+def descripcion_linea_shortlist(valor) -> str:
+    linea = normalizar_orden_shortlist(valor)
+    return SHORTLIST_LINE_DESCRIPTIONS.get(linea, "")
 
 
 def construir_fila_marcador_shortlist(scout: str, nombre_lista: str, compartido_con="") -> dict:
@@ -11212,6 +11223,19 @@ if st.session_state["menu"] == "Lista corta":
                 else:
                     st.info(mensaje_add)
 
+    section_header("Líneas de seguimiento")
+    st.caption("Asigná a cada jugador la línea que representa su proyección dentro de la plantilla.")
+    lineas_html = "".join(
+        f"""
+        <div class="alab-mini-stat">
+            <span class="alab-mini-label">{escape_html(linea)}</span>
+            <span class="alab-mini-copy">{escape_html(descripcion)}</span>
+        </div>
+        """
+        for linea, descripcion in SHORTLIST_LINE_DESCRIPTIONS.items()
+    )
+    render_html_block(f'<div class="alab-mini-grid">{lineas_html}</div>')
+
     filtros_col1, filtros_col2 = st.columns([1.3, 4.7])
     with filtros_col1:
         criterio_orden = st.selectbox(
@@ -11255,6 +11279,7 @@ if st.session_state["menu"] == "Lista corta":
         altura_card = escape_html(formatear_shortlist_unidad(row.get("Altura"), "cm"))
         pie_card = escape_html(valor_shortlist_visual(row.get("Pie_Hábil"), fallback="-"))
         orden_card = normalizar_orden_shortlist(row.get("Orden")) or "Sin asignar"
+        descripcion_orden_card = escape_html(descripcion_linea_shortlist(row.get("Orden")))
         foto_url = normalizar_url_foto(row.get("URL_Foto", ""))
         perfil_url = str(row.get("URL_Perfil", "") or "").strip()
         video_url = str(row.get("video_url", "") or "").strip()
@@ -11292,6 +11317,7 @@ if st.session_state["menu"] == "Lista corta":
                                 </div>
                                 <div class="alab-shortlist-rail">
                                     <div class="alab-badge-row"><span class='alab-badge alab-badge-muted'>{escape_html(orden_card)}</span></div>
+                                    {f'<div class="alab-shortlist-meta" style="margin-top:0.35rem;">{descripcion_orden_card}</div>' if descripcion_orden_card else ''}
                                     <div class="alab-player-link-row alab-player-link-row-inline alab-shortlist-links">{links_html}</div>
                                 </div>
                             </div>
@@ -11305,7 +11331,7 @@ if st.session_state["menu"] == "Lista corta":
             if es_propietario:
                 opcion_actual_orden = orden_card if orden_card in SHORTLIST_ALLOWED_ORDERS else "Sin asignar"
                 nueva_prioridad = st.selectbox(
-                    "Orden",
+                    "Línea de seguimiento",
                     ["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS,
                     index=(["Sin asignar"] + SHORTLIST_ALLOWED_ORDERS).index(opcion_actual_orden),
                     key=f"shortlist_orden_{usuario_key}_{lista_owner}_{lista_activa}_{row['ID_Jugador']}",

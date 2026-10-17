@@ -1119,7 +1119,10 @@ def sincronizar_shortlist_con_jugadores(
             continue
         for columna in columnas_sincronizadas:
             if columna in sincronizada.columns and columna in jugador.index:
-                sincronizada.at[indice, columna] = jugador.get(columna, "")
+                sincronizada.at[indice, columna] = valor_shortlist_visual(
+                    jugador.get(columna, ""),
+                    fallback="",
+                )
         if "Edad" in sincronizada.columns and "Fecha_Nac" in jugador.index:
             edad_actual = calcular_edad(jugador.get("Fecha_Nac"))
             if str(edad_actual) != "?":
